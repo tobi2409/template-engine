@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+
+    <div id="app">
+        <div>Hallo <span>--</span> {{ name }}
+
+            <div>Du bist {{ name }} und {{ age }} Jahre alt</div>
+        </div>
+
+        <if test="showSecondHallo">
+            Bedingtes Hallo {{ name }}
+            <p>Zweites Element innerhalb der Bedingung</p>
+
+            <if test="nestedCondition">
+                <p>Nested Condition ist erreicht, {{ name }}</p>
+            </if>
+        </if>
+
+        <if test="secondCondition">
+            <p>Zweite Condition, {{ name }}</p>
+        </if>
+
+        <div>
+            <p>Counter: {{ counter }}</p>
+        </div>
+
+        <ul>
+            <each of="friends" as="f">
+                <li>{{ f.name }} ist {{ f.age }} Jahre alt</li>
+
+                <if test="showChilds">
+                    <ul>
+                        <each of="f.childs" as="c">
+                            <li>{{ c }}</li>
+                        </each>
+                    </ul>
+                </if>
+            </each>
+        </ul>
+    </div>
+
+    <script src="template-engine.js"></script>
+
+    <script>
+        const data = {
+            name: 'Tobias',
+            age: 31,
+            counter: 1,
+            showSecondHallo: true,
+            nestedCondition: true,
+            secondCondition: false,
+            friends: [{
+                name: 'Freund1',
+                childs: ['Freund1_1', 'Freund1_2'],
+                age: 23
+            }, {
+                name: 'Freund2',
+                childs: [],
+                age: 25
+            }],
+            showChilds: false
+        }
+
+        render(data, document.getElementById('app'))
+
+        data.counter = 2
+        data.nestedCondition = false
+        data.friends[0].name = 'Tobias'
+        const changes = ['counter', 'nestedCondition', 'friends.0.name']
+
+        /*const t1 = Date.now()
+        refresh(data, changes)
+        const t2 = Date.now()*/
+
+        /*const t1 = Date.now()
+        render(data, document.getElementById('app'))
+        const t2 = Date.now()*/
+
+        //console.log(t2 - t1)
+    </script>
+
+</body>
+
+</html>
