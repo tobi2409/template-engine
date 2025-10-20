@@ -1,6 +1,7 @@
 // TODOs:
 // nodeHolder.node muss bei einem Listenelement darstellen, ob etwas erstellt, geupdatet oder gelöscht wurde (bei Zuweisung eines neuen Arrays -> komplett neurendern)
 // ifTag-Handler braucht noch context
+// if im each funktioniert nicht
 // beim Refresh könnten bei einem each innerhalb eines if Probleme auftreten
 // Proxy
 
