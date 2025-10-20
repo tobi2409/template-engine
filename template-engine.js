@@ -1,5 +1,6 @@
 // TODOs:
 // nodeHolder.node muss bei einem Listenelement darstellen, ob etwas erstellt, geupdatet oder gelöscht wurde (bei Zuweisung eines neuen Arrays -> komplett neurendern)
+// bei nodeHoldersByKeys liegen noch Keys mit Kontext drin
 // ifTag-Handler braucht noch context
 // if im each funktioniert nicht
 // beim Refresh könnten bei einem each innerhalb eines if Probleme auftreten
@@ -23,7 +24,7 @@ nodeHoldersByKeys.appendToKey = function(key, nodeHolder) {
     }
 }
 
-function resolveRelativeKey(key, data, context = new Map()) {
+function resolveKey(key, data, context = new Map()) {
     const splitted = key.split('.')
     const isFirstContext = context.has(splitted[0])
     const rootKey = isFirstContext ? context.get(splitted[0]).data : data
@@ -41,10 +42,16 @@ function resolveRelativeKey(key, data, context = new Map()) {
 function convertToFullKey(relativeKey, context, index) {
     const splitted = relativeKey.split('.')
     const isFirstContext = context.has(splitted[0])
-    return isFirstContext ? `${context.get(splitted[0]).of}.${index}.${splitted.slice(1).join('.')}` : relativeKey
+
+    if (!isFirstContext) {
+        return relativeKey
+    }
+
+    const r = convertToFullKey(`${context.get(splitted[0]).of}.${index}${splitted.length > 1 ? '.':''}${splitted.slice(1).join('.')}`, context, index)
+    return r
 }
 
-function interpolateText(node, data, context = new Map(), index = -1) {
+function interpolateText(node, data, context = new Map(), index = -1, toFullKeyTemplate = false) {
     if (node.nodeType !== Node.TEXT_NODE
         && !(node.tagName === 'SPAN' && node.dataset.template)
     ) {
@@ -55,9 +62,15 @@ function interpolateText(node, data, context = new Map(), index = -1) {
 
     // im Falle dass es ein Span ist, ist sein textContent bereits interpoliert -> template-Sicherung verwenden
     // bei einem noch nicht gewrappten Text wird einfach sein textContent genommen, da dieser noch ein Template ist
-    const template = node.nodeType === Node.TEXT_NODE ? node.textContent : node.dataset.template
+    let template = node.nodeType === Node.TEXT_NODE ? node.textContent : node.dataset.template
 
     if (regex.test(template)) {
+        if (toFullKeyTemplate) {
+            template = template.replace(regex, (_, key) => {
+                return `{{ ${convertToFullKey(key, context, index)} }}`
+            })
+        }
+
         // Text wird in ein Span gewrappt, damit dort im Dataset das Template gesichert werden kann
         // ist es bereits ein Span, wird das wiederverwendet und sein Text anhand seines Templates ersetzt
 
@@ -70,24 +83,16 @@ function interpolateText(node, data, context = new Map(), index = -1) {
             wrappedText.dataset.template = template
         }
         
-        let key = ''
         wrappedText.innerText = template
                                 .replace(/(\r\n|\n|\r)/gm, '')
                                 .replace(regex, (_, key) => {
-                                    const _context = new Map()
-                                    
-                                    // Kopie, sonst wird auf überschriebenen Context-Key zugegriffen
-                                    for (const [key, value] of context.entries()) {
-                                        _context.set(key, value)
-                                    }
-
-                                    nodeHoldersByKeys.appendToKey(convertToFullKey(key, _context, index), { node: wrappedText, context: _context })
-                                    return resolveRelativeKey(key, data, _context)
+                                    nodeHoldersByKeys.appendToKey(key, { node: wrappedText, context: context })
+                                    return resolveKey(key, data, context)
                                 })
     }
 }
 
-function handleIfTag(node, data) {
+function handleIfTag(node, data, context = new Map(), index = -1, toFullKeyTemplate = false, refreshMode = false) {
     if (!node.hasAttribute('test')) {
         console.error('if-Tag requires test-Attribute')
         return
@@ -97,25 +102,36 @@ function handleIfTag(node, data) {
     // kann display im positiven Testfall auch leer bleiben
     const conditionKey = node.getAttribute('test')
     //console.log(conditionKey)
-    nodeHoldersByKeys.appendToKey(conditionKey, { node: node, context: {} })
+
+    /*const _context = new Map()
+
+    for (const [key, value] of context.entries()) {
+        _context.set(key, value)
+    }*/
+
+    nodeHoldersByKeys.appendToKey(conditionKey, { node: node, context: context })
 
     const conditionValue = data[conditionKey]
     node.style.display = conditionValue ? '' : 'none'
 
     if (conditionValue) {
-        render(data, node)
+        renderNodes(data, node.childNodes, context, index, toFullKeyTemplate, refreshMode)
     }
 }
 
-function handleEachTag(node, data, context = new Map(), index = -1) {
+function handleEachTag(node, data, context = new Map(), index = -1, toFullKeyTemplate = false, refreshMode = false) {
+    if (refreshMode) {
+        return
+    }
+
     const ofAttribute = node.getAttribute('of')
     const asAttribute = node.getAttribute('as')
 
     node.style.display = 'none'
 
-    const items = resolveRelativeKey(ofAttribute, data, context)
+    const items = resolveKey(ofAttribute, data, context)
 
-    if (!items instanceof Array) {
+    if (!(items instanceof Array)) {
         console.error('each-of must be an Array')
         return
     }
@@ -127,40 +143,49 @@ function handleEachTag(node, data, context = new Map(), index = -1) {
 
         for (const c of node.childNodes) {
             const cloned = c.cloneNode(true)
-            render(data, cloned, context, i)
+            render(data, cloned, context, i, true, refreshMode)
             node.parentNode.insertBefore(cloned, node)
         }
     }
+
+    // bei each findet keine Aufführung in nodeHoldersByKeys statt,
+    // da beim Refresh auf die zuvor bereits gerenderten each-Child-Elemente zurückgegriffen wird
 }
 
-function handleDefaultTag(node, data, context = new Map(), index = -1) {
-    interpolateText(node, data, context, index)
-    render(data, node, context, index)
+function handleDefaultTag(node, data, context = new Map(), index = -1, toFullKeyTemplate = false, refreshMode = false) {
+    interpolateText(node, data, context, index, toFullKeyTemplate)
+    renderNodes(data, node.childNodes, context, index, toFullKeyTemplate, refreshMode)
 }
 
-function renderChildNodes(data, childNodes, context = new Map(), index = -1) {
+function renderNodes(data, nodes, context = new Map(), index = -1, toFullKeyTemplate = false, refreshMode = false) {
     // childNodes beinhaltet im Gegensatz zu children auch Text-Nodes
-    const _childNodes = Array.from(childNodes)
+    const _nodes = Array.from(nodes)
 
-    for (const c of _childNodes) {
+    const _context = new Map()
+
+    for (const [key, value] of context.entries()) {
+        _context.set(key, value)
+    }
+
+    for (const n of _nodes) {
         //console.log(c)
-        switch (c.tagName) {
+        switch (n.tagName) {
             case 'IF':
-                handleIfTag(c, data)
+                handleIfTag(n, data, _context, index, toFullKeyTemplate, refreshMode)
                 break
             case 'EACH':
-                handleEachTag(c, data, context, index)
+                handleEachTag(n, data, _context, index, toFullKeyTemplate, refreshMode)
                 break
             default:
-                handleDefaultTag(c, data, context, index)
+                handleDefaultTag(n, data, _context, index, toFullKeyTemplate, refreshMode)
                 break
         }
     }
 }
 
 // für Root-Node
-function render(data, node, context = new Map(), index = -1) {
-    renderChildNodes(data, node.childNodes, context, index)
+function render(data, node, context = new Map(), index = -1, toFullKeyTemplate = false, refreshMode = false) {
+    renderNodes(data, [node], context, index, toFullKeyTemplate, refreshMode)
 }
 
 function refresh(data, changes) {
@@ -169,7 +194,7 @@ function refresh(data, changes) {
 
         for (const n of linkedNodeHolders) {
             //console.log(n.node)
-            renderChildNodes(data, [n.node], n.context)
+            renderNodes(data, [n.node], n.context, -1, false, true)
         }
     }
 }
