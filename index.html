@@ -34,15 +34,31 @@
             <each of="friends" as="f">
                 <li>{{ f.name }} ist {{ f.age }} Jahre alt</li>
 
-                <if test="showChilds">
+                <!--<if test="showChilds">-->
                     <ul>
                         <each of="f.childs" as="c">
-                            <li>{{ c }}</li>
+                            <li>{{ c.name }}</li>
+
+                            <ul>
+                                <each of="c.childs" as="d">
+                                    <li>{{ d }}</li>
+                                </each>
+                            </ul>
                         </each>
                     </ul>
-                </if>
+                <!--</if>-->
             </each>
         </ul>
+
+        <each of="friends" as="f">
+            <p>{{ f.name }}</p>
+
+            <if test="showChilds">
+                <each of="f.childs" as="c">
+                    <p>--- {{ c.name }}</p>
+                </each>
+            </if>
+        </each>
     </div>
 
     <script src="template-engine.js"></script>
@@ -57,11 +73,20 @@
             secondCondition: false,
             friends: [{
                 name: 'Freund1',
-                childs: ['Freund1_1', 'Freund1_2'],
+                childs: [{
+                    name: 'Freund1_1',
+                    childs: ['Freund1_1_1', 'Freund1_1_2']
+                }, {
+                    name: 'Freund1_2',
+                    childs: ['Freund1_2_1']
+                }],
                 age: 23
             }, {
                 name: 'Freund2',
-                childs: ['Freund2_1'],
+                childs: [{
+                    name: 'Freund2_1',
+                    childs: ['Freund2_1_1', 'Freund2_1_2']
+                }],
                 age: 25
             }],
             showChilds: true
