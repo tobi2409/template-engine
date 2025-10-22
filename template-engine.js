@@ -154,9 +154,8 @@ function handleEachTag(node, data, context = new Map(), indexStack = [], refresh
             const cloned = c.cloneNode(true)
             render(data, cloned, context, indexStack, true, refreshMode)
             node.parentNode.insertBefore(cloned, node)
+            //nodeHoldersByKeys.appendToKey(convertToFullKey(ofAttribute))
         }
-
-        //nodeHoldersByKeys.appendToKey(convertToFullKey(ofAttribute))
     }
 
     // dieser NodeHolder-Eintrag ist für Listenaktionen relevant
