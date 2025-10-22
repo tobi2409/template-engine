@@ -34,7 +34,7 @@
             <each of="friends" as="f">
                 <li>{{ f.name }} ist {{ f.age }} Jahre alt</li>
 
-                <!--<if test="showChilds">-->
+                <if test="showChilds">
                     <ul>
                         <each of="f.childs" as="c">
                             <li>{{ c.name }}</li>
@@ -46,18 +46,20 @@
                             </ul>
                         </each>
                     </ul>
-                <!--</if>-->
+                </if>
             </each>
         </ul>
 
         <each of="friends" as="f">
             <p>{{ f.name }}</p>
 
-            <if test="showChilds">
-                <each of="f.childs" as="c">
-                    <p>--- {{ c.name }}</p>
-                </each>
-            </if>
+            <div>
+                <if test="showChilds">
+                    <each of="f.childs" as="c">
+                        <p>--- {{ c.name }}</p>
+                    </each>
+                </if>
+            </div>
         </each>
     </div>
 
@@ -97,17 +99,11 @@
         data.counter = 2
         data.nestedCondition = false
         data.friends[0].name = 'Tobias'
-        const changes = ['counter', 'nestedCondition', 'friends.0.name']
-
-        /*const t1 = Date.now()
-        refresh(data, changes)
-        const t2 = Date.now()*/
-
-        /*const t1 = Date.now()
-        render(data, document.getElementById('app'))
-        const t2 = Date.now()*/
-
-        //console.log(t2 - t1)
+        data.friends.push({ name: 'Freund3', childs: [{ name: 'Freund3_1', childs: [] }, { name: 'Freund3_2', childs: [] }], age: 27 }) // friends.push -> key: friends
+        data.friends[1].childs.push({ name: 'Freund2_2', childs: [] })
+        data.friends[1].childs[0].childs.push('Freund2_1_3')
+        const changes = [{ key: 'counter' }, { key: 'nestedCondition' }, { key: 'friends.0.name' }, { key: 'friends', listAction: 'push' }, { key: 'friends.1.childs', listAction: 'push' },
+            { key: 'friends.1.childs.0.childs', listAction: 'push' }]
     </script>
 
 </body>

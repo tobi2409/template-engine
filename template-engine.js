@@ -1,9 +1,11 @@
 // TODOs:
 // nodeHolder.node muss bei einem Listenelement darstellen, ob etwas erstellt, geupdatet oder gelöscht wurde (bei Zuweisung eines neuen Arrays -> komplett neurendern)
+// ifHandler braucht noch Full-Key
 // Proxy
+// Kommentare verbessern
 
-// in dieser Map befinden sich nur
-// TextNodes (mglw. im span umrahmt) und if-Tags,
+// In dieser Map befinden sich
+// TextNodes (mglw. im span umrahmt), if-Tags ,
 // sodass die Childs dazu "kontrolliert" enthalten sind
 // das jeweilige Node ist allerdings noch in einem Objekt gekapselt für weitere Informationen
 const nodeHoldersByKeys = new Map()
@@ -35,7 +37,7 @@ function resolveKey(key, data, context = new Map()) {
     return value
 }
 
-function convertToFullKey(relativeKey, context, indexStack) {
+function convertToFullKey(relativeKey, context = new Map(), indexStack = []) {
     const splitted = relativeKey.split('.')
     const isFirstContext = context.has(splitted[0])
 
@@ -70,7 +72,6 @@ function interpolateText(node, data, context = new Map(), indexStack = [], toFul
 
         // Text wird in ein Span gewrappt, damit dort im Dataset das Template gesichert werden kann
         // ist es bereits ein Span, wird das wiederverwendet und sein Text anhand seines Templates ersetzt
-
         let wrappedText = node
 
         if (wrappedText.tagName !== 'SPAN') {
@@ -83,7 +84,7 @@ function interpolateText(node, data, context = new Map(), indexStack = [], toFul
         wrappedText.innerText = template
                                 .replace(/(\r\n|\n|\r)/gm, '')
                                 .replace(regex, (_, key) => {
-                                    nodeHoldersByKeys.appendToKey(key, { node: wrappedText, context: context })
+                                    nodeHoldersByKeys.appendToKey(key, { node: wrappedText, refreshAction: 'interpolate', context: context })
                                     return resolveKey(key, data, context)
                                 })
     }
@@ -99,7 +100,7 @@ function handleIfTag(node, data, context = new Map(), indexStack = [], toFullKey
     // kann display im positiven Testfall auch leer bleiben
     const conditionKey = node.getAttribute('test')
 
-    nodeHoldersByKeys.appendToKey(conditionKey, { node: node, context: context })
+    nodeHoldersByKeys.appendToKey(conditionKey, { node: node, refreshAction: 'handleIfTag', context: context })
 
     const conditionValue = data[conditionKey]
     node.style.display = conditionValue ? '' : 'none'
@@ -109,8 +110,8 @@ function handleIfTag(node, data, context = new Map(), indexStack = [], toFullKey
     }
 }
 
-function handleEachTag(node, data, context = new Map(), indexStack = [], refreshMode = false) {
-    if (refreshMode) {
+function handleEachTag(node, data, context = new Map(), indexStack = [], refreshMode = false, pushMode = false, customItems = [], customStartIndex = 0) {
+    if (refreshMode && !(pushMode)) {
         return
     }
 
@@ -119,32 +120,54 @@ function handleEachTag(node, data, context = new Map(), indexStack = [], refresh
 
     node.style.display = 'none'
 
-    const items = resolveKey(ofAttribute, data, context)
+    const items = pushMode ? customItems : resolveKey(ofAttribute, data, context)
 
     if (!(items instanceof Array)) {
         console.error('each-of must be an Array')
         return
     }
 
-    indexStack.push(0)
-
+    // oldContext und oldIndexStack werden für den NodeHolder gesetzt
+    // dieser NodeHolder gilt für das Array
+    // oldContext und oldIndexStack stellen den Stand vor dem Child-Iterieren dar
+    // sodass ein array.push beim Refresh eine Orientierung hat,
+    // in welchem Parent das Push erfolgen soll
+    const oldContext = new Map()
+    
+    for (const [key, value] of context.entries()) {
+        oldContext.set(key, value)
+    }
+    
+    const oldIndexStack = Array.from(indexStack)
+    
+    indexStack.push(pushMode ? customStartIndex : 0)
+    
     for (let i = 0 ; i < items.length ; i++) {
         d = items[i]
         
         context.set(asAttribute, { data: d, of: ofAttribute })
 
         indexStack.pop()
-        indexStack.push(i)
+        indexStack.push(pushMode ? customStartIndex + i : i)
 
         for (const c of node.childNodes) {
             const cloned = c.cloneNode(true)
             render(data, cloned, context, indexStack, true, refreshMode)
             node.parentNode.insertBefore(cloned, node)
         }
+
+        //nodeHoldersByKeys.appendToKey(convertToFullKey(ofAttribute))
     }
 
-    // bei each findet keine Aufführung in nodeHoldersByKeys statt,
-    // da beim Refresh auf die zuvor bereits gerenderten each-Child-Elemente zurückgegriffen wird
+    // dieser NodeHolder-Eintrag ist für Listenaktionen relevant
+    // man gibt den Context, IndexStack auf dem Stand vor der Iteration mit
+    // vor der Iteration, weil der Child-Context nicht hier rein gehört
+    // wenn man also ein Child c für eine Person p hinzufügen will,
+    // dann muss man die jeweilige p kennen (Context)
+    if (!pushMode) {
+        nodeHoldersByKeys.appendToKey(convertToFullKey(ofAttribute, oldContext, oldIndexStack),
+                                    { node: node, refreshAction: 'listAction', context: oldContext, indexStack: oldIndexStack })
+    }
 }
 
 function handleDefaultTag(node, data, context = new Map(), indexStack = [], toFullKeyTemplate = false, refreshMode = false) {
@@ -190,11 +213,43 @@ function render(data, node, context = new Map(), indexStack = [], toFullKeyTempl
 // IndexStack ist dadurch also hier nicht mehr nötig
 // gleiches gilt für Context
 function refresh(data, changes) {
+
+    function handleListAction(key, listAction, eachTemplate, context, indexStack) {
+        function handlePush() {
+            const items = resolveKey(key, data)
+            const pushedItem = items[items.length - 1] // beim Pushen braucht man das letzte Element der Liste
+
+            handleEachTag(eachTemplate, data, context, indexStack, false, true, [pushedItem], items.length - 1)
+        }
+
+        function handleDeleteChild() {
+        }
+
+        switch (listAction) {
+            case 'push':
+                handlePush()
+                break
+            case 'deleteChild':
+                handleDeleteChild()
+                break
+        }
+    }
+
     for (const ch of changes) {
-        const linkedNodeHolders = nodeHoldersByKeys.get(ch)
+        const linkedNodeHolders = nodeHoldersByKeys.get(ch.key)
 
         for (const n of linkedNodeHolders) {
-            renderNodes(data, [n.node], [], [], false, true)
+            switch (n.refreshAction) {
+                case 'interpolate':
+                    interpolateText(n.node, data, new Map(), [], false)
+                    break
+                case 'handleIfTag':
+                    handleIfTag(n.node, data, new Map(), [], false, true)
+                    break
+                case 'listAction':
+                    handleListAction(ch.key, ch.listAction, n.node, n.context, n.indexStack)
+                    break
+            }
         }
     }
 }
