@@ -84,6 +84,7 @@ function interpolateText(node, data, context = new Map(), indexStack = [], toFul
         wrappedText.innerText = template
                                 .replace(/(\r\n|\n|\r)/gm, '')
                                 .replace(regex, (_, key) => {
+                                    //TODO: überprüfen, ob key ein Array ist (wenn nein, dann nodeHolder)
                                     nodeHoldersByKeys.appendToKey(key, { node: wrappedText, refreshAction: 'interpolate', context: context })
                                     return resolveKey(key, data, context)
                                 })
