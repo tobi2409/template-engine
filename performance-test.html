@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Template Engine Performance Test</title>
+<style>
+  #app { font-family: sans-serif; }
+  .item { padding: 2px 0; border-bottom: 1px solid #eee; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <each of="items" as="item">
+    <div class="item">{{item.name}} - {{item.value}}</div>
+  </each>
+</div>
+
+<script src="template-engine.js"></script>
+
+<script src="performance-test.js"></script>
+</body>
+</html>
