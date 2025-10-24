@@ -122,12 +122,27 @@ function handleEachTag(node, data, context = new Map(), indexStack = [], refresh
         return
     }
 
+    //TODO: Code verschönern
+    let _context = context
+    let _indexStack = indexStack
+
+    // beim Refreshen wird nicht render aufgerufen, sondern direkt handleEachTag (somit muss hier die Kopie erstellt werden)
+    if (pushMode) {
+        _context = new Map()
+
+        for (const [key, value] of context.entries()) {
+            _context.set(key, value)
+        }
+
+        _indexStack = Array.from(indexStack)
+    }
+
     const ofAttribute = node.getAttribute('of')
     const asAttribute = node.getAttribute('as')
 
     node.style.display = 'none'
 
-    const items = pushMode ? customItems : resolveKey(ofAttribute, data, context)
+    const items = pushMode ? customItems : resolveKey(ofAttribute, data, _context)
 
     if (items.constructor.name !== 'Array') {
         console.error('each-of must be an Array')
@@ -141,29 +156,29 @@ function handleEachTag(node, data, context = new Map(), indexStack = [], refresh
     // in welchem Parent das Push erfolgen soll
     const oldContext = new Map()
     
-    for (const [key, value] of context.entries()) {
+    for (const [key, value] of _context.entries()) {
         oldContext.set(key, value)
     }
     
-    const oldIndexStack = Array.from(indexStack)
+    const oldIndexStack = Array.from(_indexStack)
     
-    indexStack.push(pushMode ? customStartIndex : 0)
+    _indexStack.push(pushMode ? customStartIndex : 0)
 
     const fullKey = convertToFullKey(ofAttribute, oldContext, oldIndexStack)
     
     for (let i = 0 ; i < items.length ; i++) {
         d = items[i]
         
-        context.set(asAttribute, { data: d, of: ofAttribute })
+        _context.set(asAttribute, { data: d, of: ofAttribute })
 
-        indexStack.pop()
+        _indexStack.pop()
 
         const index = pushMode ? customStartIndex + i : i
-        indexStack.push(index)
+        _indexStack.push(index)
 
         for (const c of node.childNodes) {
             const cloned = c.cloneNode(true)
-            render(data, cloned, context, indexStack, true, refreshMode)
+            render(data, cloned, _context, _indexStack, true, refreshMode)
             node.parentNode.insertBefore(cloned, node)
             
             const value = resolveKey(`${fullKey}.${index}`, data, context)
@@ -225,14 +240,14 @@ function render(data, node, context = new Map(), indexStack = [], toFullKeyTempl
 // innerhalb des Templates mithilfe des Indexstacks konvertiert
 // IndexStack ist dadurch also hier nicht mehr nötig
 // gleiches gilt für Context
-function refresh(data, changes) {
+function refresh(data, change) {
 
     function createItem(ch) {
         const linkedNodeHolders = nodeHoldersByKeys.get(ch.key)
 
         for (const n of linkedNodeHolders) {
             const items = resolveKey(ch.key, data)
-            //TODO: man kann auch mehrere Elemente pushen
+            //TODO: man soll auch mehrere Elemente pushen können
             const pushedItem = items[items.length - 1] // beim Pushen braucht man das letzte Element der Liste
 
             const eachTemplate = n.node
@@ -254,9 +269,6 @@ function refresh(data, changes) {
                     break
                 case 'set':
                     break
-                /*case 'listAction':
-                    handleListAction(ch.key, ch.listAction, n.node, n.context, n.indexStack)
-                    break*/
             }
         }
     }
@@ -269,59 +281,72 @@ function refresh(data, changes) {
         }
     }
 
-    for (const ch of changes) {
-        const action = ch.action
+    const action = change.action
 
-        switch (action) {
-            case 'createItem':
-                createItem(ch)
-                break
-            case 'update':
-                updateHandler(ch)
-                break
-            case 'delete':
-                deleteHandler(ch)
-                break
-        }
+    switch (action) {
+        case 'createItem':
+            createItem(change)
+            break
+        case 'update':
+            updateHandler(change)
+            break
+        case 'delete':
+            deleteHandler(change)
+            break
     }
 }
 
-function reactive(data, fullKey = '') {
+function reactive(data) {
 
-    let _fullKey = ''
-    
-    return new Proxy(data, {
-        get(target, prop) {
-            _fullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
+    const topData = data
 
-            const value = target[prop]
-            if (value && typeof value === 'object') {
-                return reactive(value, _fullKey) // tiefes Wrappen des Proxys
-            }
+    function _reactive(data, fullKey = '') {
 
-            return value
-        },
-
-        set(target, prop, value) {
-            if (prop !== 'length') {
-                
-                if (target.constructor.name == 'Array' && !isNaN(prop) && prop >= target.length) {
-                    console.log('PUSH')
-                }
-                
+        let _fullKey = ''
+        
+        return new Proxy(data, {
+            get(target, prop) {
                 _fullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
-                console.log(_fullKey)
+
+                const value = target[prop]
+                if (value && typeof value === 'object') {
+                    return _reactive(value, _fullKey) // tiefes Wrappen des Proxys
+                }
+
+                return value
+            },
+
+            set(target, prop, value) {
+                if (prop !== 'length') {
+                    _fullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
+                    console.log(_fullKey)
+
+                    const isArrayPush = target.constructor.name == 'Array' && !isNaN(prop) && prop >= target.length
+
+                    target[prop] = value
+                    
+                    let change = { key: _fullKey, action: 'update' }
+
+                    if (isArrayPush) {
+                        change = { key: fullKey, action: 'createItem' } // createItem wird noch auf Basis des Parents durchgeführt, deswegen nicht _fullKey
+                    } 
+
+                    refresh(topData, change)
+                }
+
+                return true
+            },
+
+            deleteProperty(target, prop) {
+                _fullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
+
+                const change = { key: _fullKey, action: 'delete' }
+                refresh(topData, change)
+
+                return true
             }
-            
-            target[prop] = value
+        })
+    }
 
-            return true
-        },
-
-        deleteProperty(target, prop) {
-            _fullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
-
-            console.log(_fullKey)
-        }
-    })
+    return _reactive(data)
 }
