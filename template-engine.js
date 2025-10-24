@@ -85,8 +85,14 @@ function interpolateText(node, data, context = new Map(), indexStack = [], toFul
                                 .replace(/(\r\n|\n|\r)/gm, '')
                                 .replace(regex, (_, key) => {
                                     //TODO: überprüfen, ob key ein Array ist (wenn nein, dann nodeHolder)
-                                    nodeHoldersByKeys.appendToKey(key, { node: wrappedText, refreshAction: 'interpolate', context: context })
-                                    return resolveKey(key, data, context)
+                                    const interpolatedText = resolveKey(key, data, context)
+
+                                    //console.log(interpolatedText)
+                                    //if (interpolatedText instanceof String) {
+                                        nodeHoldersByKeys.appendToKey(key, { node: wrappedText, updateHandler: 'interpolate', context: context })
+                                    //}
+
+                                    return interpolatedText
                                 })
     }
 }
@@ -101,7 +107,7 @@ function handleIfTag(node, data, context = new Map(), indexStack = [], toFullKey
     // kann display im positiven Testfall auch leer bleiben
     const conditionKey = node.getAttribute('test')
 
-    nodeHoldersByKeys.appendToKey(conditionKey, { node: node, refreshAction: 'handleIfTag', context: context })
+    nodeHoldersByKeys.appendToKey(conditionKey, { node: node, updateHandler: 'handleIfTag', context: context })
 
     const conditionValue = data[conditionKey]
     node.style.display = conditionValue ? '' : 'none'
@@ -123,7 +129,7 @@ function handleEachTag(node, data, context = new Map(), indexStack = [], refresh
 
     const items = pushMode ? customItems : resolveKey(ofAttribute, data, context)
 
-    if (!(items instanceof Array)) {
+    if (items.constructor.name !== 'Array') {
         console.error('each-of must be an Array')
         return
     }
@@ -142,6 +148,8 @@ function handleEachTag(node, data, context = new Map(), indexStack = [], refresh
     const oldIndexStack = Array.from(indexStack)
     
     indexStack.push(pushMode ? customStartIndex : 0)
+
+    const fullKey = convertToFullKey(ofAttribute, oldContext, oldIndexStack)
     
     for (let i = 0 ; i < items.length ; i++) {
         d = items[i]
@@ -149,13 +157,19 @@ function handleEachTag(node, data, context = new Map(), indexStack = [], refresh
         context.set(asAttribute, { data: d, of: ofAttribute })
 
         indexStack.pop()
-        indexStack.push(pushMode ? customStartIndex + i : i)
+
+        const index = pushMode ? customStartIndex + i : i
+        indexStack.push(index)
 
         for (const c of node.childNodes) {
             const cloned = c.cloneNode(true)
             render(data, cloned, context, indexStack, true, refreshMode)
             node.parentNode.insertBefore(cloned, node)
-            //nodeHoldersByKeys.appendToKey(convertToFullKey(ofAttribute))
+            
+            const value = resolveKey(`${fullKey}.${index}`, data, context)
+            if (typeof value !== 'string') {
+                nodeHoldersByKeys.appendToKey(`${fullKey}.${index}`, { node: cloned, updateHandler: 'set' }) //TODO
+            }
         }
     }
 
@@ -165,8 +179,7 @@ function handleEachTag(node, data, context = new Map(), indexStack = [], refresh
     // wenn man also ein Child c für eine Person p hinzufügen will,
     // dann muss man die jeweilige p kennen (Context)
     if (!pushMode) {
-        nodeHoldersByKeys.appendToKey(convertToFullKey(ofAttribute, oldContext, oldIndexStack),
-                                    { node: node, refreshAction: 'listAction', context: oldContext, indexStack: oldIndexStack })
+        nodeHoldersByKeys.appendToKey(fullKey, { node: node, updateHandler: 'set', context: oldContext, indexStack: oldIndexStack })
     }
 }
 
@@ -214,42 +227,101 @@ function render(data, node, context = new Map(), indexStack = [], toFullKeyTempl
 // gleiches gilt für Context
 function refresh(data, changes) {
 
-    function handleListAction(key, listAction, eachTemplate, context, indexStack) {
-        function handlePush() {
-            const items = resolveKey(key, data)
-            const pushedItem = items[items.length - 1] // beim Pushen braucht man das letzte Element der Liste
-
-            handleEachTag(eachTemplate, data, context, indexStack, false, true, [pushedItem], items.length - 1)
-        }
-
-        function handleDeleteChild() {
-        }
-
-        switch (listAction) {
-            case 'push':
-                handlePush()
-                break
-            case 'deleteChild':
-                handleDeleteChild()
-                break
-        }
-    }
-
-    for (const ch of changes) {
+    function createItem(ch) {
         const linkedNodeHolders = nodeHoldersByKeys.get(ch.key)
 
         for (const n of linkedNodeHolders) {
-            switch (n.refreshAction) {
+            const items = resolveKey(ch.key, data)
+            //TODO: man kann auch mehrere Elemente pushen
+            const pushedItem = items[items.length - 1] // beim Pushen braucht man das letzte Element der Liste
+
+            const eachTemplate = n.node
+
+            handleEachTag(eachTemplate, data, n.context, n.indexStack, false, true, [pushedItem], items.length - 1)
+        }
+    }
+
+    function updateHandler(ch) {
+        const linkedNodeHolders = nodeHoldersByKeys.get(ch.key)
+
+        for (const n of linkedNodeHolders) {
+            switch (n.updateHandler) {
                 case 'interpolate':
                     interpolateText(n.node, data, new Map(), [], false)
                     break
                 case 'handleIfTag':
                     handleIfTag(n.node, data, new Map(), [], false, true)
                     break
-                case 'listAction':
-                    handleListAction(ch.key, ch.listAction, n.node, n.context, n.indexStack)
+                case 'set':
                     break
+                /*case 'listAction':
+                    handleListAction(ch.key, ch.listAction, n.node, n.context, n.indexStack)
+                    break*/
             }
         }
     }
+
+    function deleteHandler(ch) {
+        const linkedNodeHolders = nodeHoldersByKeys.get(ch.key)
+
+        for (const n of linkedNodeHolders) {
+            n.node.remove()
+        }
+    }
+
+    for (const ch of changes) {
+        const action = ch.action
+
+        switch (action) {
+            case 'createItem':
+                createItem(ch)
+                break
+            case 'update':
+                updateHandler(ch)
+                break
+            case 'delete':
+                deleteHandler(ch)
+                break
+        }
+    }
+}
+
+function reactive(data, fullKey = '') {
+
+    let _fullKey = ''
+    
+    return new Proxy(data, {
+        get(target, prop) {
+            _fullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
+
+            const value = target[prop]
+            if (value && typeof value === 'object') {
+                return reactive(value, _fullKey) // tiefes Wrappen des Proxys
+            }
+
+            return value
+        },
+
+        set(target, prop, value) {
+            if (prop !== 'length') {
+                
+                if (target.constructor.name == 'Array' && !isNaN(prop) && prop >= target.length) {
+                    console.log('PUSH')
+                }
+                
+                _fullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
+                console.log(_fullKey)
+            }
+            
+            target[prop] = value
+
+            return true
+        },
+
+        deleteProperty(target, prop) {
+            _fullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
+
+            console.log(_fullKey)
+        }
+    })
 }
