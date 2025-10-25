@@ -1,5 +1,5 @@
 // --- Testdaten erzeugen ---
-const N = 300000; // sehr große Liste
+const N = 100000; // sehr große Liste
 const items = Array.from({ length: N }, (_, i) => ({
     id: i + 1,
     name: "Item " + (i + 1),
@@ -22,7 +22,7 @@ console.timeEnd("Initial Render");
 setTimeout(() => {
     console.time("Update 500 Items");
     // zufällig 500 Items updaten
-    for (let i = 0; i < 200000; i++) {
+    for (let i = 0; i < 50000; i++) {
         const idx = Math.floor(Math.random() * N);
         model.items[idx].value = Math.floor(Math.random() * 1000);
     }

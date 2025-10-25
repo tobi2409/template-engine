@@ -63,10 +63,10 @@
         </each>
     </div>
 
-    <script src="template-engine.js"></script>
+    <script type="module">
+        import TemplateEngine from './template-engine.js'
 
-    <script>
-        const data = reactive({
+        const data = TemplateEngine.reactive({
             name: 'Tobias',
             age: 31,
             counter: 1,
@@ -92,39 +92,42 @@
                 age: 25
             }],
             showChilds: true
-        })
+        }, document.getElementById('app'))
 
-        render(data, document.getElementById('app'))
+        //render(data, document.getElementById('app'))
 
-        /*data.counter = 2
+        data.counter = 2
         data.nestedCondition = false
         data.friends[0].name = 'Tobias'
         data.friends.push({ name: 'Freund3', childs: [{ name: 'Freund3_1', childs: [] }, { name: 'Freund3_2', childs: [] }], age: 27 }) // friends.push -> key: friends
         data.friends[1].childs.push({ name: 'Freund2_2', childs: [] })
         data.friends[1].childs[0].childs.push('Freund2_1_3')
-        let changes = [{ key: 'counter', action: 'update' }, { key: 'nestedCondition', action: 'update' },
+        /*let changes = [{ key: 'counter', action: 'update' }, { key: 'nestedCondition', action: 'update' },
                         { key: 'friends.0.name', action: 'update' }, { key: 'friends', action: 'createItem' },
                         { key: 'friends.1.childs', action: 'createItem' }, { key: 'friends.1.childs.0.childs', action: 'createItem' }]
-        refresh(data, changes)
+        refresh(data, changes)*/
 
         data.friends[1].childs.push({ name: 'Freund2_3', childs: ['Freund2_3_1', 'Freund2_3_2'] }, { name: 'Freund2_4', childs: [] })
-        changes = [{ key: 'friends.1.childs', action: 'createItem' }]
-        refresh(data, changes)
+        /*changes = [{ key: 'friends.1.childs', action: 'createItem' }]
+        refresh(data, changes)*/
 
         delete data.friends[1].childs[0]
-        changes = [{ key: 'friends.1.childs.0', action: 'delete' }]
-        refresh(data, changes)
+        /*changes = [{ key: 'friends.1.childs.0', action: 'delete' }]
+        refresh(data, changes)*/
 
         delete data.name
-        changes = [{ key: 'name', action: 'delete' }]
-        refresh(data, changes)
+        /*changes = [{ key: 'name', action: 'delete' }]
+        refresh(data, changes)*/
 
         delete data.showSecondHallo
-        changes = [{ key: 'showSecondHallo', action: 'delete' }]
-        refresh(data, changes)
+        /*changes = [{ key: 'showSecondHallo', action: 'delete' }]
+        refresh(data, changes)*/
 
-        data.friends[1] = { name: 'Test1', age: 20, childs: [{ name: 'Test1_1', childs: [] }, { name: 'Test1_2', childs: [] }] }
-        changes = [{ key: 'friends.1', action: 'update' }] //TODO*/
+        data.friends[1].childs = [{ name: 'Test2_1', age: 30, childs: ['Test2_1_1', 'Test2_1_2'] }, { name: 'Test2_2', age: 25, childs: [] }]
+        //data.friends[1].childs = data.friends[1].childs.slice(1, 3)
+
+        //data.friends[1] = { name: 'Test1', age: 20, childs: [{ name: 'Test1_1', childs: [] }, { name: 'Test1_2', childs: [] }] }
+        /*changes = [{ key: 'friends.1', action: 'update' }] //TODO*/
     </script>
 
 </body>

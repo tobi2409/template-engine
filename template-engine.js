@@ -244,8 +244,12 @@ const TemplateEngine = (function () {
     // IndexStack ist dadurch also hier nicht mehr nötig
     // gleiches gilt für Context
     function refresh(data, change) {
+        
+        function createItemsNodes(items, eachTemplate, context, indexStack, startIndex) {
+            handleEachTag(eachTemplate, data, context, indexStack, false, true, items, startIndex)
+        }
 
-        function createItem(ch) {
+        function createItemHandler(ch) {
             const linkedNodeHolders = nodeHoldersByKeys.get(ch.key)
 
             for (const n of linkedNodeHolders) {
@@ -255,24 +259,39 @@ const TemplateEngine = (function () {
 
                 const eachTemplate = n.node
 
-                handleEachTag(eachTemplate, data, n.context, n.indexStack, false, true, [pushedItem], items.length - 1)
+                createItemsNodes([pushedItem], eachTemplate, n.context, n.indexStack, items.length - 1)
             }
         }
 
         function updateHandler(ch) {
+
+            function handleSetArray(n) {
+                const items = resolveKey(ch.key, data)
+                const eachTemplate = n.node
+
+                const _eachChildNodes = Array.from(eachTemplate.parentNode.childNodes)
+
+                for (const c of _eachChildNodes) {
+                    if (c !== eachTemplate) {
+                        c.remove()
+                    }
+                }
+
+                createItemsNodes(items, eachTemplate, n.context, n.indexStack, 0)
+            }
+
             const linkedNodeHolders = nodeHoldersByKeys.get(ch.key)
 
             for (const n of linkedNodeHolders) {
                 switch (n.updateHandler) {
                     case 'interpolate':
-                        interpolateText(n.node, data, new Map(), [], false)
+                        interpolateText(n.node, data, new Map(), [], false) // kein Context/IndexStack nötig, weil templates schon Full-Key aufweisen
                         break
                     case 'handleIfTag':
                         handleIfTag(n.node, data, new Map(), [], false, true)
                         break
                     case 'setArray':
-                        console.log('TODO')
-                        //console.log(resolveKey(ch.key, data, n.context))
+                        handleSetArray(n)
                         break
                 }
             }
@@ -283,7 +302,7 @@ const TemplateEngine = (function () {
 
             for (const n of linkedNodeHolders) {
                 n.node.remove()
-                //TODO: cleanup
+                //TODO: cleanup der NodeHolders
             }
         }
 
@@ -291,7 +310,7 @@ const TemplateEngine = (function () {
 
         switch (action) {
             case 'createItem':
-                createItem(change)
+                createItemHandler(change)
                 break
             case 'update':
                 updateHandler(change)
