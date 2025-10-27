@@ -22,7 +22,23 @@ const TemplateEngine = (function () {
 
         if (!nodeHoldersByKey.some(e => e.node === nodeHolder.node)) {
             nodeHoldersByKey.push(nodeHolder)
+            nodeRefs.appendToNode(nodeHolder.node, { key: key, nodeHolders: nodeHoldersByKeys.get(key), index: nodeHoldersByKeys.get(key).length - 1})
         }
+    }
+
+    const nodeRefs = new WeakMap()
+
+    nodeRefs.appendToNode = function(node, infos) {
+        if (!nodeRefs.has(node)) {
+            nodeRefs.set(node, [])
+        }
+
+        const infosByNode = nodeRefs.get(node)
+        infosByNode.push(infos)
+    }
+
+    function removeNode(n) {
+        //
     }
 
     function resolveKey(key, data, context = new Map()) {
@@ -100,29 +116,26 @@ const TemplateEngine = (function () {
         }
     }
 
-    function handleIfTag(node, data, context = new Map(), indexStack = [], toFullKeyTemplate = false, refreshMode = false) {
-        if (!node.hasAttribute('test')) {
-            console.error('if-Tag requires test-Attribute')
-            return
-        }
+    function handleIfTag(node, data, context = new Map(), indexStack = [], toFullKeyTemplate = false, removeClonedNodes = false) {
+        if (removeClonedNodes) {
 
-        // da if-Tag sowieso keinen Einfluss auf die Darstellung hat,
-        // kann display im positiven Testfall auch leer bleiben
-        const conditionKey = node.getAttribute('test')
+            node.querySelectorAll(':scope .templateengine-cloned, :scope .templateengine-cloned *').forEach(e => {
+                e.remove()
 
-        nodeHoldersByKeys.appendToKey(conditionKey, { node: node, updateHandler: 'handleIfTag', context: context })
+                const infosByNode = nodeRefs.get(e)
+                for (const i of infosByNode) {
+                    console.log(i.key)
+                    const nodeHolders = i.nodeHolders
+                    nodeHolders.splice(i.index, 1)
+                    
+                    for (const a of nodeHolders) {
+                        console.log(a)
+                    }
+                }
 
-        const conditionValue = data[conditionKey]
-        node.style.display = conditionValue ? '' : 'none'
+                console.log('------------')
+            })
 
-        if (conditionValue) {
-            renderNodes(data, node.childNodes, context, indexStack, toFullKeyTemplate, refreshMode)
-        }
-    }
-
-    function handleEachTag(node, data, context = new Map(), indexStack = [], refreshMode = false, pushMode = false, customItems = [], customStartIndex = 0) {
-        if (refreshMode && !(pushMode)) {
-            return
         }
 
         //TODO: Code verschönern
@@ -130,7 +143,49 @@ const TemplateEngine = (function () {
         let _indexStack = indexStack
 
         // beim Refreshen wird nicht render aufgerufen, sondern direkt handleEachTag (somit muss hier die Kopie erstellt werden)
-        if (pushMode) {
+        if (removeClonedNodes) {
+            _context = new Map()
+
+            for (const [key, value] of context.entries()) {
+                _context.set(key, value)
+            }
+
+            _indexStack = Array.from(indexStack)
+        }
+
+        if (!node.hasAttribute('test')) {
+            console.error('if-Tag requires test-Attribute')
+            return
+        }
+
+        // da if-Tag sowieso keinen Einfluss auf die Darstellung hat,
+        // kann display im positiven Testfall auch leer bleiben
+        const conditionKey = convertToFullKey(node.getAttribute('test'), _context, _indexStack)
+
+        if (!removeClonedNodes) { // Test-Fall soll nicht einfach abgeändert werden können
+            // IndexStack ist für Refresh notwendig, sobald man each-Childs rendert
+            nodeHoldersByKeys.appendToKey(conditionKey, { node: node, updateHandler: 'handleIfTag', context: _context, indexStack: _indexStack })
+        }
+
+        const conditionValue = resolveKey(conditionKey, data, _context)
+        //node.style.display = conditionValue ? '' : 'none'
+
+        if (conditionValue) {
+            renderNodes(data, node.childNodes, _context, _indexStack, toFullKeyTemplate)
+        }
+    }
+
+    function handleEachTag(node, data, context = new Map(), indexStack = [], insertItemsMode = false, customItems = [], customStartIndex = 0) {
+        /*if (refreshMode && !(pushMode)) {
+            return
+        }*/
+
+        //TODO: Code verschönern
+        let _context = context
+        let _indexStack = indexStack
+
+        // beim Refreshen wird nicht render aufgerufen, sondern direkt handleEachTag (somit muss hier die Kopie erstellt werden)
+        if (insertItemsMode) {
             _context = new Map()
 
             for (const [key, value] of context.entries()) {
@@ -145,7 +200,7 @@ const TemplateEngine = (function () {
 
         node.style.display = 'none'
 
-        const items = pushMode ? customItems : resolveKey(ofAttribute, data, _context)
+        const items = insertItemsMode ? customItems : resolveKey(ofAttribute, data, _context)
 
         if (items.constructor.name !== 'Array') {
             console.error('each-of must be an Array')
@@ -165,7 +220,7 @@ const TemplateEngine = (function () {
         
         const oldIndexStack = Array.from(_indexStack)
         
-        _indexStack.push(pushMode ? customStartIndex : 0)
+        _indexStack.push(insertItemsMode ? customStartIndex : 0)
 
         const fullKey = convertToFullKey(ofAttribute, oldContext, oldIndexStack)
         
@@ -176,17 +231,24 @@ const TemplateEngine = (function () {
 
             _indexStack.pop()
 
-            const index = pushMode ? customStartIndex + i : i
+            const index = insertItemsMode ? customStartIndex + i : i
             _indexStack.push(index)
 
             for (const c of node.childNodes) {
                 const cloned = c.cloneNode(true)
-                render(data, cloned, _context, _indexStack, true, refreshMode)
+                render(data, cloned, _context, _indexStack, true)
+
+                if (cloned.classList) {
+                    cloned.classList.add('templateengine-cloned')
+                }
+
                 node.parentNode.insertBefore(cloned, node)
                 
-                const value = resolveKey(`${fullKey}.${index}`, data, context)
+                const newFullKey = `${fullKey}.${index}`
+                const value = resolveKey(newFullKey, data, context)
+
                 if (typeof value !== 'string') {
-                    nodeHoldersByKeys.appendToKey(`${fullKey}.${index}`, { node: cloned, updateHandler: 'setObject' }) //TODO
+                    nodeHoldersByKeys.appendToKey(newFullKey, { node: cloned, updateHandler: 'setObject' }) //TODO: setObject
                 }
             }
         }
@@ -196,17 +258,17 @@ const TemplateEngine = (function () {
         // vor der Iteration, weil der Child-Context nicht hier rein gehört
         // wenn man also ein Child c für eine Person p hinzufügen will,
         // dann muss man die jeweilige p kennen (Context)
-        if (!pushMode) {
+        if (!insertItemsMode) {
             nodeHoldersByKeys.appendToKey(fullKey, { node: node, updateHandler: 'setArray', context: oldContext, indexStack: oldIndexStack })
         }
     }
 
-    function handleDefaultTag(node, data, context = new Map(), indexStack = [], toFullKeyTemplate = false, refreshMode = false) {
+    function handleDefaultTag(node, data, context = new Map(), indexStack = [], toFullKeyTemplate = false) {
         interpolateText(node, data, context, indexStack, toFullKeyTemplate)
-        renderNodes(data, node.childNodes, context, indexStack, toFullKeyTemplate, refreshMode)
+        renderNodes(data, node.childNodes, context, indexStack, toFullKeyTemplate)
     }
 
-    function renderNodes(data, nodes, context = new Map(), indexStack = [], toFullKeyTemplate = false, refreshMode = false) {
+    function renderNodes(data, nodes, context = new Map(), indexStack = [], toFullKeyTemplate = false) {
         // childNodes beinhaltet im Gegensatz zu children auch Text-Nodes
         const _nodes = Array.from(nodes)
 
@@ -221,21 +283,21 @@ const TemplateEngine = (function () {
         for (const n of _nodes) {
             switch (n.tagName) {
                 case 'IF':
-                    handleIfTag(n, data, _context, _indexStack, toFullKeyTemplate, refreshMode)
+                    handleIfTag(n, data, _context, _indexStack, toFullKeyTemplate, false)
                     break
                 case 'EACH':
-                    handleEachTag(n, data, _context, _indexStack, refreshMode)
+                    handleEachTag(n, data, _context, _indexStack, false, [], 0)
                     break
                 default:
-                    handleDefaultTag(n, data, _context, _indexStack, toFullKeyTemplate, refreshMode)
+                    handleDefaultTag(n, data, _context, _indexStack, toFullKeyTemplate)
                     break
             }
         }
     }
 
     // für Root-Node
-    function render(data, node, context = new Map(), indexStack = [], toFullKeyTemplate = false, refreshMode = false) {
-        renderNodes(data, [node], context, indexStack, toFullKeyTemplate, refreshMode)
+    function render(data, node, context = new Map(), indexStack = [], toFullKeyTemplate = false) {
+        renderNodes(data, [node], context, indexStack, toFullKeyTemplate)
     }
 
     // beim Refreshen kann der IndexStack leer sein,
@@ -246,7 +308,7 @@ const TemplateEngine = (function () {
     function refresh(data, change) {
         
         function createItemsNodes(items, eachTemplate, context, indexStack, startIndex) {
-            handleEachTag(eachTemplate, data, context, indexStack, false, true, items, startIndex)
+            handleEachTag(eachTemplate, data, context, indexStack, true, items, startIndex)
         }
 
         function createItemHandler(ch) {
@@ -269,13 +331,15 @@ const TemplateEngine = (function () {
                 const items = resolveKey(ch.key, data)
                 const eachTemplate = n.node
 
-                const _eachChildNodes = Array.from(eachTemplate.parentNode.childNodes)
+                eachTemplate.parentNode.querySelectorAll('[data-cloned="true"]').forEach(e => e.remove())
+
+                /*const _eachChildNodes = Array.from(eachTemplate.parentNode.childNodes)
 
                 for (const c of _eachChildNodes) {
-                    if (c !== eachTemplate) {
+                    if (c !== eachTemplate) { //TODO: würde auch Nodes löschen, die nicht zu einem each-Child gehören
                         c.remove()
                     }
-                }
+                }*/
 
                 createItemsNodes(items, eachTemplate, n.context, n.indexStack, 0)
             }
@@ -288,7 +352,7 @@ const TemplateEngine = (function () {
                         interpolateText(n.node, data, new Map(), [], false) // kein Context/IndexStack nötig, weil templates schon Full-Key aufweisen
                         break
                     case 'handleIfTag':
-                        handleIfTag(n.node, data, new Map(), [], false, true)
+                        handleIfTag(n.node, data, n.context, n.indexStack, true, true)
                         break
                     case 'setArray':
                         handleSetArray(n)
@@ -301,7 +365,7 @@ const TemplateEngine = (function () {
             const linkedNodeHolders = nodeHoldersByKeys.get(ch.key)
 
             for (const n of linkedNodeHolders) {
-                n.node.remove()
+                n.node.remove() // remove() löscht nur vom DOM, nicht vom Speicher
                 //TODO: cleanup der NodeHolders
             }
         }
@@ -321,7 +385,7 @@ const TemplateEngine = (function () {
         }
     }
 
-    return {
+    return {a: nodeHoldersByKeys, b: nodeRefs,
         reactive(data, node) {
 
             render(data, node)
@@ -347,8 +411,7 @@ const TemplateEngine = (function () {
                     set(target, prop, value) {
                         if (prop !== 'length') {
                             _fullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
-                            console.log(_fullKey)
-
+                            
                             const isArrayPush = target.constructor.name == 'Array' && !isNaN(prop) && prop >= target.length
 
                             target[prop] = value
