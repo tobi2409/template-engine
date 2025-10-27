@@ -51,7 +51,7 @@
                     showChilds: false
                 }],
                 age: 23,
-                showChilds: false
+                showChilds: true
             }, {
                 name: 'Freund2',
                 childs: [{
@@ -72,7 +72,7 @@
 
         //render(data, document.getElementById('app'))
 
-        data.friends[1].showChilds = false
+        data.friends[1].showChilds = true
 
         /*data.friends[0].showChilds = true
         data.friends[0].childs[1].showChilds = true
@@ -82,10 +82,11 @@
         data.friends[1].childs.push({ name: 'Freund2_2', childs: [] })
 
         data.friends[1].showChilds = false
-        data.friends[1].showChilds = true
+        data.friends[1].showChilds = true*/
 
-        data.friends[1].childs = [{ name: 'Test2_1', age: 30, childs: ['Test2_1_1', 'Test2_1_2'], showChilds: true }, { name: 'Test2_2', age: 25, childs: [], showChilds: false }]*/
+        data.friends[1].childs = [{ name: 'Test2_1', age: 30, childs: ['Test2_1_1', 'Test2_1_2'], showChilds: true }, { name: 'Test2_2', age: 25, childs: [], showChilds: false }]
 
+        delete data.friends[0].childs[1]
     </script>
 
 </body>

@@ -38,7 +38,16 @@ const TemplateEngine = (function () {
     }
 
     function removeNode(n) {
-        //
+        n.remove()
+
+        const infosByNode = nodeRefs.get(n)
+
+        for (const i of infosByNode) {
+            const nodeHolders = i.nodeHolders
+            nodeHolders.splice(i.index, 1)
+        }
+
+        nodeRefs.delete(n)
     }
 
     function resolveKey(key, data, context = new Map()) {
@@ -118,24 +127,9 @@ const TemplateEngine = (function () {
 
     function handleIfTag(node, data, context = new Map(), indexStack = [], toFullKeyTemplate = false, removeClonedNodes = false) {
         if (removeClonedNodes) {
-
             node.querySelectorAll(':scope .templateengine-cloned, :scope .templateengine-cloned *').forEach(e => {
-                e.remove()
-
-                const infosByNode = nodeRefs.get(e)
-                for (const i of infosByNode) {
-                    console.log(i.key)
-                    const nodeHolders = i.nodeHolders
-                    nodeHolders.splice(i.index, 1)
-                    
-                    for (const a of nodeHolders) {
-                        console.log(a)
-                    }
-                }
-
-                console.log('------------')
+                removeNode(e)
             })
-
         }
 
         //TODO: Code verschönern
@@ -168,7 +162,7 @@ const TemplateEngine = (function () {
         }
 
         const conditionValue = resolveKey(conditionKey, data, _context)
-        //node.style.display = conditionValue ? '' : 'none'
+        node.style.display = conditionValue ? '' : 'none'
 
         if (conditionValue) {
             renderNodes(data, node.childNodes, _context, _indexStack, toFullKeyTemplate)
@@ -331,15 +325,9 @@ const TemplateEngine = (function () {
                 const items = resolveKey(ch.key, data)
                 const eachTemplate = n.node
 
-                eachTemplate.parentNode.querySelectorAll('[data-cloned="true"]').forEach(e => e.remove())
-
-                /*const _eachChildNodes = Array.from(eachTemplate.parentNode.childNodes)
-
-                for (const c of _eachChildNodes) {
-                    if (c !== eachTemplate) { //TODO: würde auch Nodes löschen, die nicht zu einem each-Child gehören
-                        c.remove()
-                    }
-                }*/
+                eachTemplate.parentNode.querySelectorAll(':scope .templateengine-cloned, :scope .templateengine-cloned *').forEach(e => {
+                    removeNode(e)
+                })
 
                 createItemsNodes(items, eachTemplate, n.context, n.indexStack, 0)
             }
@@ -367,6 +355,8 @@ const TemplateEngine = (function () {
             for (const n of linkedNodeHolders) {
                 n.node.remove() // remove() löscht nur vom DOM, nicht vom Speicher
                 //TODO: cleanup der NodeHolders
+                /*console.log(n.node)
+                console.log(nodeHoldersByKeys)*/
             }
         }
 
