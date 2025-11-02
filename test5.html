@@ -9,21 +9,28 @@
 
     <div id="app">
 
-        <ul>
-            <each of="friends" as="f">
-                <li>{{ f.name }} ist {{ f.age }} Jahre alt
+        <template id="my-template" data-param1="">
+            <div>
+                <span>Hallo {{ my-template.param1 }}</span>
+            </div>
+        </template>
 
-                    <if test="f.showChilds">
-                        <ul>
-                            <each of="f.childs" as="c">
-                                <li>{{ c.name }} ist {{ c.age }} Jahre alt</li>
-                            </each>
-                        </ul>
-                    </if>
+        <template-use template-id="my-template" data-param1="#name">
+        </template-use>
 
-                </li>
-            </each>
-        </ul>
+        <template id="friends-template" data-list="">
+            <ul>
+                <each of="friends-template.list" as="f">
+                    <li>{{ f.name }} ist {{ f.age }} Jahre alt
+                        <template-use template-id="friends-template" data-list="#f.childs">
+                        </template-use>
+                    </li>
+                </each>
+            </ul>
+        </template>
+
+        <template-use template-id="friends-template" data-list="#friends">
+        </template-use>
 
     </div>
 
@@ -41,12 +48,16 @@
                 name: 'Freund1',
                 childs: [{
                     name: 'Freund1_1',
-                    childs: ['Freund1_1_1', 'Freund1_1_2'],
+                    childs: [],
                     age: 20,
                     showChilds: false
                 }, {
                     name: 'Freund1_2',
-                    childs: ['Freund1_2_1'],
+                    childs: [{
+                        name: 'Freund1_2_1',
+                        childs: [],
+                        age: 30
+                    }],
                     age: 22,
                     showChilds: false
                 }],
@@ -56,7 +67,7 @@
                 name: 'Freund2',
                 childs: [{
                     name: 'Freund2_1',
-                    childs: ['Freund2_1_1', 'Freund2_1_2'],
+                    childs: [],
                     age: 24,
                     showChilds: false
                 }, {
@@ -72,7 +83,9 @@
 
         //render(data, document.getElementById('app'))
 
-        data.friends[1].showChilds = true
+        //data.friends[0].name = 'Tobias'
+
+        /*data.friends[1].showChilds = true
 
         data.friends[0].showChilds = true
         //data.friends[0].childs[1].showChilds = true
@@ -86,7 +99,7 @@
 
         data.friends[1].childs = [{ name: 'Test2_1', age: 30, childs: ['Test2_1_1', 'Test2_1_2'], showChilds: true }, { name: 'Test2_2', age: 25, childs: [], showChilds: false }]
 
-        delete data.friends[0].childs[1]
+        delete data.friends[0].childs[1]*/
     </script>
 
 </body>

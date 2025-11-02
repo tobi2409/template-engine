@@ -1,4 +1,5 @@
 // TODOs:
+// wenn eine Variable gelöscht wird, dann nodeHolder löschen
 // Kommentare verbessern
 
 // In dieser Map befinden sich
@@ -51,6 +52,8 @@ const TemplateEngine = (function () {
         
         nodeRefs.delete(n)
     }
+
+    const templates = new Map()
 
     function resolveKey(key, data, context = new Map()) {
         const splitted = key.split('.')
@@ -197,7 +200,7 @@ const TemplateEngine = (function () {
         node.style.display = 'none'
 
         const items = insertItemsMode ? customItems : resolveKey(ofAttribute, data, _context)
-
+        
         if (items.constructor.name !== 'Array') {
             console.error('each-of must be an Array')
             return
@@ -259,6 +262,38 @@ const TemplateEngine = (function () {
         }
     }
 
+    function handleTemplateTag(node) {
+        templates[node.id] = node
+    }
+
+    function handleTemplateUseTag(node, data, context = new Map(), indexStack = [], toFullKeyTemplate = false) {
+        const wrapper = document.createElement('div')
+
+        const templateId = node.attributes.getNamedItem('template-id').value
+        const template = templates[templateId]
+
+        for (const c of template.content.childNodes) {
+            const cloned = c.cloneNode(true)
+            wrapper.append(cloned)
+        }
+
+        node.parentNode.insertBefore(wrapper, node)
+
+        const paramsObject = {}
+
+        for (const [p] of Object.entries(template.dataset)) {
+            if (node.dataset[p].startsWith('#')) {
+                paramsObject[p] = resolveKey(node.dataset[p].slice(1), data, context, indexStack)
+            } else {
+                paramsObject[p] = node.dataset[p]
+            }
+        }
+
+        const merged = { ...data, ... { [templateId]: paramsObject } }
+        console.log(merged)
+        render(merged, wrapper, context, indexStack, toFullKeyTemplate)
+    }
+
     function handleDefaultTag(node, data, context = new Map(), indexStack = [], toFullKeyTemplate = false) {
         interpolateText(node, data, context, indexStack, toFullKeyTemplate)
         renderNodes(data, node.childNodes, context, indexStack, toFullKeyTemplate)
@@ -283,6 +318,12 @@ const TemplateEngine = (function () {
                     break
                 case 'EACH':
                     handleEachTag(n, data, _context, _indexStack, false, [], 0)
+                    break
+                case 'TEMPLATE':
+                    handleTemplateTag(n)
+                    break
+                case 'TEMPLATE-USE':
+                    handleTemplateUseTag(n, data, _context, _indexStack, toFullKeyTemplate)
                     break
                 default:
                     handleDefaultTag(n, data, _context, _indexStack, toFullKeyTemplate)
@@ -337,7 +378,6 @@ const TemplateEngine = (function () {
                 createItemsNodes(items, eachTemplate, n.context, n.indexStack, 0)
             }
 
-            console.log(ch)
             const linkedNodeHolders = nodeHoldersByKeys.get(ch.key)
 
             for (const n of linkedNodeHolders) {

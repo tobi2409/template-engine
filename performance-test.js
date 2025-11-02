@@ -1,3 +1,5 @@
+import TemplateEngine from './template-engine.js'
+
 // --- Testdaten erzeugen ---
 const N = 100000; // sehr große Liste
 const items = Array.from({ length: N }, (_, i) => ({
@@ -8,11 +10,11 @@ const items = Array.from({ length: N }, (_, i) => ({
 
 const root = document.getElementById("app");
 
-const model = reactive({ items }, () => render(root, model));
+const model = TemplateEngine.reactive({ items }, root);
 
 // --- Initial Render ---
 console.time("Initial Render");
-render(model, root);
+//render(model, root);
 console.timeEnd("Initial Render");
 
 //const idx = 5 //Math.floor(Math.random() * N);
