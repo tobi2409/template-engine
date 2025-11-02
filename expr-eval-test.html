@@ -12,6 +12,8 @@
 
         const Parser = exprEval.Parser
         console.log(Parser.evaluate('6 * y(x)', { x: 7, y: function(x) { return 5 * x } }))
+        console.log(Parser.evaluate('6 * y(x) == 50 ? true : false', { x: 7, y: function(x) { return 5 * x } }))
+        console.log(Parser.evaluate('"a" != "b"'))
     </script>
 
 </body>

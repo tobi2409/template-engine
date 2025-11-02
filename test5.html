@@ -8,27 +8,6 @@
 <body>
 
     <div id="app">
-        <div>Hallo <span>--</span> {{ name }}
-
-            <div>Du bist {{ name }} und {{ age }} Jahre alt</div>
-        </div>
-
-        <if test="showSecondHallo">
-            Bedingtes Hallo {{ name }}
-            <p>Zweites Element innerhalb der Bedingung</p>
-
-            <if test="nestedCondition">
-                <p>Nested Condition ist erreicht, {{ name }}</p>
-            </if>
-        </if>
-
-        <if test="secondCondition">
-            <p>Zweite Condition, {{ name }}</p>
-        </if>
-
-        <div>
-            <p>Counter: {{ counter }}</p>
-        </div>
 
         <ul>
             <each of="friends" as="f">
@@ -37,19 +16,7 @@
                     <if test="f.showChilds">
                         <ul>
                             <each of="f.childs" as="c">
-                                <li>{{ c.name }}
-
-                                    <if test="c.showChilds">
-
-                                        <ul>
-                                            <each of="c.childs" as="d">
-                                                <li>{{ d }}</li>
-                                            </each>
-                                        </ul>
-
-                                    </if>
-
-                                </li>
+                                <li>{{ c.name }} ist {{ c.age }} Jahre alt</li>
                             </each>
                         </ul>
                     </if>
@@ -58,19 +25,6 @@
             </each>
         </ul>
 
-        <each of="friends" as="f1">
-            <p>{{ f1.name }}</p>
-
-            <div>
-                <if test="f1.showChilds">
-
-                    <each of="f1.childs" as="c1">
-                        <p>--- {{ c1.name }}</p>
-                    </each>
-
-                </if>
-            </div>
-        </each>
     </div>
 
     <script type="module">
@@ -88,20 +42,28 @@
                 childs: [{
                     name: 'Freund1_1',
                     childs: ['Freund1_1_1', 'Freund1_1_2'],
+                    age: 20,
                     showChilds: false
                 }, {
                     name: 'Freund1_2',
                     childs: ['Freund1_2_1'],
+                    age: 22,
                     showChilds: false
                 }],
                 age: 23,
-                showChilds: false
+                showChilds: true
             }, {
                 name: 'Freund2',
                 childs: [{
                     name: 'Freund2_1',
                     childs: ['Freund2_1_1', 'Freund2_1_2'],
-                    showChilds: true
+                    age: 24,
+                    showChilds: false
+                }, {
+                    name: 'Freund2_2',
+                    childs: [],
+                    age: 26,
+                    showChilds: false
                 }],
                 age: 25,
                 showChilds: true
@@ -110,10 +72,21 @@
 
         //render(data, document.getElementById('app'))
 
-        data.friends[1].childs = [{ name: 'Test2_1', age: 30, childs: ['Test2_1_1', 'Test2_1_2'], showChilds: true }, { name: 'Test2_2', age: 25, childs: [], showChilds: false }]
-        data.friends[1].childs.push({ name: 'Test2_3', childs: [] })
         data.friends[1].showChilds = true
 
+        data.friends[0].showChilds = true
+        //data.friends[0].childs[1].showChilds = true
+        //data.friends[1].childs[0].showChilds = true
+
+        data.friends[0].name = 'Tobias'
+        data.friends[1].childs.push({ name: 'Freund2_2', childs: [] })
+
+        data.friends[1].showChilds = false
+        data.friends[1].showChilds = true
+
+        data.friends[1].childs = [{ name: 'Test2_1', age: 30, childs: ['Test2_1_1', 'Test2_1_2'], showChilds: true }, { name: 'Test2_2', age: 25, childs: [], showChilds: false }]
+
+        delete data.friends[0].childs[1]
     </script>
 
 </body>

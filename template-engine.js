@@ -1,7 +1,4 @@
 // TODOs:
-// nodeHolder.node muss bei einem Listenelement darstellen, ob etwas erstellt, geupdatet oder gelöscht wurde (bei Zuweisung eines neuen Arrays -> komplett neurendern)
-// ifHandler braucht noch Full-Key
-// Proxy
 // Kommentare verbessern
 
 // In dieser Map befinden sich
@@ -41,12 +38,17 @@ const TemplateEngine = (function () {
         n.remove()
 
         const infosByNode = nodeRefs.get(n)
-
+        
+        if (!infosByNode) {
+            return
+        }
+        
         for (const i of infosByNode) {
             const nodeHolders = i.nodeHolders
-            nodeHolders.splice(i.index, 1)
+            delete nodeHolders[i.index] // delete ist ggü. splice zu bevorzugen, sonst verrutscht i.index
+            //nodeHolders.splice(i.index, 1)
         }
-
+        
         nodeRefs.delete(n)
     }
 
@@ -309,13 +311,15 @@ const TemplateEngine = (function () {
             const linkedNodeHolders = nodeHoldersByKeys.get(ch.key)
 
             for (const n of linkedNodeHolders) {
-                const items = resolveKey(ch.key, data)
-                //TODO: man soll auch mehrere Elemente pushen können
-                const pushedItem = items[items.length - 1] // beim Pushen braucht man das letzte Element der Liste
+                if (n) {
+                    const items = resolveKey(ch.key, data)
+                    //TODO: man soll auch mehrere Elemente pushen können
+                    const pushedItem = items[items.length - 1] // beim Pushen braucht man das letzte Element der Liste
 
-                const eachTemplate = n.node
+                    const eachTemplate = n.node
 
-                createItemsNodes([pushedItem], eachTemplate, n.context, n.indexStack, items.length - 1)
+                    createItemsNodes([pushedItem], eachTemplate, n.context, n.indexStack, items.length - 1)
+                }
             }
         }
 
@@ -327,24 +331,28 @@ const TemplateEngine = (function () {
 
                 eachTemplate.parentNode.querySelectorAll(':scope .templateengine-cloned, :scope .templateengine-cloned *').forEach(e => {
                     removeNode(e)
+                    //console.log(e)
                 })
 
                 createItemsNodes(items, eachTemplate, n.context, n.indexStack, 0)
             }
 
+            console.log(ch)
             const linkedNodeHolders = nodeHoldersByKeys.get(ch.key)
 
             for (const n of linkedNodeHolders) {
-                switch (n.updateHandler) {
-                    case 'interpolate':
-                        interpolateText(n.node, data, new Map(), [], false) // kein Context/IndexStack nötig, weil templates schon Full-Key aufweisen
-                        break
-                    case 'handleIfTag':
-                        handleIfTag(n.node, data, n.context, n.indexStack, true, true)
-                        break
-                    case 'setArray':
-                        handleSetArray(n)
-                        break
+                if (n) {
+                    switch (n.updateHandler) {
+                        case 'interpolate':
+                            interpolateText(n.node, data, new Map(), [], false) // kein Context/IndexStack nötig, weil templates schon Full-Key aufweisen
+                            break
+                        case 'handleIfTag':
+                            handleIfTag(n.node, data, n.context, n.indexStack, true, true)
+                            break
+                        case 'setArray':
+                            handleSetArray(n)
+                            break
+                    }
                 }
             }
         }
@@ -353,10 +361,12 @@ const TemplateEngine = (function () {
             const linkedNodeHolders = nodeHoldersByKeys.get(ch.key)
 
             for (const n of linkedNodeHolders) {
-                n.node.remove() // remove() löscht nur vom DOM, nicht vom Speicher
-                //TODO: cleanup der NodeHolders
-                /*console.log(n.node)
-                console.log(nodeHoldersByKeys)*/
+                if (n) {
+                    n.node.remove() // remove() löscht nur vom DOM, nicht vom Speicher
+                    //TODO: cleanup der NodeHolders
+                    /*console.log(n.node)
+                    console.log(nodeHoldersByKeys)*/
+                }
             }
         }
 
@@ -375,7 +385,7 @@ const TemplateEngine = (function () {
         }
     }
 
-    return {a: nodeHoldersByKeys, b: nodeRefs,
+    return {
         reactive(data, node) {
 
             render(data, node)
