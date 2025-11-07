@@ -56,6 +56,16 @@ const TemplateEngine = (function () {
     const templates = new Map()
 
     function resolveKey(key, data, context = new Map()) {
+        let _key = key
+
+        _key = _key.replace(/\[(.*?)\]/g, (_, inner) => {
+            return resolveParamKey(inner, data, context) || inner
+        })
+
+        return resolveNonParamKey(_key, data, context)
+    }
+
+    function resolveNonParamKey(key, data, context = new Map()) {
         const splitted = key.split('.')
         const isFirstContext = context.has(splitted[0])
         const rootKey = isFirstContext ? context.get(splitted[0]).data : data
@@ -68,6 +78,16 @@ const TemplateEngine = (function () {
         }
 
         return value
+    }
+
+    // paramPlaceHolder: <ParamKey>
+    // z.B.: my-template.param1 -> name
+    function resolveParamKey(paramKey, data, context = new Map()) {
+        const paramValue = resolveNonParamKey(paramKey, data, context)
+
+        if (paramValue.startsWith('#')) {
+            return paramValue.slice(1)
+        }
     }
 
     function convertToFullKey(relativeKey, context = new Map(), indexStack = []) {
@@ -94,6 +114,14 @@ const TemplateEngine = (function () {
         // im Falle dass es ein Span ist, ist sein textContent bereits interpoliert -> template-Sicherung verwenden
         // bei einem noch nicht gewrappten Text wird einfach sein textContent genommen, da dieser noch ein Template ist
         let template = node.nodeType === Node.TEXT_NODE ? node.textContent : node.dataset.template
+        // sollte innerhalb des Templates sich ein [...] befinden, handelt es sich um ein Param
+        // klar kann man statt [my-template.param1] auch my-template.param1 schreiben, aber sollte param1 auf ein data-Attribut verweisen,
+        // würde es in dem Fall nicht aufgelöst werden
+        template = template.replace(/\{\{[^{}]*\[(.*?)\][^{}]*\}\}/g, (match) => {
+            return match.replace(/\[(.*?)\]/g, (_, inner) => {
+                return resolveParamKey(inner, data, context) || inner
+            })
+        })
 
         if (regex.test(template)) {
             if (toFullKeyTemplate) {
@@ -110,7 +138,6 @@ const TemplateEngine = (function () {
             if (wrappedText.tagName !== 'SPAN') {
                 wrappedText = document.createElement('span')
                 node.replaceWith(wrappedText)
-
                 wrappedText.dataset.template = template
             }
             
@@ -118,7 +145,7 @@ const TemplateEngine = (function () {
                                     .replace(/(\r\n|\n|\r)/gm, '')
                                     .replace(regex, (_, key) => {
                                         //TODO: überprüfen, ob key ein Array ist (wenn nein, dann nodeHolder)
-                                        const interpolatedText = resolveKey(key, data, context)
+                                        const interpolatedText = resolveNonParamKey(key, data, context)
 
                                         //console.log(interpolatedText)
                                         //if (interpolatedText instanceof String) {
@@ -166,7 +193,7 @@ const TemplateEngine = (function () {
             nodeHoldersByKeys.appendToKey(conditionKey, { node: node, updateHandler: 'handleIfTag', context: _context, indexStack: _indexStack })
         }
 
-        const conditionValue = resolveKey(conditionKey, data, _context)
+        const conditionValue = resolveNonParamKey(conditionKey, data, _context)
         node.style.display = conditionValue ? '' : 'none'
 
         if (conditionValue) {
@@ -199,7 +226,7 @@ const TemplateEngine = (function () {
 
         node.style.display = 'none'
 
-        const items = insertItemsMode ? customItems : resolveKey(ofAttribute, data, _context)
+        const items = insertItemsMode ? customItems : resolveNonParamKey(ofAttribute, data, _context)
         
         if (items.constructor.name !== 'Array') {
             console.error('each-of must be an Array')
@@ -244,7 +271,7 @@ const TemplateEngine = (function () {
                 node.parentNode.insertBefore(cloned, node)
                 
                 const newFullKey = `${fullKey}.${index}`
-                const value = resolveKey(newFullKey, data, context)
+                const value = resolveNonParamKey(newFullKey, data, context)
 
                 if (typeof value !== 'string') {
                     nodeHoldersByKeys.appendToKey(newFullKey, { node: cloned, updateHandler: 'setObject' }) //TODO: setObject
@@ -282,11 +309,12 @@ const TemplateEngine = (function () {
         const paramsObject = {}
 
         for (const [p] of Object.entries(template.dataset)) {
-            if (node.dataset[p].startsWith('#')) {
-                paramsObject[p] = resolveKey(node.dataset[p].slice(1), data, context, indexStack)
-            } else {
-                paramsObject[p] = node.dataset[p]
-            }
+            paramsObject[p] = node.dataset[p]
+            //if (node.dataset[p].startsWith('#')) {
+            //    paramsObject[p] = resolveKey(node.dataset[p].slice(1), data, context, indexStack)
+            //} else {
+            //    paramsObject[p] = node.dataset[p]
+            //}
         }
 
         const merged = { ...data, ... { [templateId]: paramsObject } }
@@ -353,7 +381,7 @@ const TemplateEngine = (function () {
 
             for (const n of linkedNodeHolders) {
                 if (n) {
-                    const items = resolveKey(ch.key, data)
+                    const items = resolveNonParamKey(ch.key, data)
                     //TODO: man soll auch mehrere Elemente pushen können
                     const pushedItem = items[items.length - 1] // beim Pushen braucht man das letzte Element der Liste
 
@@ -367,7 +395,7 @@ const TemplateEngine = (function () {
         function updateHandler(ch) {
 
             function handleSetArray(n) {
-                const items = resolveKey(ch.key, data)
+                const items = resolveNonParamKey(ch.key, data)
                 const eachTemplate = n.node
 
                 eachTemplate.parentNode.querySelectorAll(':scope .templateengine-cloned, :scope .templateengine-cloned *').forEach(e => {
