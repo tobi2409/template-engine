@@ -55,18 +55,16 @@ const TemplateEngine = (function () {
 
     const templates = new Map()
 
-    function resolveKey(key, data, context = new Map()) {
+    /*function resolveKeyEx(key, data, context = new Map()) {
+        let _key = tryConvertParamKey(key, data, context)
+        return resolveKey(_key, data, context)
+    }*/
+
+    function resolveKey(key, data, context = new Map(), layer = 1) {
+        //let _key = convertParamKey(key, data, context)
         let _key = key
 
-        _key = _key.replace(/\[(.*?)\]/g, (_, inner) => {
-            return resolveParamKey(inner, data, context) || inner
-        })
-
-        return resolveNonParamKey(_key, data, context)
-    }
-
-    function resolveNonParamKey(key, data, context = new Map()) {
-        const splitted = key.split('.')
+        const splitted = _key.split('.')
         const isFirstContext = context.has(splitted[0])
         const rootKey = isFirstContext ? context.get(splitted[0]).data : data
         const startIndex = isFirstContext ? 1 : 0
@@ -74,20 +72,47 @@ const TemplateEngine = (function () {
         let value = rootKey
 
         for (let i = startIndex ; i < splitted.length ; i++) {
+            if (splitted[i].slice(-1) === '*') {
+                splitted[i] = `${splitted[i].slice(0, -1)}-${layer}`
+            }
             value = value[splitted[i]]
         }
 
         return value
     }
 
-    // paramPlaceHolder: <ParamKey>
-    // z.B.: my-template.param1 -> name
-    function resolveParamKey(paramKey, data, context = new Map()) {
-        const paramValue = resolveNonParamKey(paramKey, data, context)
+    /*function tryConvertParamKey(key, data, context = new Map()) {
+        let _key = key
+
+        const regex = /\[(.*?)\]/g
+
+        if (regex.test(_key)) {
+            return _key.replace(regex, (_, inner) => {
+                return convertParamKey(inner, data, context)
+            })
+        }
+
+        return _key
+    }*/
+
+    // paramPlaceHolder: [<ParamKey>]
+    // z.B.: [my-template.param1] -> name
+    function convertParamKey(paramKey, data, context = new Map()) {
+        const regex = /\[(.*?)\]/g
+
+        if (!regex.test(paramKey)) {
+            return paramKey
+        }
+
+        const unwrappedParamKey = paramKey.slice(1, -1)
+
+        const paramValue = resolveKey(unwrappedParamKey, data, context)
 
         if (paramValue.startsWith('#')) {
             return paramValue.slice(1)
         }
+
+        return unwrappedParamKey
     }
 
     function convertToFullKey(relativeKey, context = new Map(), indexStack = []) {
@@ -102,14 +127,14 @@ const TemplateEngine = (function () {
                                 context, indexStack.slice(0, indexStack.length - 1))
     }
 
-    function interpolateText(node, data, context = new Map(), indexStack = [], toFullKeyTemplate = false) {
+    function interpolateText(node, data, context = new Map(), indexStack = [], toFullKeyTemplate = false, layer = 1) {
         if (node.nodeType !== Node.TEXT_NODE
             && !(node.tagName === 'SPAN' && node.dataset.template)
         ) {
             return
         }
 
-        const regex = /\{\{\s*([\w.-]+)\s*\}\}/g
+        const regex = /\{\{\s*([\w.*-]+)\s*\}\}/g
 
         // im Falle dass es ein Span ist, ist sein textContent bereits interpoliert -> template-Sicherung verwenden
         // bei einem noch nicht gewrappten Text wird einfach sein textContent genommen, da dieser noch ein Template ist
@@ -118,8 +143,8 @@ const TemplateEngine = (function () {
         // klar kann man statt [my-template.param1] auch my-template.param1 schreiben, aber sollte param1 auf ein data-Attribut verweisen,
         // würde es in dem Fall nicht aufgelöst werden
         template = template.replace(/\{\{[^{}]*\[(.*?)\][^{}]*\}\}/g, (match) => {
-            return match.replace(/\[(.*?)\]/g, (_, inner) => {
-                return resolveParamKey(inner, data, context) || inner
+            return match.replace(/\[(.*?)\]/g, (paramKey) => {
+                return convertParamKey(paramKey, data, context)
             })
         })
 
@@ -140,12 +165,12 @@ const TemplateEngine = (function () {
                 node.replaceWith(wrappedText)
                 wrappedText.dataset.template = template
             }
-            
+
             wrappedText.innerText = template
                                     .replace(/(\r\n|\n|\r)/gm, '')
                                     .replace(regex, (_, key) => {
                                         //TODO: überprüfen, ob key ein Array ist (wenn nein, dann nodeHolder)
-                                        const interpolatedText = resolveNonParamKey(key, data, context)
+                                        const interpolatedText = resolveKey(key, data, context, layer)
 
                                         //console.log(interpolatedText)
                                         //if (interpolatedText instanceof String) {
@@ -157,7 +182,7 @@ const TemplateEngine = (function () {
         }
     }
 
-    function handleIfTag(node, data, context = new Map(), indexStack = [], toFullKeyTemplate = false, removeClonedNodes = false) {
+    function handleIfTag(node, data, context = new Map(), indexStack = [], toFullKeyTemplate = false, removeClonedNodes = false, layer = 1) {
         if (removeClonedNodes) {
             node.querySelectorAll(':scope .templateengine-cloned, :scope .templateengine-cloned *').forEach(e => {
                 removeNode(e)
@@ -193,15 +218,15 @@ const TemplateEngine = (function () {
             nodeHoldersByKeys.appendToKey(conditionKey, { node: node, updateHandler: 'handleIfTag', context: _context, indexStack: _indexStack })
         }
 
-        const conditionValue = resolveNonParamKey(conditionKey, data, _context)
+        const conditionValue = resolveKeyEx(conditionKey, data, _context)
         node.style.display = conditionValue ? '' : 'none'
 
         if (conditionValue) {
-            renderNodes(data, node.childNodes, _context, _indexStack, toFullKeyTemplate)
+            renderNodes(data, node.childNodes, _context, _indexStack, toFullKeyTemplate, layer)
         }
     }
 
-    function handleEachTag(node, data, context = new Map(), indexStack = [], insertItemsMode = false, customItems = [], customStartIndex = 0) {
+    function handleEachTag(node, data, context = new Map(), indexStack = [], insertItemsMode = false, customItems = [], customStartIndex = 0, layer = 1) {
         /*if (refreshMode && !(pushMode)) {
             return
         }*/
@@ -221,12 +246,16 @@ const TemplateEngine = (function () {
             _indexStack = Array.from(indexStack)
         }
 
-        const ofAttribute = node.getAttribute('of')
-        const asAttribute = node.getAttribute('as')
+        let ofAttribute = convertParamKey(node.getAttribute('of'), data, _context)
+        
+        let asAttribute = node.getAttribute('as')
+        if (asAttribute.slice(-1) === '*') {
+            asAttribute = `${asAttribute.slice(0, -1)}-${layer}`
+        }
 
         node.style.display = 'none'
 
-        const items = insertItemsMode ? customItems : resolveNonParamKey(ofAttribute, data, _context)
+        const items = insertItemsMode ? customItems : resolveKey(ofAttribute, data, _context, layer)
         
         if (items.constructor.name !== 'Array') {
             console.error('each-of must be an Array')
@@ -262,7 +291,7 @@ const TemplateEngine = (function () {
 
             for (const c of node.childNodes) {
                 const cloned = c.cloneNode(true)
-                render(data, cloned, _context, _indexStack, true)
+                render(data, cloned, _context, _indexStack, true, layer)
 
                 if (cloned.classList) {
                     cloned.classList.add('templateengine-cloned')
@@ -271,7 +300,7 @@ const TemplateEngine = (function () {
                 node.parentNode.insertBefore(cloned, node)
                 
                 const newFullKey = `${fullKey}.${index}`
-                const value = resolveNonParamKey(newFullKey, data, context)
+                const value = resolveKey(newFullKey, data, context, layer)
 
                 if (typeof value !== 'string') {
                     nodeHoldersByKeys.appendToKey(newFullKey, { node: cloned, updateHandler: 'setObject' }) //TODO: setObject
@@ -293,7 +322,7 @@ const TemplateEngine = (function () {
         templates[node.id] = node
     }
 
-    function handleTemplateUseTag(node, data, context = new Map(), indexStack = [], toFullKeyTemplate = false) {
+    function handleTemplateUseTag(node, data, context = new Map(), indexStack = [], toFullKeyTemplate = false, layer = 1) {
         const wrapper = document.createElement('div')
 
         const templateId = node.attributes.getNamedItem('template-id').value
@@ -318,16 +347,16 @@ const TemplateEngine = (function () {
         }
 
         const merged = { ...data, ... { [templateId]: paramsObject } }
-        console.log(merged)
-        render(merged, wrapper, context, indexStack, toFullKeyTemplate)
+        //console.log(merged)
+        render(merged, wrapper, context, indexStack, toFullKeyTemplate, layer)
     }
 
-    function handleDefaultTag(node, data, context = new Map(), indexStack = [], toFullKeyTemplate = false) {
-        interpolateText(node, data, context, indexStack, toFullKeyTemplate)
-        renderNodes(data, node.childNodes, context, indexStack, toFullKeyTemplate)
+    function handleDefaultTag(node, data, context = new Map(), indexStack = [], toFullKeyTemplate = false, layer = 1) {
+        interpolateText(node, data, context, indexStack, toFullKeyTemplate, layer)
+        renderNodes(data, node.childNodes, context, indexStack, toFullKeyTemplate, layer)
     }
 
-    function renderNodes(data, nodes, context = new Map(), indexStack = [], toFullKeyTemplate = false) {
+    function renderNodes(data, nodes, context = new Map(), indexStack = [], toFullKeyTemplate = false, layer = 1) {
         // childNodes beinhaltet im Gegensatz zu children auch Text-Nodes
         const _nodes = Array.from(nodes)
 
@@ -342,27 +371,27 @@ const TemplateEngine = (function () {
         for (const n of _nodes) {
             switch (n.tagName) {
                 case 'IF':
-                    handleIfTag(n, data, _context, _indexStack, toFullKeyTemplate, false)
+                    handleIfTag(n, data, _context, _indexStack, toFullKeyTemplate, false, layer)
                     break
                 case 'EACH':
-                    handleEachTag(n, data, _context, _indexStack, false, [], 0)
+                    handleEachTag(n, data, _context, _indexStack, false, [], 0, layer)
                     break
                 case 'TEMPLATE':
                     handleTemplateTag(n)
                     break
                 case 'TEMPLATE-USE':
-                    handleTemplateUseTag(n, data, _context, _indexStack, toFullKeyTemplate)
+                    handleTemplateUseTag(n, data, _context, _indexStack, toFullKeyTemplate, layer)
                     break
                 default:
-                    handleDefaultTag(n, data, _context, _indexStack, toFullKeyTemplate)
+                    handleDefaultTag(n, data, _context, _indexStack, toFullKeyTemplate, layer)
                     break
             }
         }
     }
 
     // für Root-Node
-    function render(data, node, context = new Map(), indexStack = [], toFullKeyTemplate = false) {
-        renderNodes(data, [node], context, indexStack, toFullKeyTemplate)
+    function render(data, node, context = new Map(), indexStack = [], toFullKeyTemplate = false, layer = 1) {
+        renderNodes(data, [node], context, indexStack, toFullKeyTemplate, layer)
     }
 
     // beim Refreshen kann der IndexStack leer sein,
@@ -381,7 +410,7 @@ const TemplateEngine = (function () {
 
             for (const n of linkedNodeHolders) {
                 if (n) {
-                    const items = resolveNonParamKey(ch.key, data)
+                    const items = resolveKeyEx(ch.key, data)
                     //TODO: man soll auch mehrere Elemente pushen können
                     const pushedItem = items[items.length - 1] // beim Pushen braucht man das letzte Element der Liste
 
@@ -395,7 +424,7 @@ const TemplateEngine = (function () {
         function updateHandler(ch) {
 
             function handleSetArray(n) {
-                const items = resolveNonParamKey(ch.key, data)
+                const items = resolveKeyEx(ch.key, data)
                 const eachTemplate = n.node
 
                 eachTemplate.parentNode.querySelectorAll(':scope .templateengine-cloned, :scope .templateengine-cloned *').forEach(e => {

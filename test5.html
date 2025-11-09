@@ -11,21 +11,21 @@
 
         <template id="my-template" data-param1="">
             <div>
-                <span>Hallo {{ [my-template.param1] }}</span>
+                <span>Hallo {{ [my-template.param1] }} und {{ age }}</span>
             </div>
         </template>
 
-        <template-use template-id="my-template" data-param1="#name">
+        <!--<template-use template-id="my-template" data-param1="#name">
         </template-use>
 
         <template-use template-id="my-template" data-param1="Test">
-        </template-use>
+        </template-use>-->
 
-        <!--<template id="friends-template" data-list="">
+        <template id="friends-template" data-list="">
             <ul>
-                <each of="[friends-template.list]" as="f">
-                    <li>{{ f.name }} ist {{ f.age }} Jahre alt
-                        <template-use template-id="friends-template" data-list="#f.childs">
+                <each of="[friends-template.list]" as="f*">
+                    <li>{{ f-1.name }} ist {{ f-1.age }} Jahre alt
+                        <template-use template-id="friends-template" data-list="#f*.childs">
                         </template-use>
                     </li>
                 </each>
@@ -33,7 +33,7 @@
         </template>
 
         <template-use template-id="friends-template" data-list="#friends">
-        </template-use>-->
+        </template-use>
 
     </div>
 
