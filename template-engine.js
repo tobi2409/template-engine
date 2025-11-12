@@ -211,14 +211,16 @@ const TemplateEngine = (function () {
 
         // da if-Tag sowieso keinen Einfluss auf die Darstellung hat,
         // kann display im positiven Testfall auch leer bleiben
-        const conditionKey = convertToFullKey(node.getAttribute('test'), _context, _indexStack)
+        // Warum funktioniert if-test nur in Form eines PlaceHolders und each-of auch ohne PlaceHolder?
+        // Weil bei each-of der aus dem PlaceHolder erhaltene Wert nochmal resolveKey't wird, um die items-Liste zu erhalten
+        const conditionKey = convertToFullKey(indexKey(node.getAttribute('test'), layer), _context, _indexStack)
 
         if (!removeClonedNodes) { // Test-Fall soll nicht einfach abgeändert werden können
             // IndexStack ist für Refresh notwendig, sobald man each-Childs rendert
             nodeHoldersByKeys.appendToKey(conditionKey, { node: node, updateHandler: 'handleIfTag', context: _context, indexStack: _indexStack })
         }
 
-        const conditionValue = resolveKey(conditionKey, data, _context)
+        const conditionValue = resolvePlaceHolder(conditionKey, data, _context, layer)
         node.style.display = conditionValue ? '' : 'none'
 
         if (conditionValue) {
