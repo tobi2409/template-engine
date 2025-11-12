@@ -154,12 +154,14 @@ const TemplateEngine = (function () {
         if (toFullKeyTemplate) {
             // wird nur beim ersten Rendern durchgeführt, weil danach bereits Full-Key im Template Bestand hat
             fullKeyTemplate = fullKeyTemplate.replace(getPlaceHolderRegEx(), (_, key) => {
-                // template-use und each kümmern sich darum, dass ihre jeweiligen Attribute lesbar sind
-                // also muss es interpolate mithilfe von indexKey auch für sich tun
+                // template-use und each kümmern sich darum, dass ihre jeweiligen Attribute verarbeitet werden und lesbar sind
+                // (siehe Parameter in Data hinzufügen, layer bei template-use; context und indexStack bei each)
+                // also muss es interpolate u.a. mithilfe von indexKey und dem Bereitstellen eines gesicherten Templates auch für sich tun
                 return `{{ ${convertToFullKey(indexKey(key, layer), context, indexStack)} }}`
             })
         }
 
+        // alternativ könnte man auch indexKey(template) einsetzen
         const resolvedTemplate = resolveTemplate(fullKeyTemplate, data, context, layer)
 
         // Text wird in ein Span gewrappt, damit dort im Dataset das Template gesichert werden kann
@@ -307,7 +309,9 @@ const TemplateEngine = (function () {
         // wenn man also ein Child c für eine Person p hinzufügen will,
         // dann muss man die jeweilige p kennen (Context)
         if (!insertItemsMode) {
-            nodeHoldersByKeys.appendToKey(fullKey, { node: node, updateHandler: 'setArray', context: oldContext, indexStack: oldIndexStack })
+            const templateParams = Object.fromEntries(Object.entries(data).filter(([key]) => key.slice(-7) == '-params'))
+            //const templateParams = data.ke
+            nodeHoldersByKeys.appendToKey(fullKey, { node: node, updateHandler: 'setArray', context: oldContext, indexStack: oldIndexStack, layer: layer, templateParams: templateParams })
         }
     }
 
@@ -334,7 +338,7 @@ const TemplateEngine = (function () {
             paramsObject[p] = resolvePlaceHolder(node.dataset[p], data, context, layer)
         }
 
-        const merged = { ...data, ... { [templateId]: paramsObject } }
+        const merged = { ...data, ... { [`${templateId}-params`]: paramsObject } }
         //console.log(merged)
         render(merged, wrapper, context, indexStack, toFullKeyTemplate, layer + 1)
     }
@@ -389,8 +393,10 @@ const TemplateEngine = (function () {
     // gleiches gilt für Context
     function refresh(data, change) {
         
-        function createItemsNodes(items, eachTemplate, context, indexStack, startIndex) {
-            handleEachTag(eachTemplate, data, context, indexStack, true, items, startIndex)
+        function createItemsNodes(items, eachTemplate, context, indexStack, startIndex, layer, templateParams) {
+            const merged = { ... data, ... templateParams }
+            console.log(merged)
+            handleEachTag(eachTemplate, merged, context, indexStack, true, items, startIndex, layer)
         }
 
         function createItemHandler(ch) {
@@ -404,7 +410,7 @@ const TemplateEngine = (function () {
 
                     const eachTemplate = n.node
 
-                    createItemsNodes([pushedItem], eachTemplate, n.context, n.indexStack, items.length - 1)
+                    createItemsNodes([pushedItem], eachTemplate, n.context, n.indexStack, items.length - 1, n.layer, n.templateParams)
                 }
             }
         }
@@ -420,7 +426,7 @@ const TemplateEngine = (function () {
                     //console.log(e)
                 })
 
-                createItemsNodes(items, eachTemplate, n.context, n.indexStack, 0)
+                createItemsNodes(items, eachTemplate, n.context, n.indexStack, 0, n.layer, n.templateParams)
             }
 
             const linkedNodeHolders = nodeHoldersByKeys.get(ch.key)

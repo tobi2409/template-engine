@@ -11,7 +11,7 @@
 
         <template id="my-template" data-param1="">
             <div>
-                <span>Hallo {{ my-template.param1 }} und {{ age }}</span>
+                <span>Hallo {{ my-template-params.param1 }} und {{ age }}</span>
             </div>
         </template>
 
@@ -23,7 +23,7 @@
 
         <template id="friends-template" data-list="">
             <ul>
-                <each of="{{ friends-template.list }}" as="f*">
+                <each of="{{ friends-template-params.list }}" as="f*">
                     <li>{{ f*.name }} ist {{ f*.age }} Jahre alt
                         <template-use template-id="friends-template" data-list="f*.childs">
                         </template-use>
@@ -87,7 +87,8 @@
         //render(data, document.getElementById('app'))
 
         data.friends[0].name = 'Tobias'
-        //data.friends[1].childs = [{ name: 'Test2_1', age: 30, childs: ['Test2_1_1', 'Test2_1_2'], showChilds: true }, { name: 'Test2_2', age: 25, childs: [], showChilds: false }]
+        delete data.friends[0].childs[0]
+        data.friends[1].childs = [{ name: 'Test2_1', age: 30, childs: [{ name: 'Test2_1_1', childs: [] }, { name: 'Test2_1_2', childs: [] }], showChilds: true }, { name: 'Test2_2', age: 25, childs: [], showChilds: false }]
 
         /*data.friends[1].showChilds = true
 
