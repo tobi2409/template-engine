@@ -99,6 +99,8 @@ const TemplateEngine = (function () {
         return dereferencePlaceHolder(placeHolder, data, context, layer)
     }
 
+    // ein Key kennt keine PlaceHolder, welche zu einem anderen Attribut weiterleiten
+    // daher ist resolveKey nicht-rekursiv
     function resolveKey(key, data, context = new Map(), layer = 0) {
         const splitted = key.split('.')
         const isFirstContext = context.has(splitted[0])
@@ -152,6 +154,8 @@ const TemplateEngine = (function () {
         if (toFullKeyTemplate) {
             // wird nur beim ersten Rendern durchgeführt, weil danach bereits Full-Key im Template Bestand hat
             fullKeyTemplate = fullKeyTemplate.replace(getPlaceHolderRegEx(), (_, key) => {
+                // template-use und each kümmern sich darum, dass ihre jeweiligen Attribute lesbar sind
+                // also muss es interpolate mithilfe von indexKey auch für sich tun
                 return `{{ ${convertToFullKey(indexKey(key, layer), context, indexStack)} }}`
             })
         }
