@@ -55,51 +55,9 @@ const TemplateEngine = (function () {
 
     const templates = new Map()
 
-    function resolveKey(key, data, context = new Map()) {
-        const splitted = key.split('.')
-        const isFirstContext = context.has(splitted[0])
-        const rootKey = isFirstContext ? context.get(splitted[0]).data : data
-        const startIndex = isFirstContext ? 1 : 0
-        
-        let value = rootKey
-
-        for (let i = startIndex ; i < splitted.length ; i++) {
-            value = value[splitted[i]]
-        }
-
-        return value
-    }
-
-    // paramPlaceHolder: [<ParamKey>]
-    // z.B.: [my-template.param1] -> name
-    function convertParamKey(paramKey, data, context = new Map()) {
-        const regex = /\[(.*?)\]/g
-
-        if (!regex.test(paramKey)) {
-            return paramKey
-        }
-
-        const unwrappedParamKey = paramKey.slice(1, -1)
-
-        const paramValue = resolveKey(unwrappedParamKey, data, context)
-
-        if (paramValue.startsWith('#')) {
-            return paramValue.slice(1)
-        }
-
-        return unwrappedParamKey
-    }
-
-    function indexKey(key, layer) {
-        const splitted = key.split('.')
-
-        for (let i = 0 ; i < splitted.length ; i++) {
-            if (splitted[i].slice(-1) === '*') {
-                splitted[i] = `${splitted[i].slice(0, -1)}-${layer}`
-            }
-        }
-
-        return splitted.join('.')
+    function getPlaceHolderRegEx(global = true) {
+        const pattern = /\{\{\s*([\w.\-*]+)\s*\}\}/
+        return global ? new RegExp(pattern.source, 'g') : new RegExp(pattern.source)
     }
 
     function convertToFullKey(relativeKey, context = new Map(), indexStack = []) {
@@ -114,6 +72,66 @@ const TemplateEngine = (function () {
                                 context, indexStack.slice(0, indexStack.length - 1))
     }
 
+    function resolveTemplate(template, data, context = new Map(), layer = 0) {
+        const regex = getPlaceHolderRegEx()
+
+        return template.replace(/(\r\n|\n|\r)/gm, '').replace(regex, (placeHolder, _) => {
+            return resolvePlaceHolder(placeHolder, data, context, layer)
+        })
+    }
+
+    function resolvePlaceHolder(placeHolder, data, context = new Map(), layer = 0) {
+        // refKey: {{<RefKey>}}
+        // z.B.: {{my-template.param1}} -> name
+        function dereferencePlaceHolder(placeHolder, data, context = new Map(), layer = 0) {
+            const regex = getPlaceHolderRegEx(false)
+
+            if (!regex.test(placeHolder)) {
+                return placeHolder
+            }
+
+            const unwrappedParamKey = placeHolder.match(regex)[1] // Index 1 ist 2. Gruppe des RegEx
+            const paramValue = resolveKey(unwrappedParamKey, data, context, layer)
+
+            return dereferencePlaceHolder(paramValue, data, context, layer)
+        }
+
+        return dereferencePlaceHolder(placeHolder, data, context, layer)
+    }
+
+    function resolveKey(key, data, context = new Map(), layer = 0) {
+        const splitted = key.split('.')
+        const isFirstContext = context.has(splitted[0])
+        const rootKey = isFirstContext ? context.get(splitted[0]).data : data
+        const startIndex = isFirstContext ? 1 : 0
+        
+        let value = rootKey
+
+        for (let i = startIndex ; i < splitted.length ; i++) {
+            value = value[splitted[i]]
+        }
+
+        return indexKey(value, layer)
+    }
+
+    function indexKey(key, layer = 0) {
+        // wenn beim Dereferenzieren kein String rauskommen sollte
+        if (typeof key !== 'string') {
+            return key
+        }
+
+        const splitted = key.split('.')
+
+        for (let i = 0 ; i < splitted.length ; i++) {
+            if (splitted[i].slice(-1) === '*') {
+                splitted[i] = `${splitted[i].slice(0, -1)}-${layer}`
+            }
+        }
+
+        return splitted.join('.')
+    }
+
+    // toFullKeyTemplate nur innerhalb von each
     function interpolateText(node, data, context = new Map(), indexStack = [], toFullKeyTemplate = false, layer = 0) {
         if (node.nodeType !== Node.TEXT_NODE
             && !(node.tagName === 'SPAN' && node.dataset.template)
@@ -121,56 +139,40 @@ const TemplateEngine = (function () {
             return
         }
 
-        const regex = /\{\{\s*([\w.\-\[(.*?)\]]+)\s*\}\}/g
-
         // im Falle dass es ein Span ist, ist sein textContent bereits interpoliert -> template-Sicherung verwenden
         // bei einem noch nicht gewrappten Text wird einfach sein textContent genommen, da dieser noch ein Template ist
-        let template = node.nodeType === Node.TEXT_NODE ? node.textContent : node.dataset.template
+        const template = node.nodeType === Node.TEXT_NODE ? node.textContent : node.dataset.template
+        
+        if (!getPlaceHolderRegEx().test(template)) {
+            return
+        }
 
-        if (regex.test(template)) {
-            // sollte innerhalb des Templates sich ein [...] befinden, handelt es sich um ein Param
-            // klar kann man statt [my-template.param1] auch my-template.param1 schreiben, aber sollte param1 auf ein data-Attribut verweisen,
-            // würde es in dem Fall nicht aufgelöst werden
-            template = template.replace(regex, (match) => {
-                return match.replace(/\[(.*?)\]/g, (paramKey) => {
-                    return convertParamKey(paramKey, data, context)
-                })
+        let fullKeyTemplate = template
+        
+        if (toFullKeyTemplate) {
+            // wird nur beim ersten Rendern durchgeführt, weil danach bereits Full-Key im Template Bestand hat
+            fullKeyTemplate = fullKeyTemplate.replace(getPlaceHolderRegEx(), (_, key) => {
+                return `{{ ${convertToFullKey(indexKey(key, layer), context, indexStack)} }}`
             })
+        }
 
-            template = template.replace(regex, (_, key) => {
-                return `{{ ${indexKey(key, layer)} }}`
-            })
+        const resolvedTemplate = resolveTemplate(fullKeyTemplate, data, context, layer)
 
-            if (toFullKeyTemplate) {
-                // wird nur beim ersten Rendern durchgeführt, weil danach bereits Full-Key im Template Bestand hat
-                template = template.replace(regex, (_, key) => {
-                    return `{{ ${convertToFullKey(key, context, indexStack)} }}`
-                })
-            }
+        // Text wird in ein Span gewrappt, damit dort im Dataset das Template gesichert werden kann
+        // ist es bereits ein Span, wird das wiederverwendet und sein Text anhand seines Templates ersetzt
+        let wrappedText = node
+        
+        if (wrappedText.tagName !== 'SPAN') {
+            wrappedText = document.createElement('span')
+            node.replaceWith(wrappedText)
+            wrappedText.dataset.template = fullKeyTemplate
+        }
 
-            // Text wird in ein Span gewrappt, damit dort im Dataset das Template gesichert werden kann
-            // ist es bereits ein Span, wird das wiederverwendet und sein Text anhand seines Templates ersetzt
-            let wrappedText = node
+        wrappedText.innerText = resolvedTemplate
 
-            if (wrappedText.tagName !== 'SPAN') {
-                wrappedText = document.createElement('span')
-                node.replaceWith(wrappedText)
-                wrappedText.dataset.template = template
-            }
-
-            wrappedText.innerText = template
-                                    .replace(/(\r\n|\n|\r)/gm, '')
-                                    .replace(regex, (_, key) => {
-                                        //TODO: überprüfen, ob key ein Array ist (wenn nein, dann nodeHolder)
-                                        const interpolatedText = resolveKey(key, data, context, layer)
-
-                                        //console.log(interpolatedText)
-                                        //if (interpolatedText instanceof String) {
-                                            nodeHoldersByKeys.appendToKey(key, { node: wrappedText, updateHandler: 'interpolate', context: context })
-                                        //}
-
-                                        return interpolatedText
-                                    })
+        const keyGroup = [...fullKeyTemplate.matchAll(getPlaceHolderRegEx())].map(m => m[1])
+        for (const key of keyGroup) {
+            nodeHoldersByKeys.appendToKey(key, { node: wrappedText, updateHandler: 'interpolate', context: context })
         }
     }
 
@@ -219,10 +221,6 @@ const TemplateEngine = (function () {
     }
 
     function handleEachTag(node, data, context = new Map(), indexStack = [], insertItemsMode = false, customItems = [], customStartIndex = 0, layer = 0) {
-        /*if (refreshMode && !(pushMode)) {
-            return
-        }*/
-
         //TODO: Code verschönern
         let _context = context
         let _indexStack = indexStack
@@ -238,18 +236,16 @@ const TemplateEngine = (function () {
             _indexStack = Array.from(indexStack)
         }
 
-        let ofAttribute = indexKey(convertParamKey(node.getAttribute('of'), data, _context), layer)
-        
-        let asAttribute = node.getAttribute('as')
-
-        if (asAttribute.slice(-1) === '*') {
-            asAttribute = `${asAttribute.slice(0, -1)}-${layer}`
-        }
+        // ofAttribute: bei bspw. "my-template.list" wird auf "friends" referenziert, nicht auf "{{ friends }}" (so wird das verlangt)
+        // -> daher kann "friends" auch innerhalb von convertToFullKey verwendet werden
+        const ofAttribute = resolvePlaceHolder(node.getAttribute('of'), data, _context, layer - 1)
+        const asAttribute = indexKey(node.getAttribute('as'), layer) // ist einfach nur eine einzelne Variable zum Indizieren
 
         node.style.display = 'none'
 
+        // hier wird bspw. "friends" von vorhin auch aufgelöst (resolveKey ist nicht-rekursiv)
         const items = insertItemsMode ? customItems : resolveKey(ofAttribute, data, _context, layer)
-        
+
         if (items.constructor.name !== 'Array') {
             console.error('each-of must be an Array')
             return
@@ -270,7 +266,7 @@ const TemplateEngine = (function () {
         
         _indexStack.push(insertItemsMode ? customStartIndex : 0)
 
-        const fullKey = convertToFullKey(ofAttribute, oldContext, oldIndexStack)
+        const fullKey = convertToFullKey(ofAttribute, oldContext, oldIndexStack) // siehe Zeile mit ofAttribute-Zuweisung
         
         for (let i = 0 ; i < items.length ; i++) {
             const d = items[i]
@@ -331,13 +327,7 @@ const TemplateEngine = (function () {
         const paramsObject = {}
 
         for (const [p] of Object.entries(template.dataset)) {
-            console.log(node.dataset[p] + layer)
-            paramsObject[p] = indexKey(node.dataset[p], layer)
-            //if (node.dataset[p].startsWith('#')) {
-            //    paramsObject[p] = resolveKey(node.dataset[p].slice(1), data, context, indexStack)
-            //} else {
-            //    paramsObject[p] = node.dataset[p]
-            //}
+            paramsObject[p] = resolvePlaceHolder(node.dataset[p], data, context, layer)
         }
 
         const merged = { ...data, ... { [templateId]: paramsObject } }
