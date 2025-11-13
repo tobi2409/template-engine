@@ -213,6 +213,9 @@ const TemplateEngine = (function () {
         // kann display im positiven Testfall auch leer bleiben
         // Warum funktioniert if-test nur in Form eines PlaceHolders und each-of auch ohne PlaceHolder?
         // Weil bei each-of der aus dem PlaceHolder erhaltene Wert nochmal resolveKey't wird, um die items-Liste zu erhalten
+        // TODO: das ist noch nicht so günstig, hier wird der PlaceHolder in die indexKey/convert-Methode übergeben (es funktioniert, ist aber unattraktiv)
+        // anders bei interpolateText, dort wird über replace der key entnommen
+        // Problem wird auch bei refresh (handleIfTag) auffällig
         const conditionKey = convertToFullKey(indexKey(node.getAttribute('test'), layer), _context, _indexStack)
 
         if (!removeClonedNodes) { // Test-Fall soll nicht einfach abgeändert werden können
@@ -430,7 +433,7 @@ const TemplateEngine = (function () {
 
                 createItemsNodes(items, eachTemplate, n.context, n.indexStack, 0, n.layer, n.templateParams)
             }
-
+console.log(nodeHoldersByKeys.get(ch.key))
             const linkedNodeHolders = nodeHoldersByKeys.get(ch.key)
 
             for (const n of linkedNodeHolders) {
