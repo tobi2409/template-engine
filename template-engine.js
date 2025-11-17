@@ -102,7 +102,9 @@ const TemplateEngine = (function () {
     // ein Key kennt keine PlaceHolder, welche zu einem anderen Attribut weiterleiten
     // daher ist resolveKey nicht-rekursiv
     function resolveKey(key, data, context = new Map(), layer = 0) {
-        const splitted = key.split('.')
+        const indexedKey = indexKey(key, layer)
+
+        const splitted = indexedKey.split('.')
         const isFirstContext = context.has(splitted[0])
         const rootKey = isFirstContext ? context.get(splitted[0]).data : data
         const startIndex = isFirstContext ? 1 : 0
@@ -113,7 +115,7 @@ const TemplateEngine = (function () {
             value = value[splitted[i]]
         }
 
-        return indexKey(value, layer)
+        return value
     }
 
     function indexKey(key, layer = 0) {
@@ -211,19 +213,20 @@ const TemplateEngine = (function () {
 
         // da if-Tag sowieso keinen Einfluss auf die Darstellung hat,
         // kann display im positiven Testfall auch leer bleiben
-        // Warum funktioniert if-test nur in Form eines PlaceHolders und each-of auch ohne PlaceHolder?
-        // Weil bei each-of der aus dem PlaceHolder erhaltene Wert nochmal resolveKey't wird, um die items-Liste zu erhalten
+        // die Idee ist, dass if-test immer auf ein Attribut zeigt
+        // -> daher wird hier nur resolveKey und nicht resolvePlaceHolder angewandt
+        // anders sieht es bei each-of aus, dort kann auch direkt eine Liste aus einem Attribut angegeben werden
         // TODO: das ist noch nicht so günstig, hier wird der PlaceHolder in die indexKey/convert-Methode übergeben (es funktioniert, ist aber unattraktiv)
         // anders bei interpolateText, dort wird über replace der key entnommen
-        // Problem wird auch bei refresh (handleIfTag) auffällig
+
         const conditionKey = convertToFullKey(indexKey(node.getAttribute('test'), layer), _context, _indexStack)
 
         if (!removeClonedNodes) { // Test-Fall soll nicht einfach abgeändert werden können
             // IndexStack ist für Refresh notwendig, sobald man each-Childs rendert
-            nodeHoldersByKeys.appendToKey(conditionKey, { node: node, updateHandler: 'handleIfTag', context: _context, indexStack: _indexStack })
+            nodeHoldersByKeys.appendToKey(conditionKey, { node: node, updateHandler: 'handleIfTag', context: _context, indexStack: _indexStack, layer: layer })
         }
 
-        const conditionValue = resolvePlaceHolder(conditionKey, data, _context, layer)
+        const conditionValue = resolveKey(conditionKey, data, _context, layer)
         node.style.display = conditionValue ? '' : 'none'
 
         if (conditionValue) {
@@ -249,7 +252,7 @@ const TemplateEngine = (function () {
 
         // ofAttribute: bei bspw. "my-template.list" wird auf "friends" referenziert, nicht auf "{{ friends }}" (so wird das verlangt)
         // -> daher kann "friends" auch innerhalb von convertToFullKey verwendet werden
-        const ofAttribute = resolvePlaceHolder(node.getAttribute('of'), data, _context, layer - 1)
+        const ofAttribute = indexKey(resolvePlaceHolder(node.getAttribute('of'), data, _context, layer - 1), layer - 1)
         const asAttribute = indexKey(node.getAttribute('as'), layer) // ist einfach nur eine einzelne Variable zum Indizieren
 
         node.style.display = 'none'
@@ -400,7 +403,7 @@ const TemplateEngine = (function () {
         
         function createItemsNodes(items, eachTemplate, context, indexStack, startIndex, layer, templateParams) {
             const merged = { ... data, ... templateParams }
-            console.log(merged)
+            //console.log(merged)
             handleEachTag(eachTemplate, merged, context, indexStack, true, items, startIndex, layer)
         }
 
@@ -433,7 +436,7 @@ const TemplateEngine = (function () {
 
                 createItemsNodes(items, eachTemplate, n.context, n.indexStack, 0, n.layer, n.templateParams)
             }
-console.log(nodeHoldersByKeys.get(ch.key))
+//console.log(nodeHoldersByKeys.get(ch.key))
             const linkedNodeHolders = nodeHoldersByKeys.get(ch.key)
 
             for (const n of linkedNodeHolders) {
@@ -443,7 +446,7 @@ console.log(nodeHoldersByKeys.get(ch.key))
                             interpolateText(n.node, data, new Map(), [], false) // kein Context/IndexStack nötig, weil templates schon Full-Key aufweisen
                             break
                         case 'handleIfTag':
-                            handleIfTag(n.node, data, n.context, n.indexStack, true, true)
+                            handleIfTag(n.node, data, n.context, n.indexStack, true, true, n.layer)
                             break
                         case 'setArray':
                             handleSetArray(n)

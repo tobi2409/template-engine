@@ -25,7 +25,7 @@
             <ul>
                 <each of="{{ friends-template-params.list }}" as="f*">
                     <li>{{ f*.name }} ist {{ f*.age }} Jahre alt
-                        <if test="{{ f*.showChilds }}">
+                        <if test="f*.showChilds">
                             <template-use template-id="friends-template" data-list="f*.childs">
                             </template-use>
                         </if>
