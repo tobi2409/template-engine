@@ -25,7 +25,7 @@
             <ul>
                 <each of="{{ friends-template-params.list }}" as="f*">
                     <li>{{ f*.name }} ist {{ f*.age }} Jahre alt
-                        <if test="f*.showChilds">
+                        <if test="{{ f*.showChilds }}">
                             <template-use template-id="friends-template" data-list="f*.childs">
                             </template-use>
                         </if>
@@ -61,7 +61,8 @@
                     childs: [{
                         name: 'Freund1_2_1',
                         childs: [],
-                        age: 30
+                        age: 30,
+                        showChilds: false
                     }],
                     age: 22,
                     showChilds: false
@@ -90,8 +91,9 @@
         
         data.friends[0].name = 'Tobias'
         data.friends[1].childs = [{ name: 'Test2_1', age: 30, childs: [{ name: 'Test2_1_1', childs: [] }, { name: 'Test2_1_2', childs: [] }], showChilds: true }, { name: 'Test2_2', age: 25, childs: [], showChilds: false }]
+        //TODO: bei slice müssten die NodeHolders nachgezogen werden
         delete data.friends[0].childs[0]
-        data.friends[0].childs.push({ name: 'Freund1_3', age: 20, childs: [{ name: 'Freund1_3_1', age: 25, childs: [] }] })
+        data.friends[0].childs.push({ name: 'Freund1_3', age: 20, childs: [{ name: 'Freund1_3_1', age: 25, childs: [], showChilds: false }], showChilds: false })
         data.friends[0].childs[1].showChilds = true
 
     </script>

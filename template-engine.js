@@ -1,5 +1,6 @@
 // TODOs:
 // wenn eine Variable gelöscht wird, dann nodeHolder löschen
+// bei slice, insert müssen NodeHolders nachgezogen werden
 // Kommentare verbessern
 
 // In dieser Map befinden sich
@@ -178,7 +179,7 @@ const TemplateEngine = (function () {
 
         wrappedText.innerText = resolvedTemplate
 
-        const keyGroup = [...fullKeyTemplate.matchAll(getPlaceHolderRegEx())].map(m => m[1])
+        const keyGroup = [... fullKeyTemplate.matchAll(getPlaceHolderRegEx())].map(m => m[1])
         for (const key of keyGroup) {
             nodeHoldersByKeys.appendToKey(key, { node: wrappedText, updateHandler: 'interpolate', context: context })
         }
@@ -219,14 +220,23 @@ const TemplateEngine = (function () {
         // TODO: das ist noch nicht so günstig, hier wird der PlaceHolder in die indexKey/convert-Methode übergeben (es funktioniert, ist aber unattraktiv)
         // anders bei interpolateText, dort wird über replace der key entnommen
 
-        const conditionKey = convertToFullKey(indexKey(node.getAttribute('test'), layer), _context, _indexStack)
+        const conditionKey = node.getAttribute('test')
+
+        const conditionFullKey = conditionKey.replace(getPlaceHolderRegEx(), (_, key) => {
+            return `{{ ${convertToFullKey(indexKey(key, layer), _context, _indexStack)} }}`
+        })
 
         if (!removeClonedNodes) { // Test-Fall soll nicht einfach abgeändert werden können
             // IndexStack ist für Refresh notwendig, sobald man each-Childs rendert
-            nodeHoldersByKeys.appendToKey(conditionKey, { node: node, updateHandler: 'handleIfTag', context: _context, indexStack: _indexStack, layer: layer })
+
+            const keyGroup = [... conditionFullKey.matchAll(getPlaceHolderRegEx())].map(m => m[1])
+            for (const key of keyGroup) {
+                nodeHoldersByKeys.appendToKey(key, { node: node, updateHandler: 'handleIfTag', context: _context, indexStack: _indexStack, layer: layer })
+            }
         }
 
-        const conditionValue = resolveKey(conditionKey, data, _context, layer)
+        const conditionValue = resolvePlaceHolder(conditionFullKey, data, _context, layer)
+
         node.style.display = conditionValue ? '' : 'none'
 
         if (conditionValue) {
@@ -528,6 +538,8 @@ const TemplateEngine = (function () {
                     },
 
                     deleteProperty(target, prop) {
+                        delete target[prop]
+
                         _fullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
 
                         const change = { key: _fullKey, action: 'delete' }
