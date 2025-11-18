@@ -13,7 +13,7 @@
             <each of="friends" as="f">
                 <li>{{ f.name }} ist {{ f.age }} Jahre alt
 
-                    <if test="f.showChilds">
+                    <if test="{{ f.showChilds }}">
                         <ul>
                             <each of="f.childs" as="c">
                                 <li>{{ c.name }} ist {{ c.age }} Jahre alt</li>

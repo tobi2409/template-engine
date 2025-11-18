@@ -1,14 +1,13 @@
 // TODOs:
 // wenn eine Variable gelöscht wird, dann nodeHolder löschen
-// bei slice, insert müssen NodeHolders nachgezogen werden
+// bei slice, insert müssen NodeHolders-Indizes nachgezogen werden
 // Kommentare verbessern
 
-// In dieser Map befinden sich
-// TextNodes (mglw. im span umrahmt), if-Tags ,
-// sodass die Childs dazu "kontrolliert" enthalten sind
-// das jeweilige Node ist allerdings noch in einem Objekt gekapselt für weitere Informationen
-
 const TemplateEngine = (function () {
+    // In dieser Map befinden sich
+    // TextNodes (mglw. im span umrahmt), if-Tags ,
+    // sodass die Childs dazu "kontrolliert" enthalten sind
+    // das jeweilige Node ist allerdings noch in einem Objekt gekapselt für weitere Informationen
 
     const nodeHoldersByKeys = new Map()
 
@@ -91,13 +90,22 @@ const TemplateEngine = (function () {
                 return placeHolder
             }
 
-            const unwrappedParamKey = placeHolder.match(regex)[1] // Index 1 ist 2. Gruppe des RegEx
+            const unwrappedParamKey = unwrapPlaceHolder(placeHolder)
             const paramValue = resolveKey(unwrappedParamKey, data, context, layer)
 
             return dereferencePlaceHolder(paramValue, data, context, layer)
         }
 
         return dereferencePlaceHolder(placeHolder, data, context, layer)
+    }
+
+    function unwrapPlaceHolder(placeHolder) {
+        const regex = getPlaceHolderRegEx(false)
+        return placeHolder.match(regex)[1] // Index 1 ist 2. Gruppe des RegEx
+    }
+
+    function wrapKey(key) {
+        return `{{ ${key} }}`
     }
 
     // ein Key kennt keine PlaceHolder, welche zu einem anderen Attribut weiterleiten
@@ -134,6 +142,20 @@ const TemplateEngine = (function () {
         }
 
         return splitted.join('.')
+    }
+
+    function backupContext(context) {
+        const backup = new Map()
+        
+        for (const [key, value] of context.entries()) {
+            backup.set(key, value)
+        }
+
+        return backup
+    }
+
+    function backupIndexStack(indexStack) {
+        return Array.from(indexStack)
     }
 
     // toFullKeyTemplate nur innerhalb von each
@@ -192,19 +214,13 @@ const TemplateEngine = (function () {
             })
         }
 
-        //TODO: Code verschönern
         let _context = context
         let _indexStack = indexStack
 
         // beim Refreshen wird nicht render aufgerufen, sondern direkt handleEachTag (somit muss hier die Kopie erstellt werden)
         if (removeClonedNodes) {
-            _context = new Map()
-
-            for (const [key, value] of context.entries()) {
-                _context.set(key, value)
-            }
-
-            _indexStack = Array.from(indexStack)
+            _context = backupContext(context)
+            _indexStack = backupIndexStack(indexStack)
         }
 
         if (!node.hasAttribute('test')) {
@@ -220,22 +236,18 @@ const TemplateEngine = (function () {
         // TODO: das ist noch nicht so günstig, hier wird der PlaceHolder in die indexKey/convert-Methode übergeben (es funktioniert, ist aber unattraktiv)
         // anders bei interpolateText, dort wird über replace der key entnommen
 
-        const conditionKey = node.getAttribute('test')
+        const testAttribute = node.getAttribute('test')
 
-        const conditionFullKey = conditionKey.replace(getPlaceHolderRegEx(), (_, key) => {
-            return `{{ ${convertToFullKey(indexKey(key, layer), _context, _indexStack)} }}`
-        })
+        const unwrapTestAttribute = unwrapPlaceHolder(testAttribute)
+        const testFullKey = convertToFullKey(indexKey(unwrapTestAttribute, layer), _context, _indexStack)
 
         if (!removeClonedNodes) { // Test-Fall soll nicht einfach abgeändert werden können
             // IndexStack ist für Refresh notwendig, sobald man each-Childs rendert
-
-            const keyGroup = [... conditionFullKey.matchAll(getPlaceHolderRegEx())].map(m => m[1])
-            for (const key of keyGroup) {
-                nodeHoldersByKeys.appendToKey(key, { node: node, updateHandler: 'handleIfTag', context: _context, indexStack: _indexStack, layer: layer })
-            }
+            nodeHoldersByKeys.appendToKey(testFullKey, { node: node, updateHandler: 'handleIfTag', context: _context, indexStack: _indexStack, layer: layer })
         }
 
-        const conditionValue = resolvePlaceHolder(conditionFullKey, data, _context, layer)
+        const testFullPlaceHolder = wrapKey(testFullKey)
+        const conditionValue = resolvePlaceHolder(testFullPlaceHolder, data, _context, layer)
 
         node.style.display = conditionValue ? '' : 'none'
 
@@ -245,30 +257,29 @@ const TemplateEngine = (function () {
     }
 
     function handleEachTag(node, data, context = new Map(), indexStack = [], insertItemsMode = false, customItems = [], customStartIndex = 0, layer = 0) {
-        //TODO: Code verschönern
         let _context = context
         let _indexStack = indexStack
 
         // beim Refreshen wird nicht render aufgerufen, sondern direkt handleEachTag (somit muss hier die Kopie erstellt werden)
         if (insertItemsMode) {
-            _context = new Map()
-
-            for (const [key, value] of context.entries()) {
-                _context.set(key, value)
-            }
-
-            _indexStack = Array.from(indexStack)
+            _context = backupContext(context)
+            _indexStack = backupIndexStack(indexStack)
         }
 
-        // ofAttribute: bei bspw. "my-template.list" wird auf "friends" referenziert, nicht auf "{{ friends }}" (so wird das verlangt)
-        // -> daher kann "friends" auch innerhalb von convertToFullKey verwendet werden
-        const ofAttribute = indexKey(resolvePlaceHolder(node.getAttribute('of'), data, _context, layer - 1), layer - 1)
-        const asAttribute = indexKey(node.getAttribute('as'), layer) // ist einfach nur eine einzelne Variable zum Indizieren
+        //const ofList = resolvePlaceHolder(node.getAttribute('of'), data, _context, layer)
+        //const ofAttribute = indexKey(resolvePlaceHolder(node.getAttribute('of'), data, _context, layer - 1), layer - 1)
+        const ofAttribute = node.getAttribute('of')
+        const asAttribute = node.getAttribute('as')
 
         node.style.display = 'none'
 
+        // beim Resolven muss Keyname einer Liste rauskommen
+        // damit dieser Keyname später für FullKey verwendet werden kann (Parameter für FullKey reicht nicht)
+        // da Listenname noch Index-Platzhalter enthalten kann -> indexKey
+        const listName = indexKey(resolvePlaceHolder(ofAttribute, data, _context, layer - 1), layer - 1)
+
         // hier wird bspw. "friends" von vorhin auch aufgelöst (resolveKey ist nicht-rekursiv)
-        const items = insertItemsMode ? customItems : resolveKey(ofAttribute, data, _context, layer)
+        const items = insertItemsMode ? customItems : resolveKey(listName, data, _context, layer)
 
         if (items.constructor.name !== 'Array') {
             console.error('each-of must be an Array')
@@ -280,22 +291,19 @@ const TemplateEngine = (function () {
         // oldContext und oldIndexStack stellen den Stand vor dem Child-Iterieren dar
         // sodass ein array.push beim Refresh eine Orientierung hat,
         // in welchem Parent das Push erfolgen soll
-        const oldContext = new Map()
-        
-        for (const [key, value] of _context.entries()) {
-            oldContext.set(key, value)
-        }
-        
-        const oldIndexStack = Array.from(_indexStack)
+        const oldContext = backupContext(_context)
+        const oldIndexStack = backupIndexStack(_indexStack)
         
         _indexStack.push(insertItemsMode ? customStartIndex : 0)
 
-        const fullKey = convertToFullKey(ofAttribute, oldContext, oldIndexStack) // siehe Zeile mit ofAttribute-Zuweisung
-        
+        const fullKey = convertToFullKey(listName, oldContext, oldIndexStack) // siehe Zeile mit ofAttribute-Zuweisung
+
+        const indexAs = indexKey(asAttribute, layer) // ist einfach nur eine einzelne Variable zum Indizieren
+
         for (let i = 0 ; i < items.length ; i++) {
             const d = items[i]
             
-            _context.set(asAttribute, { data: d, of: ofAttribute })
+            _context.set(indexAs, { data: d, of: listName })
 
             _indexStack.pop()
 
@@ -311,7 +319,7 @@ const TemplateEngine = (function () {
                 }
 
                 node.parentNode.insertBefore(cloned, node)
-                
+
                 const newFullKey = `${fullKey}.${index}`
                 const value = resolveKey(newFullKey, data, context, layer)
 
@@ -328,7 +336,6 @@ const TemplateEngine = (function () {
         // dann muss man die jeweilige p kennen (Context)
         if (!insertItemsMode) {
             const templateParams = Object.fromEntries(Object.entries(data).filter(([key]) => key.slice(-7) == '-params'))
-            //const templateParams = data.ke
             nodeHoldersByKeys.appendToKey(fullKey, { node: node, updateHandler: 'setArray', context: oldContext, indexStack: oldIndexStack, layer: layer, templateParams: templateParams })
         }
     }
@@ -370,13 +377,8 @@ const TemplateEngine = (function () {
         // childNodes beinhaltet im Gegensatz zu children auch Text-Nodes
         const _nodes = Array.from(nodes)
 
-        const _context = new Map()
-
-        for (const [key, value] of context.entries()) {
-            _context.set(key, value)
-        }
-
-        const _indexStack = Array.from(indexStack)
+        const _context = backupContext(context)
+        const _indexStack = backupIndexStack(indexStack)
 
         for (const n of _nodes) {
             switch (n.tagName) {
