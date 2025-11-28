@@ -70,6 +70,9 @@
 
         data.friends[0].name = 'Test'
         TemplateEngine.refresh(data, { 'action': 'update', key: 'friends.0.name' })
+
+        data.friends[0].childs.push({ name: 'Freund1_3', childs: [] })
+        TemplateEngine.refresh(data, { 'action': 'createItem', key: 'friends.0.childs' })
     </script>
 
 </body>

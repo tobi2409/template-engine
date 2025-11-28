@@ -137,7 +137,7 @@ const TemplateEngine = (function () {
 
         const fullOfAttribute = convertToFullKey(ofAttribute, contextStack)
 
-        nodeHoldersByKeys.appendToKey(fullOfAttribute, { node: eachNode, updateHandler: 'setArray', contextStack: contextStack })
+        nodeHoldersByKeys.appendToKey(fullOfAttribute, { node: eachNode, mountNode: mountNode, updateHandler: 'setArray', contextStack: contextStack })
 
         const list = resolveKey(fullOfAttribute, data)
 
@@ -208,9 +208,26 @@ const TemplateEngine = (function () {
     }
 
     function refresh(data, change, app) {
-        const linkedNodeHolders = nodeHoldersByKeys.get(change.key)
+        
+        function createItemsNodes(items, contextStack, eachNode, mountNode) {
+            //TODO: mountEachIterations mit custom Items anpassen
+            mountEachIterations(items, contextStack, eachNode, mountNode)
+        }
+
+        function createItemHandler() {
+            const linkedNodeHolders = nodeHoldersByKeys.get(change.key)
+
+            for (const node of linkedNodeHolders.holders) {
+                const items = resolveKey(change.key, data)
+                //TODO: man soll auch mehrere Elemente pushen können
+                const pushedItem = items[items.length - 1] // beim Pushen braucht man das letzte Element der Liste
+                createItemsNodes([pushedItem], node.contextStack, node.node, node.mountNode)
+            }
+        }
 
         function updateHandler() {
+            const linkedNodeHolders = nodeHoldersByKeys.get(change.key)
+
             function updateGet(node) {
                 const getResolvedSpan = node.previousElementSibling
 
@@ -232,6 +249,9 @@ const TemplateEngine = (function () {
         }
 
         switch (change.action) {
+            case 'createItem':
+                createItemHandler()
+                break
             case 'update':
                 updateHandler()
                 break
