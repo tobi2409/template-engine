@@ -1,0 +1,103 @@
+<div>Hallo <span>--</span> {{ name }}
+	<div>Du bist {{ name }} und {{ age }} Jahre alt</div>
+</div>
+
+->
+
+<div>Hallo <span>--</span> <span data-template="{{ name }}">Tobias</span>
+	<div>Du bist <span data-template="{{ name }}">Tobias</span> und <span data-template="{{ age }}">31</span> Jahre alt</div>
+</div>
+
+name -> [<span data-template="{{ name }}">Tobias</span>, <span data-template="{{ name }}">Tobias</span>]
+age -> [<span data-template="{{ age }}">31</span>]
+
+<ul>
+	<each of="friends" as="f">
+		<li>{{ f.name }} ist {{ f.age }} Jahre alt
+
+			<ul>
+				<each of="f.childs" as="c">
+					<li>{{ c.name }}</li>
+				</each>
+			</ul>
+
+		</li>
+	</each>
+</ul>
+
+->
+
+<ul>
+	<li><span data-template="{{ friends.0.name }}">Freund1</span> ist <span data-template="{{ friends.0.age }}">30</span> Jahre alt
+
+		<ul>
+			<li><span data-template="{{ friends.0.childs.0.name }}">Freund1_1</span></li>
+			<li><span data-template="{{ friends.0.childs.1.name }}">Freund1_2</span></li>
+			/* Template */
+			<li><span data-template="{{ friends.0.childs.2.name }}"></span></li>
+		</ul>
+
+	</li>
+
+	<li><span data-template="{{ friends.1.name }}">Freund2</span> ist <span data-template="{{ friends.1.age }}">28</span> Jahre alt
+
+		<ul>
+			<li><span data-template="{{ friends.1.childs.0.name }}">Freund2_1</span></li>
+			<li><span data-template="{{ friends.1.childs.1.name }}">Freund2_2</span></li>
+			/* Template */
+			<li><span data-template="{{ friends.1.childs.2.name }}"></span></li>
+		</ul>
+
+	</li>
+
+	<li><span data-template="{{ friends.2.name }}">Freund3</span> ist <span data-template="{{ friends.2.age }}">26</span> Jahre alt
+
+		<ul>
+			<li><span data-template="{{ friends.2.childs.0.name }}">Freund3_1</span></li>
+			<li><span data-template="{{ friends.2.childs.1.name }}">Freund3_2</span></li>
+			/* Template */
+			<li><span data-template="{{ friends.2.childs.2.name }}"></span></li>
+		</ul>
+
+	</li>
+
+	/* Template */
+	<li><span data-template="{{ friends.3.name }}"></span> ist <span data-template="{{ friends.3.age }}></span> Jahre alt
+
+		<ul>
+			<each of="friends.3.childs" as="c">
+				<li>{{ c.name }}</li>
+			</each>
+		</ul>
+
+	</li>
+</ul>
+
+friends -> [<ul>.....</ul>]
+
+friends.0 -> [<li><span data-template="{{ friends.0.name }}">.....</li>]
+friends.0.name -> [<span data-template="{{ friends.0.name }}">Freund1</span>]
+friends.0.age -> [<span data-template="{{ friends.0.age }}">30</span>]
+friends.0.childs -> [<ul>.....</ul>]
+friends.0.childs.0 -> [<li><span data-template="{{ friends.0.childs.0.name }}">Freund1_1</span></li>]
+friends.0.childs.0.name -> [<span data-template="{{ friends.0.childs.0.name }}">Freund1_1</span>]
+friends.0.childs.1 -> [<li><span data-template="{{ friends.0.childs.1.name }}">Freund1_2</span></li>]
+friends.0.childs.1.name -> [<li><span data-template="{{ friends.0.childs.1.name }}">Freund1_2</span></li>]
+
+friends.1 -> [<li><span data-template="{{ friends.1.name }}">.....</li>]
+friends.1.name -> [<span data-template="{{ friends.1.name }}">Freund2</span>]
+friends.1.age -> [<span data-template="{{ friends.1.age }}">28</span>]
+friends.1.childs -> [<ul>.....</ul>]
+friends.1.childs.0 -> [<li><span data-template="{{ friends.1.childs.0.name }}">Freund2_1</span></li>]
+friends.1.childs.0.name -> [<span data-template="{{ friends.1.childs.0.name }}">Freund2_1</span>]
+friends.1.childs.1 -> [<li><span data-template="{{ friends.1.childs.1.name }}">Freund2_2</span></li>]
+friends.1.childs.1.name -> [<span data-template="{{ friends.1.childs.1.name }}">Freund2_2</span>]
+
+friends.2 -> [<li><span data-template="{{ friends.2.name }}">.....</li>]
+friends.2.name -> [<span data-template="{{ friends.2.name }}">Freund3</span>]
+friends.2.age -> [<span data-template="{{ friends.2.age }}">26</span>]
+friends.2.childs -> [<ul>.....</ul>]
+friends.2.childs.0 -> [<li><span data-template="{{ friends.2.childs.0.name }}">Freund3_1</span></li>]
+friends.2.childs.0.name -> [<span data-template="{{ friends.2.childs.0.name }}">Freund3_1</span>]
+friends.2.childs.1 -> [<li><span data-template="{{ friends.2.childs.1.name }}">Freund3_2</span></li>]
+friends.2.childs.1.name -> [<span data-template="{{ friends.2.childs.1.name }}">Freund3_2</span>]
