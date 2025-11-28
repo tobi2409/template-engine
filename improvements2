@@ -12,8 +12,8 @@ name -> [<span data-template="{{ name }}">Tobias</span>, <span data-template="{{
 age -> [<span data-template="{{ age }}">31</span>]
 
 <ul>
-	<each of="friends" as="f">
-		<li>{{ f.name }} ist {{ f.age }} Jahre alt
+	<for var="if" from="0" to="friends.length">
+		<li>{{ friends.i.name }} ist {{ friends.i.age }} Jahre alt
 
 			<ul>
 				<each of="f.childs" as="c">

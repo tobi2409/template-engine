@@ -7,74 +7,37 @@
 </head>
 <body>
 
-    <div id="app">
-        <div>Hallo <span>--</span> {{ name }}
+    <div id="app"></div>
 
-            <div>Du bist {{ name }} und {{ age }} Jahre alt</div>
+    <template id="app-template">
+        <div>Hallo <span>--</span> <get>name</get>
+
+            <div>Du bist <get>name</get> und <get>age</get> Jahre alt</div>
         </div>
 
-        <if test="{{ showSecondHallo }}">
-            Bedingtes Hallo {{ name }}
-            <p>Zweites Element innerhalb der Bedingung</p>
-
-            <if test="{{ nestedCondition }}">
-                <p>Nested Condition ist erreicht, {{ name }}</p>
-            </if>
-        </if>
-
-        <if test="{{ secondCondition }}">
-            <p>Zweite Condition, {{ name }}</p>
-        </if>
-
-        <div>
-            <p>Counter: {{ counter }}</p>
-        </div>
+        <div>Hallo <get>param1</get></div>
 
         <ul>
             <each of="friends" as="f">
-                <li>{{ f.name }} ist {{ f.age }} Jahre alt
+                <li><get>f.name</get> ist <get>f.age</get> Jahre alt
 
-                    <if test="{{ showChilds }}">
-                        <ul>
-                            <each of="f.childs" as="c">
-                                <li>{{ c.name }}
-
-                                    <if test="{{ showChilds2 }}">
-
-                                        <ul>
-                                            <each of="c.childs" as="d">
-                                                <li>{{ d }}</li>
-                                            </each>
-                                        </ul>
-
-                                    </if>
-
-                                </li>
-                            </each>
-                        </ul>
-                    </if>
+                    <ul>
+                        <each of="f.childs" as="c">
+                            <li><get>c.name</get></li>
+                        </each>
+                    </ul>
 
                 </li>
             </each>
         </ul>
+    </template>
 
-        <each of="friends" as="f">
-            <p>{{ f.name }}</p>
-
-            <div>
-                <if test="{{ showChilds }}">
-                    <each of="f.childs" as="c">
-                        <p>--- {{ c.name }}</p>
-                    </each>
-                </if>
-            </div>
-        </each>
-    </div>
+    <template-use id="app-template-use" template-id="app-template" mount-id="app" data-param1="Test"></template-use>
 
     <script type="module">
         import TemplateEngine from './template-engine.js'
 
-        const data = TemplateEngine.reactive({
+        const data = TemplateEngine.run({
             name: 'Tobias',
             age: 31,
             counter: 1,
@@ -85,27 +48,27 @@
                 name: 'Freund1',
                 childs: [{
                     name: 'Freund1_1',
-                    childs: ['Freund1_1_1', 'Freund1_1_2']
+                    childs: []
                 }, {
                     name: 'Freund1_2',
-                    childs: ['Freund1_2_1']
+                    childs: []
                 }],
                 age: 23
             }, {
                 name: 'Freund2',
                 childs: [{
                     name: 'Freund2_1',
-                    childs: ['Freund2_1_1', 'Freund2_1_2']
+                    childs: []
                 }],
                 age: 25
             }],
             showChilds: false,
             showChilds2: true
-        }, document.getElementById('app'))
+        }, document.getElementById('app-template-use'))
 
         //render(data, document.getElementById('app'))
 
-        data.showChilds = true
+        /*data.showChilds = true
         data.showChilds = true
         data.showChilds = false
         data.showChilds2 = false
@@ -119,7 +82,7 @@
         delete data.friends[1].childs[0]
         delete data.name
         delete data.showSecondHallo
-        data.friends[1].childs = [{ name: 'Test2_1', age: 30, childs: ['Test2_1_1', 'Test2_1_2'] }, { name: 'Test2_2', age: 25, childs: [] }]
+        data.friends[1].childs = [{ name: 'Test2_1', age: 30, childs: ['Test2_1_1', 'Test2_1_2'] }, { name: 'Test2_2', age: 25, childs: [] }]*/
     </script>
 
 </body>
