@@ -2,23 +2,85 @@ const TemplateEngine = (function () {
 
     const nodeHoldersByKeys = new Map()
 
-    nodeHoldersByKeys.appendToKey = function(key, nodeHolder) {
-        if (!nodeHoldersByKeys.has(key)) {
-            nodeHoldersByKeys.set(key, [])
+    nodeHoldersByKeys.appendToKey = function(fullKey, nodeHolder) {
+        const segments = fullKey.split('.')
+
+        let ref = nodeHoldersByKeys
+
+        for (let i = 0; i < segments.length; i++) {
+            const segment = segments[i]
+
+            const isIndex = /^\d+$/.test(segment)
+
+            if (isIndex) {
+                // Array-Index → behandle als array
+                if (!Array.isArray(ref.items)) {
+                    ref.items = []
+                }
+
+                if (!ref.items[segment]) {
+                    ref.items[segment] = {}
+                }
+            
+                ref = ref.items[segment]
+            } else {
+                // normales Objektfeld
+                if (!ref[segment]) {
+                    ref[segment] = {}
+                }
+
+                ref = ref[segment]
+            }
         }
 
-        const nodeHoldersByKey = nodeHoldersByKeys.get(key)
+        // Am Ende: Liste erzeugen falls nicht existiert
+        if (!ref.holders) {
+            ref.holders = []
+        }
 
-        if (!nodeHoldersByKey.some(e => e.node === nodeHolder.node)) {
-            nodeHoldersByKey.push(nodeHolder)
+        // Duplikate verhindern
+        if (!ref.holders.some(e => e.node === nodeHolder.node)) {
+            ref.holders.push(nodeHolder)
         }
     }
 
-    function resolveKey(key, data, contextStack = new Map()) {
+    nodeHoldersByKeys.get = function(fullKey) {
+        const segments = fullKey.split('.')
+        let ref = nodeHoldersByKeys
+
+        for (let i = 0; i < segments.length; i++) {
+            const segment = segments[i]
+
+            const isIndex = /^\d+$/.test(segment)
+
+            if (isIndex) {
+                // Index eines Arrays
+                if (!ref.items) {
+                    return undefined
+                }
+
+                ref = ref.items[segment]
+                
+                if (!ref) {
+                    return undefined
+                }
+            } else {
+                // norm. property
+                ref = ref[segment]
+
+                if (!ref) {
+                    return undefined
+                }
+            }
+        }
+
+        return ref
+    }
+
+    function resolveKey(key, data) {
         const splitted = key.split('.')
-        const isFirstContext = contextStack.has(splitted[0])
-        const rootKey = isFirstContext ? contextStack.get(splitted[0]).data : data
-        const startIndex = isFirstContext ? 1 : 0
+        const rootKey = data
+        const startIndex = 0
         
         let value = rootKey
 
@@ -61,10 +123,12 @@ const TemplateEngine = (function () {
         mountedNode.innerText = fullKey
         mountedNode.hidden = true
 
-        const resolvedText = document.createTextNode(resolveKey(fullKey, data, contextStack))
-        mountNode.insertBefore(resolvedText, mountedNode)
+        const resolvedTextSpan = document.createElement('span')
+        resolvedTextSpan.classList.add('get-resolved')
+        resolvedTextSpan.innerText = resolveKey(fullKey, data)
+        mountNode.insertBefore(resolvedTextSpan, mountedNode)
         
-        nodeHoldersByKeys.appendToKey(fullKey, { node: mountedNode, refreshHandler: 'interpolate' })
+        nodeHoldersByKeys.appendToKey(fullKey, { node: mountedNode, updateHandler: 'updateGet' })
     }
 
     function mountEachIterations(data, contextStack = new Map(), eachNode, mountNode) {
@@ -75,7 +139,11 @@ const TemplateEngine = (function () {
 
         nodeHoldersByKeys.appendToKey(fullOfAttribute, { node: eachNode, updateHandler: 'setArray', contextStack: contextStack })
 
-        const list = resolveKey(fullOfAttribute, data, contextStack)
+        const list = resolveKey(fullOfAttribute, data)
+
+        if (list.constructor.name !== 'Array') {
+            throw new Error('each-of must be an Array')
+        }
 
         for (const [index, listElement] of list.entries()) {
             contextStack.set(asAttribute, { data: listElement, of: ofAttribute })
@@ -92,7 +160,7 @@ const TemplateEngine = (function () {
 
     function handleEachNode(data, contextStack = new Map(), eachNode, mountNode) {
         mountEachIterations(data, contextStack, eachNode, mountNode)
-        //mountEachTemplate(data, eachNode, mountNode)
+        //mountEachTemplate(data, contextStack, eachNode, mountNode)
         //console.log(eachNode)
         console.log(nodeHoldersByKeys)
     }
@@ -139,7 +207,38 @@ const TemplateEngine = (function () {
         templateUse(data, contextStack, templateUseNode)
     }
 
-    return { run }
+    function refresh(data, change, app) {
+        const linkedNodeHolders = nodeHoldersByKeys.get(change.key)
+
+        function updateHandler() {
+            function updateGet(node) {
+                const getResolvedSpan = node.previousElementSibling
+
+                if (!(getResolvedSpan.tagName === 'SPAN'
+                    && getResolvedSpan.classList.contains('get-resolved'))) {
+                        throw new Error("get isn't resolved")
+                    }
+
+                getResolvedSpan.innerText = resolveKey(change.key, data)
+            }
+
+            for (const nodeHolder of linkedNodeHolders.holders) {
+                switch (nodeHolder.updateHandler) {
+                    case 'updateGet':
+                        updateGet(nodeHolder.node)
+                        break
+                }
+            }
+        }
+
+        switch (change.action) {
+            case 'update':
+                updateHandler()
+                break
+        }
+    }
+
+    return { run, refresh }
 
 })()
 
