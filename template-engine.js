@@ -137,7 +137,7 @@ const TemplateEngine = (function () {
 
         const fullOfAttribute = convertToFullKey(ofAttribute, contextStack)
 
-        nodeHoldersByKeys.appendToKey(fullOfAttribute, { node: eachNode, mountNode: mountNode, updateHandler: 'setArray', contextStack: contextStack })
+        nodeHoldersByKeys.appendToKey(fullOfAttribute, { node: eachNode, mountNode: mountNode, updateHandler: 'setArray', contextStack: new Map(contextStack) })
 
         const list = resolveKey(fullOfAttribute, data)
 
@@ -146,9 +146,10 @@ const TemplateEngine = (function () {
         }
 
         for (const [index, listElement] of list.entries()) {
-            contextStack.set(asAttribute, { data: listElement, of: ofAttribute })
-            contextStack.set(`${asAttribute}-index`, index)
-            walk(data, contextStack, eachNode.childNodes, mountNode)
+            const childContextStack = new Map(contextStack)
+            childContextStack.set(asAttribute, { data: listElement, of: ofAttribute })
+            childContextStack.set(`${asAttribute}-index`, index)
+            walk(data, childContextStack, eachNode.childNodes, mountNode)
         }
     }
 
