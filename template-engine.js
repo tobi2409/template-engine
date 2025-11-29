@@ -77,30 +77,32 @@ const TemplateEngine = (function () {
         return ref
     }
 
-    function resolveKey(key, data) {
-        const splitted = key.split('.')
-        const rootKey = data
-        const startIndex = 0
-        
-        let value = rootKey
-
-        for (let i = startIndex ; i < splitted.length ; i++) {
-            value = value[splitted[i]]
-        }
-
-        return value
-    }
-
     function convertToFullKey(relativeKey, contextStack = new Map()) {
         const splitted = relativeKey.split('.')
         const isFirstContext = contextStack.has(splitted[0])
 
-        if (!isFirstContext) {
+        if (!(isFirstContext && contextStack.get(splitted[0]).of)) {
             return relativeKey
         }
 
-        return convertToFullKey(`${contextStack.get(splitted[0]).of}.${contextStack.get(`${splitted[0]}-index`)}${splitted.length > 1 ? '.':''}${splitted.slice(1).join('.')}`,
+        return convertToFullKey(`${contextStack.get(splitted[0]).of}.${contextStack.get(splitted[0]).index}${splitted.length > 1 ? '.':''}${splitted.slice(1).join('.')}`,
                                 contextStack)
+    }
+
+    function resolve(key, data, contextStack = new Map()) {
+        const splitted = key.split('.')
+        let value = data
+
+        for (const s of splitted) {
+            if (contextStack.has(s)) {
+                value = contextStack.get(s)
+                continue
+            }
+
+            value = value[s]
+        }
+
+        return value
     }
 
     function mount(data, contextStack = new Map(), node, mountNode) {
@@ -119,51 +121,38 @@ const TemplateEngine = (function () {
         const key = getNode.innerText
         const fullKey = convertToFullKey(key, contextStack)
 
-        const mountedNode = mount(data, contextStack, getNode, mountNode)
-        mountedNode.innerText = fullKey
-        mountedNode.hidden = true
-
         const resolvedTextSpan = document.createElement('span')
         resolvedTextSpan.classList.add('get-resolved')
-        resolvedTextSpan.innerText = resolveKey(fullKey, data)
-        mountNode.insertBefore(resolvedTextSpan, mountedNode)
+        resolvedTextSpan.innerText = resolve(fullKey, data, contextStack)
+        mountNode.appendChild(resolvedTextSpan)
         
-        nodeHoldersByKeys.appendToKey(fullKey, { node: mountedNode, updateHandler: 'updateGet' })
+        nodeHoldersByKeys.appendToKey(fullKey, { node: resolvedTextSpan, updateHandler: 'updateGet' })
     }
 
-    function mountEachIterations(data, contextStack = new Map(), eachNode, mountNode) {
+    function handleEachNode(data, contextStack = new Map(), eachNode, mountNode, refreshMode = false, startAfterExisting = 0) {
         const ofAttribute = eachNode.getAttribute('of')
-        const asAttribute = eachNode.getAttribute('as')
-
         const fullOfAttribute = convertToFullKey(ofAttribute, contextStack)
 
-        nodeHoldersByKeys.appendToKey(fullOfAttribute, { node: eachNode, mountNode: mountNode, updateHandler: 'setArray', contextStack: new Map(contextStack) })
+        const asAttribute = eachNode.getAttribute('as')
 
-        const list = resolveKey(fullOfAttribute, data)
+        if (!refreshMode) {
+            nodeHoldersByKeys.appendToKey(fullOfAttribute, { node: eachNode, mountNode: mountNode, updateHandler: 'setArray', contextStack: new Map(contextStack) })
+        }
+
+        const list = resolve(fullOfAttribute, data)
 
         if (list.constructor.name !== 'Array') {
             throw new Error('each-of must be an Array')
         }
 
-        for (const [index, listElement] of list.entries()) {
+        const startIndex = refreshMode ? list.length - startAfterExisting : 0
+
+        for (let index = startIndex ; index < list.length ; index++) {
+            const listElement = list[index]
             const childContextStack = new Map(contextStack)
-            childContextStack.set(asAttribute, { data: listElement, of: ofAttribute })
-            childContextStack.set(`${asAttribute}-index`, index)
+            childContextStack.set(asAttribute, { data: listElement, of: ofAttribute, index: index })
             walk(data, childContextStack, eachNode.childNodes, mountNode)
         }
-    }
-
-    function mountEachTemplate(data, contextStack = new Map(), eachNode, mountNode) {
-        const mountedNode = mount(data, contextStack, eachNode, mountNode)
-        walk(data, contextStack, eachNode.childNodes, mountedNode)
-        return mountedNode
-    }
-
-    function handleEachNode(data, contextStack = new Map(), eachNode, mountNode) {
-        mountEachIterations(data, contextStack, eachNode, mountNode)
-        //mountEachTemplate(data, contextStack, eachNode, mountNode)
-        //console.log(eachNode)
-        console.log(nodeHoldersByKeys)
     }
 
     function handleDefaultNode(data, contextStack = new Map(), defaultNode, mountNode) {
@@ -193,6 +182,12 @@ const TemplateEngine = (function () {
     }
 
     function templateUse(data, contextStack = new Map(), templateUseNode) {
+        const params = Object.assign({}, templateUseNode.dataset)
+        
+        for (const key in templateUseNode.dataset) {
+            contextStack.set(key, templateUseNode.dataset[key])
+        }
+
         const templateNode = document.getElementById(templateUseNode.attributes.getNamedItem('template-id').value)
         const mountNode = document.getElementById(templateUseNode.attributes.getNamedItem('mount-id').value)
         walk(data, contextStack, templateNode.content.children, mountNode)
@@ -206,23 +201,22 @@ const TemplateEngine = (function () {
         const contextStack = new Map()
 
         templateUse(data, contextStack, templateUseNode)
+
+        console.log(nodeHoldersByKeys)
     }
 
     function refresh(data, change, app) {
         
-        function createItemsNodes(items, contextStack, eachNode, mountNode) {
-            //TODO: mountEachIterations mit custom Items anpassen
-            mountEachIterations(items, contextStack, eachNode, mountNode)
+        function createItemsNodes(contextStack, eachNode, mountNode) {
+            handleEachNode(data, contextStack, eachNode, mountNode, true, 1)
         }
 
         function createItemHandler() {
             const linkedNodeHolders = nodeHoldersByKeys.get(change.key)
 
             for (const node of linkedNodeHolders.holders) {
-                const items = resolveKey(change.key, data)
                 //TODO: man soll auch mehrere Elemente pushen können
-                const pushedItem = items[items.length - 1] // beim Pushen braucht man das letzte Element der Liste
-                createItemsNodes([pushedItem], node.contextStack, node.node, node.mountNode)
+                createItemsNodes(node.contextStack, node.node, node.mountNode)
             }
         }
 
@@ -230,14 +224,12 @@ const TemplateEngine = (function () {
             const linkedNodeHolders = nodeHoldersByKeys.get(change.key)
 
             function updateGet(node) {
-                const getResolvedSpan = node.previousElementSibling
-
-                if (!(getResolvedSpan.tagName === 'SPAN'
-                    && getResolvedSpan.classList.contains('get-resolved'))) {
-                        throw new Error("get isn't resolved")
+                if (!(node.tagName === 'SPAN'
+                    && node.classList.contains('get-resolved'))) {
+                        throw new Error("get wasn't resolved correctly")
                     }
 
-                getResolvedSpan.innerText = resolveKey(change.key, data)
+                node.innerText = resolve(change.key, data)
             }
 
             for (const nodeHolder of linkedNodeHolders.holders) {
