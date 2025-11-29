@@ -81,7 +81,7 @@ const TemplateEngine = (function () {
         const splitted = relativeKey.split('.')
         const isFirstContext = contextStack.has(splitted[0])
 
-        if (!(isFirstContext && contextStack.get(splitted[0]).of)) {
+        if (!isFirstContext) {
             return relativeKey
         }
 
@@ -89,57 +89,57 @@ const TemplateEngine = (function () {
                                 contextStack)
     }
 
-    function resolve(key, data, contextStack = new Map()) {
+    function resolve(key, data, params = new Map()) {
+        if (params.has(key)) {
+            return params.get(key) // a paramname (as param1) is always single
+        }
+
         const splitted = key.split('.')
         let value = data
 
         for (const s of splitted) {
-            if (contextStack.has(s)) {
-                value = contextStack.get(s)
-                continue
-            }
-
             value = value[s]
         }
 
         return value
     }
 
-    function mount(data, contextStack = new Map(), node, mountNode) {
+    function mount(node, mountNode) {
         const cloned = node.cloneNode(false)
         mountNode.appendChild(cloned)
         return cloned
     }
 
     // textNode only contains text, nothing more
-    function handleTextNode(data, contextStack = new Map(), textNode, mountNode) {
-        mount(data, contextStack, textNode, mountNode)
+    function handleTextNode(textNode, mountNode) {
+        mount(textNode, mountNode)
     }
 
     // getNode only contains key, nothing more
-    function handleGetNode(data, contextStack = new Map(), getNode, mountNode) {
+    function handleGetNode(data, contextStack = new Map(), params = new Map(), getNode, mountNode) {
         const key = getNode.innerText
         const fullKey = convertToFullKey(key, contextStack)
 
         const resolvedTextSpan = document.createElement('span')
         resolvedTextSpan.classList.add('get-resolved')
-        resolvedTextSpan.innerText = resolve(fullKey, data, contextStack)
+        resolvedTextSpan.innerText = resolve(fullKey, data, params)
         mountNode.appendChild(resolvedTextSpan)
         
         nodeHoldersByKeys.appendToKey(fullKey, { node: resolvedTextSpan, updateHandler: 'updateGet' })
     }
 
-    function handleEachNode(data, contextStack = new Map(), eachNode, mountNode, refreshMode = false, startAfterExisting = 0) {
+    function handleEachNode(data, contextStack = new Map(), params = new Map(), eachNode, mountNode, refreshMode = false, startAfterExisting = 0) {
         const ofAttribute = eachNode.getAttribute('of')
         const fullOfAttribute = convertToFullKey(ofAttribute, contextStack)
 
         const asAttribute = eachNode.getAttribute('as')
 
         if (!refreshMode) {
-            nodeHoldersByKeys.appendToKey(fullOfAttribute, { node: eachNode, mountNode: mountNode, updateHandler: 'setArray', contextStack: new Map(contextStack) })
+            nodeHoldersByKeys.appendToKey(fullOfAttribute,
+                { node: eachNode, mountNode: mountNode, updateHandler: 'setArray', contextStack: new Map(contextStack), params: params })
         }
 
-        const list = resolve(fullOfAttribute, data)
+        const list = resolve(fullOfAttribute, data, params)
 
         if (list.constructor.name !== 'Array') {
             throw new Error('each-of must be an Array')
@@ -150,47 +150,47 @@ const TemplateEngine = (function () {
         for (let index = startIndex ; index < list.length ; index++) {
             const listElement = list[index]
             const childContextStack = new Map(contextStack)
-            childContextStack.set(asAttribute, { data: listElement, of: ofAttribute, index: index })
-            walk(data, childContextStack, eachNode.childNodes, mountNode)
+            childContextStack.set(asAttribute, { isEachContext: true, data: listElement, of: ofAttribute, index: index })
+            walk(data, childContextStack, params, eachNode.childNodes, mountNode)
         }
     }
 
-    function handleDefaultNode(data, contextStack = new Map(), defaultNode, mountNode) {
-        const mountedNode = mount(data, contextStack, defaultNode, mountNode)
-        walk(data, contextStack, defaultNode.childNodes, mountedNode)
+    function handleDefaultNode(data, contextStack = new Map(), params = new Map(), defaultNode, mountNode) {
+        const mountedNode = mount(defaultNode, mountNode)
+        walk(data, contextStack, params, defaultNode.childNodes, mountedNode)
     }
 
-    function walk(data, contextStack = new Map(), nodes, mountNode) {
+    function walk(data, contextStack = new Map(), params = new Map(), nodes, mountNode) {
         for (const node of nodes) {
             if (node.nodeType === Node.TEXT_NODE) {
-                handleTextNode(data, contextStack, node, mountNode)
+                handleTextNode(node, mountNode)
                 continue
             }
 
             switch (node.tagName) {
                 case 'GET':
-                    handleGetNode(data, contextStack, node, mountNode)
+                    handleGetNode(data, contextStack, params, node, mountNode)
                     break
                 case 'EACH':
-                    handleEachNode(data, contextStack, node, mountNode)
+                    handleEachNode(data, contextStack, params, node, mountNode)
                     break
                 default:
-                    handleDefaultNode(data, contextStack, node, mountNode)
+                    handleDefaultNode(data, contextStack, params, node, mountNode)
                     break
             }
         }
     }
 
     function templateUse(data, contextStack = new Map(), templateUseNode) {
-        const params = Object.assign({}, templateUseNode.dataset)
+        const params = new Map()
         
         for (const key in templateUseNode.dataset) {
-            contextStack.set(key, templateUseNode.dataset[key])
+            params.set(key, templateUseNode.dataset[key])
         }
 
         const templateNode = document.getElementById(templateUseNode.attributes.getNamedItem('template-id').value)
         const mountNode = document.getElementById(templateUseNode.attributes.getNamedItem('mount-id').value)
-        walk(data, contextStack, templateNode.content.children, mountNode)
+        walk(data, contextStack, params, templateNode.content.children, mountNode)
     }
 
     function run(data, templateUseNode) {
@@ -207,8 +207,8 @@ const TemplateEngine = (function () {
 
     function refresh(data, change, app) {
         
-        function createItemsNodes(contextStack, eachNode, mountNode) {
-            handleEachNode(data, contextStack, eachNode, mountNode, true, 1)
+        function createItemsNodes(contextStack, params, eachNode, mountNode) {
+            handleEachNode(data, contextStack, params, eachNode, mountNode, true, 1)
         }
 
         function createItemHandler() {
@@ -216,7 +216,7 @@ const TemplateEngine = (function () {
 
             for (const node of linkedNodeHolders.holders) {
                 //TODO: man soll auch mehrere Elemente pushen können
-                createItemsNodes(node.contextStack, node.node, node.mountNode)
+                createItemsNodes(node.contextStack, node.params, node.node, node.mountNode)
             }
         }
 
