@@ -104,9 +104,15 @@ const TemplateEngine = (function () {
         return value
     }
 
-    function mount(node, mountNode) {
+    function mount(node, mountNode, beforeNode = undefined) {
         const cloned = node.cloneNode(false)
-        mountNode.appendChild(cloned)
+
+        if (beforeNode) {
+            mountNode.insertBefore(cloned, beforeNode)
+        } else {
+            mountNode.appendChild(cloned)
+        }
+        
         return cloned
     }
 
@@ -128,7 +134,7 @@ const TemplateEngine = (function () {
         nodeHoldersByKeys.appendToKey(fullKey, { node: resolvedTextSpan, updateHandler: 'updateGet' })
     }
 
-    function handleEachNode(data, contextStack = new Map(), params = new Map(), eachNode, mountNode, refreshMode = false, startAfterExisting = 0) {
+    function handleEachNode(data, contextStack = new Map(), params = new Map(), eachNode, mountNode, refreshMode = false, startIndex = 0, endIndex = undefined) {
         const ofAttribute = eachNode.getAttribute('of')
         const fullOfAttribute = convertToFullKey(ofAttribute, contextStack)
 
@@ -145,9 +151,10 @@ const TemplateEngine = (function () {
             throw new Error('each-of must be an Array')
         }
 
-        const startIndex = refreshMode ? list.length - startAfterExisting : 0
+        const _startIndex = startIndex < 0 ? list.length + startIndex : startIndex
+        const _endIndex = endIndex !== undefined ? endIndex : list.length - 1
 
-        for (let index = startIndex ; index < list.length ; index++) {
+        for (let index = _startIndex ; index <= _endIndex ; index++) {
             const listElement = list[index]
             const childContextStack = new Map(contextStack)
             childContextStack.set(asAttribute, { isEachContext: true, data: listElement, of: ofAttribute, index: index })
@@ -207,16 +214,23 @@ const TemplateEngine = (function () {
 
     function refresh(data, change, app) {
         
-        function createItemsNodes(contextStack, params, eachNode, mountNode) {
-            handleEachNode(data, contextStack, params, eachNode, mountNode, true, 1)
+        function createItemsNodes(contextStack, params, eachNode, mountNode, startIndex = 0, endIndex = undefined) {
+            handleEachNode(data, contextStack, params, eachNode, mountNode, true, startIndex, endIndex)
         }
 
-        function createItemHandler() {
+        function pushItemHandler() {
             const linkedNodeHolders = nodeHoldersByKeys.get(change.key)
 
-            for (const node of linkedNodeHolders.holders) {
-                //TODO: man soll auch mehrere Elemente pushen können
-                createItemsNodes(node.contextStack, node.params, node.node, node.mountNode)
+            for (const nodeHolder of linkedNodeHolders.holders) {
+                createItemsNodes(nodeHolder.contextStack, nodeHolder.params, nodeHolder.node, nodeHolder.mountNode, -1)
+            }
+        }
+
+        function insertHandler() {
+            const linkedNodeHolders = nodeHoldersByKeys.get(change.key)
+
+            for (const nodeHolder of linkedNodeHolders.holders) {
+                createItemsNodes(nodeHolder.contextStack, nodeHolder.params, nodeHolder.node, nodeHolder.mountNode, change.startIndex, change.startIndex)
             }
         }
 
@@ -242,8 +256,11 @@ const TemplateEngine = (function () {
         }
 
         switch (change.action) {
-            case 'createItem':
-                createItemHandler()
+            case 'pushItem':
+                pushItemHandler()
+                break
+            case 'insert':
+                insertHandler()
                 break
             case 'update':
                 updateHandler()

@@ -69,10 +69,15 @@
         TemplateEngine.run(data, document.getElementById('app-template-use'))
 
         data.friends[0].name = 'Test'
-        TemplateEngine.refresh(data, { 'action': 'update', key: 'friends.0.name' })
+        TemplateEngine.refresh(data, { action: 'update', key: 'friends.0.name' })
 
         data.friends[0].childs.push({ name: 'Freund1_3', childs: [] })
-        TemplateEngine.refresh(data, { 'action': 'createItem', key: 'friends.0.childs' })
+        TemplateEngine.refresh(data, { action: 'pushItem', key: 'friends.0.childs' })
+
+        data.friends[0].childs.splice(1, 0, { name: 'inserted_Freund', childs: [] })
+        TemplateEngine.refresh(data, { action: 'insert', key: 'friends.0.childs', startIndex: 1 })
+
+        console.log(data)
     </script>
 
 </body>
