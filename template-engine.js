@@ -105,31 +105,28 @@ const TemplateEngine = (function () {
     }
 
     function mount(node, mountNode, beforeNode = undefined) {
-        const cloned = node.cloneNode(false)
-
         if (beforeNode) {
-            mountNode.insertBefore(cloned, beforeNode)
+            mountNode.insertBefore(node, beforeNode)
         } else {
-            mountNode.appendChild(cloned)
+            mountNode.appendChild(node)
         }
-        
-        return cloned
     }
 
     // textNode only contains text, nothing more
-    function handleTextNode(textNode, mountNode) {
-        mount(textNode, mountNode)
+    function handleTextNode(textNode, mountNode, beforeNode = undefined) {
+        const cloned = textNode.cloneNode(false)
+        mount(cloned, mountNode, beforeNode)
     }
 
     // getNode only contains key, nothing more
-    function handleGetNode(data, contextStack = new Map(), params = new Map(), getNode, mountNode) {
+    function handleGetNode(data, contextStack = new Map(), params = new Map(), getNode, mountNode, beforeNode = undefined) {
         const key = getNode.innerText
         const fullKey = convertToFullKey(key, contextStack)
 
         const resolvedTextSpan = document.createElement('span')
         resolvedTextSpan.classList.add('get-resolved')
         resolvedTextSpan.innerText = resolve(fullKey, data, params)
-        mountNode.appendChild(resolvedTextSpan)
+        mount(resolvedTextSpan, mountNode, beforeNode)
         
         nodeHoldersByKeys.appendToKey(fullKey, { node: resolvedTextSpan, updateHandler: 'updateGet' })
     }
@@ -163,8 +160,9 @@ const TemplateEngine = (function () {
     }
 
     function handleDefaultNode(data, contextStack = new Map(), params = new Map(), defaultNode, mountNode) {
-        const mountedNode = mount(defaultNode, mountNode)
-        walk(data, contextStack, params, defaultNode.childNodes, mountedNode)
+        const cloned = defaultNode.cloneNode(false)
+        mount(cloned, mountNode)
+        walk(data, contextStack, params, defaultNode.childNodes, cloned)
     }
 
     function walk(data, contextStack = new Map(), params = new Map(), nodes, mountNode) {
