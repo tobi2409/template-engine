@@ -75,7 +75,7 @@
         TemplateEngine.refresh(data, { action: 'pushItem', key: 'friends.0.childs' })
 
         data.friends[0].childs.splice(1, 0, { name: 'inserted_Freund', childs: [] })
-        TemplateEngine.refresh(data, { action: 'insert', key: 'friends.0.childs', startIndex: 1 })
+        TemplateEngine.refresh(data, { action: 'insert', key: 'friends.0.childs', startIndex: 1, endIndex: 1 })
 
         console.log(data)
     </script>

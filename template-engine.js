@@ -106,6 +106,9 @@ const TemplateEngine = (function () {
 
     function mount(node, mountNode, beforeNode = undefined) {
         if (beforeNode) {
+            console.log(mountNode)
+            console.log(node)
+            console.log(beforeNode)
             mountNode.insertBefore(node, beforeNode)
         } else {
             mountNode.appendChild(node)
@@ -148,39 +151,42 @@ const TemplateEngine = (function () {
             throw new Error('each-of must be an Array')
         }
 
-        const _startIndex = startIndex < 0 ? list.length + startIndex : startIndex
+        const defaultPushStartIndex = list.length + startIndex
+        const _startIndex = startIndex < 0 ? defaultPushStartIndex : startIndex
         const _endIndex = endIndex !== undefined ? endIndex : list.length - 1
+
+        const beforeNode = refreshMode ? mountNode.children[_startIndex] : undefined
 
         for (let index = _startIndex ; index <= _endIndex ; index++) {
             const listElement = list[index]
             const childContextStack = new Map(contextStack)
             childContextStack.set(asAttribute, { isEachContext: true, data: listElement, of: ofAttribute, index: index })
-            walk(data, childContextStack, params, eachNode.childNodes, mountNode)
+            walk(data, childContextStack, params, eachNode.childNodes, mountNode, beforeNode)
         }
     }
 
-    function handleDefaultNode(data, contextStack = new Map(), params = new Map(), defaultNode, mountNode) {
+    function handleDefaultNode(data, contextStack = new Map(), params = new Map(), defaultNode, mountNode, beforeNode = undefined) {
         const cloned = defaultNode.cloneNode(false)
-        mount(cloned, mountNode)
+        mount(cloned, mountNode, beforeNode)
         walk(data, contextStack, params, defaultNode.childNodes, cloned)
     }
 
-    function walk(data, contextStack = new Map(), params = new Map(), nodes, mountNode) {
+    function walk(data, contextStack = new Map(), params = new Map(), nodes, mountNode, beforeNode = undefined) {
         for (const node of nodes) {
             if (node.nodeType === Node.TEXT_NODE) {
-                handleTextNode(node, mountNode)
+                handleTextNode(node, mountNode, beforeNode)
                 continue
             }
 
             switch (node.tagName) {
                 case 'GET':
-                    handleGetNode(data, contextStack, params, node, mountNode)
+                    handleGetNode(data, contextStack, params, node, mountNode, beforeNode)
                     break
                 case 'EACH':
-                    handleEachNode(data, contextStack, params, node, mountNode)
+                    handleEachNode(data, contextStack, params, node, mountNode, beforeNode)
                     break
                 default:
-                    handleDefaultNode(data, contextStack, params, node, mountNode)
+                    handleDefaultNode(data, contextStack, params, node, mountNode, beforeNode)
                     break
             }
         }
@@ -207,7 +213,7 @@ const TemplateEngine = (function () {
 
         templateUse(data, contextStack, templateUseNode)
 
-        console.log(nodeHoldersByKeys)
+        //console.log(nodeHoldersByKeys)
     }
 
     function refresh(data, change, app) {
@@ -228,7 +234,7 @@ const TemplateEngine = (function () {
             const linkedNodeHolders = nodeHoldersByKeys.get(change.key)
 
             for (const nodeHolder of linkedNodeHolders.holders) {
-                createItemsNodes(nodeHolder.contextStack, nodeHolder.params, nodeHolder.node, nodeHolder.mountNode, change.startIndex, change.startIndex)
+                createItemsNodes(nodeHolder.contextStack, nodeHolder.params, nodeHolder.node, nodeHolder.mountNode, change.startIndex, change.endIndex)
             }
         }
 
