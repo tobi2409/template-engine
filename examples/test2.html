@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+
+    <div id="app"></div>
+
+    <template id="app-template">
+        <div>Hallo <span>--</span> <get>name</get>
+
+            <div>Du bist <get>name</get> und <get>age</get> Jahre alt</div>
+        </div>
+
+        <div>Hallo <get>param1</get></div>
+
+        <ul>
+            <each of="persons" as="p">
+                <li><get>p.name</get> ist <get>p.age</get> Jahre alt
+
+                    <ul>
+                        <template-use template-id="app-template" data-get-list="p.childs"></template-use>
+                    </ul>
+
+                </li>
+            </each>
+        </ul>
+    </template>
+
+    <template-use id="app-template-use" template-id="app-template" mount-id="app" data-param1="Test"></template-use>
+
+    <script type="module">
+        import TemplateEngine from '../template-engine.js'
+
+        const data = {
+            name: 'Tobias',
+            age: 31,
+            persons: [{
+                name: 'Person1',
+                childs: [{
+                    name: 'Person1_1',
+                    childs: []
+                }, {
+                    name: 'Person1_2',
+                    childs: []
+                }],
+                age: 23
+            }, {
+                name: 'Person2',
+                childs: [{
+                    name: 'Person2_1',
+                    childs: []
+                }],
+                age: 25
+            }]
+        }
+
+        TemplateEngine.run(data, document.getElementById('app-template-use'))
+
+        data.persons[0].name = 'Test'
+        TemplateEngine.refresh(data, { action: 'update', key: 'persons.0.name' })
+
+        data.persons[0].childs.push({ name: 'Person1_3', childs: [] })
+        TemplateEngine.refresh(data, { action: 'pushItem', key: 'persons.0.childs' })
+
+        data.persons[0].childs.splice(1, 0, { name: 'inserted_to_Person1', childs: [] })
+        TemplateEngine.refresh(data, { action: 'insert', key: 'persons.0.childs', startIndex: 1, endIndex: 1 })
+
+        data.persons.splice(1, 0, { name: 'inserted_Person', childs: [{ name: 'inserted_Person_1', childs: [] }] })
+        TemplateEngine.refresh(data, { action: 'insert', key: 'persons', startIndex: 1, endIndex: 1 })
+
+        console.log(data)
+    </script>
+
+</body>
+
+</html>

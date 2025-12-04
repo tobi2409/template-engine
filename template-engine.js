@@ -189,6 +189,9 @@ const TemplateEngine = (function () {
                 case 'EACH':
                     handleEachNode(data, contextStack, params, node, mountNode)
                     break
+                case 'TEMPLATE-USE':
+                    templateUse(data, contextStack, node)
+                    break
                 default:
                     handleDefaultNode(data, contextStack, params, node, mountNode, insertBeforeAnchor)
                     break
