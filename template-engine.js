@@ -104,32 +104,29 @@ const TemplateEngine = (function () {
         return value
     }
 
-    function mount(node, mountNode, beforeNode = undefined) {
-        if (beforeNode) {
-            console.log(mountNode)
-            console.log(node)
-            console.log(beforeNode)
-            mountNode.insertBefore(node, beforeNode)
+    function mount(node, mountNode, insertBeforeAnchor = undefined) {
+        if (insertBeforeAnchor) {
+            mountNode.insertBefore(node, insertBeforeAnchor)
         } else {
             mountNode.appendChild(node)
         }
     }
 
-    // textNode only contains text, nothing more
-    function handleTextNode(textNode, mountNode, beforeNode = undefined) {
+    // textNode only contains text, nothing more -> no walk anymore
+    function handleTextNode(textNode, mountNode, insertBeforeAnchor = undefined) {
         const cloned = textNode.cloneNode(false)
-        mount(cloned, mountNode, beforeNode)
+        mount(cloned, mountNode, insertBeforeAnchor)
     }
 
-    // getNode only contains key, nothing more
-    function handleGetNode(data, contextStack = new Map(), params = new Map(), getNode, mountNode, beforeNode = undefined) {
+    // getNode only contains key, nothing more -> no walk anymore
+    function handleGetNode(data, contextStack = new Map(), params = new Map(), getNode, mountNode, insertBeforeAnchor = undefined) {
         const key = getNode.innerText
         const fullKey = convertToFullKey(key, contextStack)
 
         const resolvedTextSpan = document.createElement('span')
         resolvedTextSpan.classList.add('get-resolved')
         resolvedTextSpan.innerText = resolve(fullKey, data, params)
-        mount(resolvedTextSpan, mountNode, beforeNode)
+        mount(resolvedTextSpan, mountNode, insertBeforeAnchor)
         
         nodeHoldersByKeys.appendToKey(fullKey, { node: resolvedTextSpan, updateHandler: 'updateGet' })
     }
@@ -155,38 +152,45 @@ const TemplateEngine = (function () {
         const _startIndex = startIndex < 0 ? defaultPushStartIndex : startIndex
         const _endIndex = endIndex !== undefined ? endIndex : list.length - 1
 
-        const beforeNode = refreshMode ? mountNode.children[_startIndex] : undefined
+        const insertBeforeAnchor = refreshMode ? mountNode.children[_startIndex] : undefined
 
         for (let index = _startIndex ; index <= _endIndex ; index++) {
             const listElement = list[index]
             const childContextStack = new Map(contextStack)
             childContextStack.set(asAttribute, { isEachContext: true, data: listElement, of: ofAttribute, index: index })
-            walk(data, childContextStack, params, eachNode.childNodes, mountNode, beforeNode)
+            
+            // insertBeforeAnchor is passed down only one recursion level.
+            // The insertion position matters only within the current container.
+            // Nested containers are positioned based on their parent container's position.
+            walk(data, childContextStack, params, eachNode.childNodes, mountNode, insertBeforeAnchor)
         }
     }
 
-    function handleDefaultNode(data, contextStack = new Map(), params = new Map(), defaultNode, mountNode, beforeNode = undefined) {
+    function handleDefaultNode(data, contextStack = new Map(), params = new Map(), defaultNode, mountNode, insertBeforeAnchor = undefined) {
         const cloned = defaultNode.cloneNode(false)
-        mount(cloned, mountNode, beforeNode)
+        mount(cloned, mountNode, insertBeforeAnchor)
+        // What is with insertBeforeAnchor? see handleEachNode
         walk(data, contextStack, params, defaultNode.childNodes, cloned)
     }
 
-    function walk(data, contextStack = new Map(), params = new Map(), nodes, mountNode, beforeNode = undefined) {
+    function walk(data, contextStack = new Map(), params = new Map(), nodes, mountNode, insertBeforeAnchor = undefined) {
         for (const node of nodes) {
+            // What is with insertBeforeAnchor? see handleEachNode
+
             if (node.nodeType === Node.TEXT_NODE) {
-                handleTextNode(node, mountNode, beforeNode)
+                handleTextNode(node, mountNode, insertBeforeAnchor)
                 continue
             }
 
             switch (node.tagName) {
                 case 'GET':
-                    handleGetNode(data, contextStack, params, node, mountNode, beforeNode)
+                    handleGetNode(data, contextStack, params, node, mountNode, insertBeforeAnchor)
                     break
                 case 'EACH':
-                    handleEachNode(data, contextStack, params, node, mountNode, beforeNode)
+                    handleEachNode(data, contextStack, params, node, mountNode)
                     break
                 default:
-                    handleDefaultNode(data, contextStack, params, node, mountNode, beforeNode)
+                    handleDefaultNode(data, contextStack, params, node, mountNode, insertBeforeAnchor)
                     break
             }
         }
