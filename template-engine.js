@@ -89,19 +89,43 @@ const TemplateEngine = (function () {
                                 contextStack)
     }
 
-    function resolve(key, data, params = new Map()) {
-        if (params.has(key)) {
-            return params.get(key) // a paramname (as param1) is always single
+    function dereferenceKey(key, data, params = new Map()) {
+        if (key.startsWith('{{') && key.endsWith('}}')) {
+            const indirectKey = key.slice(2, -2).trim()
+            return resolve(indirectKey, data, params)
         }
 
+        return key
+    }
+
+    function resolve(key, data, params = new Map()) {
         const splitted = key.split('.')
         let value = data
 
-        for (const s of splitted) {
-            value = value[s]
+        for (const [index, segment] of splitted.entries()) {
+            let dereferencedSegment = segment
+
+            if (index === 0) {
+                dereferencedSegment = dereferenceKey(segment, data, params)
+                console.log(dereferencedSegment)
+            }
+
+            if (index === 0 && params.has(dereferencedSegment)) {
+                // a paramname (eg. param1) is always represented by a single-key
+                // maybe dereference it first
+                // only params are supported for dereferencing
+                return params.get(dereferencedSegment)
+            }
+
+            value = value[segment]
         }
 
         return value
+    }
+
+    function resolveEx(key, data, contextStack = new Map(), params = new Map()) {
+        const fullKey = convertToFullKey(key, contextStack)
+        return { fullKey: fullKey, value: resolve(fullKey, data, params) }
     }
 
     function mount(node, mountNode, insertBeforeAnchor = undefined) {
@@ -121,28 +145,28 @@ const TemplateEngine = (function () {
     // getNode only contains key, nothing more -> no walk anymore
     function handleGetNode(data, contextStack = new Map(), params = new Map(), getNode, mountNode, insertBeforeAnchor = undefined) {
         const key = getNode.innerText
-        const fullKey = convertToFullKey(key, contextStack)
+        const resolved = resolveEx(key, data, contextStack, params)
 
         const resolvedTextSpan = document.createElement('span')
         resolvedTextSpan.classList.add('get-resolved')
-        resolvedTextSpan.innerText = resolve(fullKey, data, params)
+        resolvedTextSpan.innerText = resolved.value
         mount(resolvedTextSpan, mountNode, insertBeforeAnchor)
         
-        nodeHoldersByKeys.appendToKey(fullKey, { node: resolvedTextSpan, updateHandler: 'updateGet' })
+        nodeHoldersByKeys.appendToKey(resolved.fullKey, { node: resolvedTextSpan, updateHandler: 'updateGet' })
     }
 
     function handleEachNode(data, contextStack = new Map(), params = new Map(), eachNode, mountNode, refreshMode = false, startIndex = 0, endIndex = undefined) {
         const ofAttribute = eachNode.getAttribute('of')
-        const fullOfAttribute = convertToFullKey(ofAttribute, contextStack)
+        const resolvedOf = resolveEx(ofAttribute, data, contextStack, params)
 
         const asAttribute = eachNode.getAttribute('as')
 
         if (!refreshMode) {
-            nodeHoldersByKeys.appendToKey(fullOfAttribute,
+            nodeHoldersByKeys.appendToKey(resolvedOf.fullKey,
                 { node: eachNode, mountNode: mountNode, updateHandler: 'setArray', contextStack: new Map(contextStack), params: params })
         }
 
-        const list = resolve(fullOfAttribute, data, params)
+        const list = resolvedOf.value
 
         if (list.constructor.name !== 'Array') {
             throw new Error('each-of must be an Array')
@@ -157,13 +181,22 @@ const TemplateEngine = (function () {
         for (let index = _startIndex ; index <= _endIndex ; index++) {
             const listElement = list[index]
             const childContextStack = new Map(contextStack)
-            childContextStack.set(asAttribute, { isEachContext: true, data: listElement, of: ofAttribute, index: index })
+            childContextStack.set(asAttribute, { isEachContext: true, data: listElement, of: resolvedOf.fullKey, index: index })
             
             // insertBeforeAnchor is passed down only one recursion level.
             // The insertion position matters only within the current container.
             // Nested containers are positioned based on their parent container's position.
             walk(data, childContextStack, params, eachNode.childNodes, mountNode, insertBeforeAnchor)
         }
+    }
+
+    function handleTemplateUse(data, contextStack = new Map(), params = new Map(), templateUseNode, mountNode) {
+        for (const key in templateUseNode.dataset) {
+            params.set(key, templateUseNode.dataset[key])
+        }
+
+        const templateNode = document.getElementById(templateUseNode.attributes.getNamedItem('template-id').value)
+        walk(data, contextStack, params, templateNode.content.children, mountNode)
     }
 
     function handleDefaultNode(data, contextStack = new Map(), params = new Map(), defaultNode, mountNode, insertBeforeAnchor = undefined) {
@@ -190,7 +223,7 @@ const TemplateEngine = (function () {
                     handleEachNode(data, contextStack, params, node, mountNode)
                     break
                 case 'TEMPLATE-USE':
-                    templateUse(data, contextStack, node)
+                    handleTemplateUse(data, contextStack, params, node, mountNode)
                     break
                 default:
                     handleDefaultNode(data, contextStack, params, node, mountNode, insertBeforeAnchor)
@@ -199,16 +232,10 @@ const TemplateEngine = (function () {
         }
     }
 
-    function templateUse(data, contextStack = new Map(), templateUseNode) {
+    function initialTemplateUse(data, contextStack = new Map(), templateUseNode) {
         const params = new Map()
-        
-        for (const key in templateUseNode.dataset) {
-            params.set(key, templateUseNode.dataset[key])
-        }
-
-        const templateNode = document.getElementById(templateUseNode.attributes.getNamedItem('template-id').value)
         const mountNode = document.getElementById(templateUseNode.attributes.getNamedItem('mount-id').value)
-        walk(data, contextStack, params, templateNode.content.children, mountNode)
+        handleTemplateUse(data, contextStack, params, templateUseNode, mountNode)
     }
 
     function run(data, templateUseNode) {
@@ -218,7 +245,7 @@ const TemplateEngine = (function () {
 
         const contextStack = new Map()
 
-        templateUse(data, contextStack, templateUseNode)
+        initialTemplateUse(data, contextStack, templateUseNode)
 
         //console.log(nodeHoldersByKeys)
     }
@@ -254,7 +281,7 @@ const TemplateEngine = (function () {
                         throw new Error("get wasn't resolved correctly")
                     }
 
-                node.innerText = resolve(change.key, data)
+                node.innerText = resolve(change.key, data) // change.key is already fullKey
             }
 
             for (const nodeHolder of linkedNodeHolders.holders) {

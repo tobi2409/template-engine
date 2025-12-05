@@ -9,6 +9,20 @@
 
     <div id="app"></div>
 
+    <template id="list-template">
+        <ul>
+            <each of="{{ list }}" as="p">
+                <li><get>p.name</get> ist <get>p.age</get> Jahre alt
+
+                    <ul>
+                        <template-use template-id="list-template" data-list="p.childs"></template-use>
+                    </ul>
+
+                </li>
+            </each>
+        </ul>
+    </template>
+
     <template id="app-template">
         <div>Hallo <span>--</span> <get>name</get>
 
@@ -17,17 +31,7 @@
 
         <div>Hallo <get>param1</get></div>
 
-        <ul>
-            <each of="persons" as="p">
-                <li><get>p.name</get> ist <get>p.age</get> Jahre alt
-
-                    <ul>
-                        <template-use template-id="app-template" data-get-list="p.childs"></template-use>
-                    </ul>
-
-                </li>
-            </each>
-        </ul>
+        <template-use template-id="list-template" data-list="persons"></template-use>
     </template>
 
     <template-use id="app-template-use" template-id="app-template" mount-id="app" data-param1="Test"></template-use>
@@ -47,7 +51,8 @@
                     name: 'Person1_2',
                     childs: []
                 }],
-                age: 23
+                age: 23,
+                ref: '{{ name }}'
             }, {
                 name: 'Person2',
                 childs: [{
@@ -64,6 +69,9 @@
         TemplateEngine.refresh(data, { action: 'update', key: 'persons.0.name' })
 
         data.persons[0].childs.push({ name: 'Person1_3', childs: [] })
+        TemplateEngine.refresh(data, { action: 'pushItem', key: 'persons.0.childs' })
+
+        data.persons[0].childs.push({ name: 'Person1_4', childs: [ { name: 'Person1_4_1', childs: [ { name: 'Person1_4_1_1', childs: [] } ] } ] })
         TemplateEngine.refresh(data, { action: 'pushItem', key: 'persons.0.childs' })
 
         data.persons[0].childs.splice(1, 0, { name: 'inserted_to_Person1', childs: [] })
