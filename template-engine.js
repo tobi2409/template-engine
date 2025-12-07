@@ -90,8 +90,8 @@ const TemplateEngine = (function () {
     }
 
     function dereferenceKey(key, data, params = new Map()) {
-        if (key.startsWith('{{') && key.endsWith('}}')) {
-            const indirectKey = key.slice(2, -2).trim()
+        if (key.startsWith('*')) {
+            const indirectKey = key.slice(1)
             return resolve(indirectKey, data, params)
         }
 
@@ -103,18 +103,9 @@ const TemplateEngine = (function () {
         let value = data
 
         for (const [index, segment] of splitted.entries()) {
-            let dereferencedSegment = segment
-
-            if (index === 0) {
-                dereferencedSegment = dereferenceKey(segment, data, params)
-                console.log(dereferencedSegment)
-            }
-
-            if (index === 0 && params.has(dereferencedSegment)) {
+            if (index === 0 && params.has(segment)) {
                 // a paramname (eg. param1) is always represented by a single-key
-                // maybe dereference it first
-                // only params are supported for dereferencing
-                return params.get(dereferencedSegment)
+                return params.get(segment)
             }
 
             value = value[segment]
@@ -124,7 +115,9 @@ const TemplateEngine = (function () {
     }
 
     function resolveEx(key, data, contextStack = new Map(), params = new Map()) {
-        const fullKey = convertToFullKey(key, contextStack)
+        // only a paramname is supported for dereferencing
+        const dereferencedKey = key.startsWith('*') && params.has(key.slice(1)) ? dereferenceKey(key, data, params) : key
+        const fullKey = convertToFullKey(dereferencedKey, contextStack)
         return { fullKey: fullKey, value: resolve(fullKey, data, params) }
     }
 
@@ -191,12 +184,14 @@ const TemplateEngine = (function () {
     }
 
     function handleTemplateUse(data, contextStack = new Map(), params = new Map(), templateUseNode, mountNode) {
+        const childParams = new Map(params) // Inherit parent params
+        
         for (const key in templateUseNode.dataset) {
-            params.set(key, templateUseNode.dataset[key])
+            childParams.set(key, templateUseNode.dataset[key])
         }
 
         const templateNode = document.getElementById(templateUseNode.attributes.getNamedItem('template-id').value)
-        walk(data, contextStack, params, templateNode.content.children, mountNode)
+        walk(data, contextStack, childParams, templateNode.content.children, mountNode)
     }
 
     function handleDefaultNode(data, contextStack = new Map(), params = new Map(), defaultNode, mountNode, insertBeforeAnchor = undefined) {

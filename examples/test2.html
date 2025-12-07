@@ -11,7 +11,7 @@
 
     <template id="list-template">
         <ul>
-            <each of="{{ list }}" as="p">
+            <each of="*list" as="p">
                 <li><get>p.name</get> ist <get>p.age</get> Jahre alt
 
                     <ul>
