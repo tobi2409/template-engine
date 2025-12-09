@@ -41,67 +41,61 @@ import TemplateEngine from './template-engine.js'
 <template-use template-id="user-template" mount-id="mount-point"></template-use>
 ```
 
-### 2. Initialize with Data
+### 2. Initialize with Reactive Data
 
 ```javascript
-const data = {
+const templateUse = document.querySelector('template-use')
+
+const data = TemplateEngine.reactive({
   name: 'Alice',
   email: 'alice@example.com',
   posts: [
     { title: 'First Post', content: 'Hello World!' },
     { title: 'Second Post', content: 'Learning TemplateEngine' }
   ]
-}
-
-const templateUse = document.querySelector('template-use')
-TemplateEngine.run(data, templateUse)
+}, templateUse)
 ```
 
 ### 3. Update Reactively
 
+The template automatically updates when you modify the data:
+
 ```javascript
 // Update a single value
 data.name = 'Alice Smith'
-TemplateEngine.refresh(data, {
-  action: 'update',
-  key: 'name'
-})
 
 // Add an item to a list
 data.posts.push({ title: 'Third Post', content: 'Advanced features!' })
-TemplateEngine.refresh(data, {
-  action: 'pushItem',
-  key: 'posts'
-})
 
 // Insert item at specific position
 data.posts.splice(1, 0, { title: 'Inserted Post', content: 'In the middle!' })
-TemplateEngine.refresh(data, {
-  action: 'insert',
-  key: 'posts',
-  startIndex: 1,
-  endIndex: 1
-})
+
+// Remove last item
+data.posts.pop()
+
+// Remove first item
+data.posts.shift()
+
+// Add item at the beginning
+data.posts.unshift({ title: 'New First Post', content: 'At the top!' })
 ```
 
 ## API Reference
 
-### `TemplateEngine.run(data, templateUseNode)`
+### `TemplateEngine.reactive(data, templateUseNode)`
 
-Initialize and render a template.
+Creates a reactive proxy around your data that automatically updates the DOM when data changes.
 
 - **`data`**: Object containing the data to render
 - **`templateUseNode`**: The `<template-use>` element
+- **Returns**: Proxied data object
 
-### `TemplateEngine.refresh(data, change)`
-
-Update the DOM based on data changes.
-
-**Change object:**
-- `action`: `'update'`, `'pushItem'`, or `'insert'`
-- `key`: Data key that changed (e.g., `'posts'` or `'user.name'`)
-- `startIndex`: (For `insert`) Start index (supports negative indices)
-- `endIndex`: (For `insert`) End index (optional)
+**Supported Array Methods:**
+- `push()` - Add items to the end
+- `pop()` - Remove last item
+- `shift()` - Remove first item
+- `unshift()` - Add items to the beginning
+- `splice()` - Insert/remove items at any position
 
 ## Template Syntax
 
@@ -137,17 +131,12 @@ Iterate over an array.
 
 ### Negative Indices
 
-Use `-1` to append to the end:
+Use Automatic Reactivity
 
-```javascript
-TemplateEngine.refresh(data, {
-  action: 'pushItem',
-  key: 'posts'
-  // Automatically uses startIndex: -1
-})
-```
-
-### Template Parameters
+All data mutations are automatically tracked:
+- Property updates (`data.name = 'Bob'`)
+- Array mutations (`push`, `pop`, `shift`, `unshift`, `splice`)
+- Nested object changes (`data.user.address.city = 'Berlin'`) Template Parameters
 
 Pass parameters via `data-*` attributes:
 
@@ -171,9 +160,10 @@ Access in template logic (currently internal).
 
 ## Browser Support
 
-Modern browsers with ES6+ support (Map, destructuring, arrow functions).
-
-## License
+ModeProxy-based Reactivity**: Automatic change detection using JavaScript Proxies
+- **Context Stacks**: Track nested scopes during iteration
+- **Node Holders**: Map data keys to DOM nodes for efficient updates
+- **Optimized Array Handlers**: Separate handlers for each array method (`push`, `pop`, etc.)
 
 MIT
 

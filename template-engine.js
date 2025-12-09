@@ -251,19 +251,88 @@ const TemplateEngine = (function () {
             handleEachNode(data, contextStack, params, eachNode, mountNode, true, startIndex, endIndex)
         }
 
-        function pushItemHandler() {
+        function pushHandler() {
             const linkedNodeHolders = nodeHoldersByKeys.get(change.key)
-
+            const list = resolve(change.key, data)
+            
             for (const nodeHolder of linkedNodeHolders.holders) {
-                createItemsNodes(nodeHolder.contextStack, nodeHolder.params, nodeHolder.node, nodeHolder.mountNode, -1)
+                const startIndex = list.length - change.items.length
+                const endIndex = list.length - 1
+                createItemsNodes(
+                    nodeHolder.contextStack, 
+                    nodeHolder.params, 
+                    nodeHolder.node, 
+                    nodeHolder.mountNode, 
+                    startIndex, 
+                    endIndex
+                )
             }
         }
 
-        function insertHandler() {
+        function popHandler() {
+            const linkedNodeHolders = nodeHoldersByKeys.get(change.key)
+            
+            for (const nodeHolder of linkedNodeHolders.holders) {
+                const lastChild = nodeHolder.mountNode.lastElementChild
+                if (lastChild) {
+                    nodeHolder.mountNode.removeChild(lastChild)
+                }
+            }
+        }
+
+        function shiftHandler() {
+            const linkedNodeHolders = nodeHoldersByKeys.get(change.key)
+            
+            for (const nodeHolder of linkedNodeHolders.holders) {
+                const firstChild = nodeHolder.mountNode.firstElementChild
+                if (firstChild) {
+                    nodeHolder.mountNode.removeChild(firstChild)
+                }
+            }
+        }
+
+        function unshiftHandler() {
+            const linkedNodeHolders = nodeHoldersByKeys.get(change.key)
+            
+            for (const nodeHolder of linkedNodeHolders.holders) {
+                const endIndex = change.items.length - 1
+                createItemsNodes(
+                    nodeHolder.contextStack, 
+                    nodeHolder.params, 
+                    nodeHolder.node, 
+                    nodeHolder.mountNode, 
+                    0, 
+                    endIndex
+                )
+            }
+        }
+
+        function spliceHandler() {
             const linkedNodeHolders = nodeHoldersByKeys.get(change.key)
 
             for (const nodeHolder of linkedNodeHolders.holders) {
-                createItemsNodes(nodeHolder.contextStack, nodeHolder.params, nodeHolder.node, nodeHolder.mountNode, change.startIndex, change.endIndex)
+                // Zuerst Elemente löschen
+                if (change.deleteCount > 0) {
+                    for (let i = 0; i < change.deleteCount; i++) {
+                        const childToRemove = nodeHolder.mountNode.children[change.startIndex]
+                        if (childToRemove) {
+                            nodeHolder.mountNode.removeChild(childToRemove)
+                        }
+                    }
+                }
+                
+                // Dann neue Elemente einfügen
+                if (change.items.length > 0) {
+                    const endIndex = change.startIndex + change.items.length - 1
+                    createItemsNodes(
+                        nodeHolder.contextStack, 
+                        nodeHolder.params, 
+                        nodeHolder.node, 
+                        nodeHolder.mountNode, 
+                        change.startIndex, 
+                        endIndex
+                    )
+                }
             }
         }
 
@@ -289,11 +358,20 @@ const TemplateEngine = (function () {
         }
 
         switch (change.action) {
-            case 'pushItem':
-                pushItemHandler()
+            case 'push':
+                pushHandler()
                 break
-            case 'insert':
-                insertHandler()
+            case 'pop':
+                popHandler()
+                break
+            case 'shift':
+                shiftHandler()
+                break
+            case 'unshift':
+                unshiftHandler()
+                break
+            case 'splice':
+                spliceHandler()
                 break
             case 'update':
                 updateHandler()
@@ -301,7 +379,121 @@ const TemplateEngine = (function () {
         }
     }
 
-    return { run, refresh }
+    return {
+        reactive(data, node) {
+
+            run(data, node)
+
+            const topData = data
+
+            function _reactive(data, fullKey = '') {
+
+                let _fullKey = ''
+                let isInArrayMethod = false
+                let arrayMethodName = null
+                
+                const proxy = new Proxy(data, {
+                    get(target, prop) {
+                        _fullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
+
+                        const value = target[prop]
+                        
+                        // Array-Methoden abfangen
+                        if (Array.isArray(target) && typeof value === 'function') {
+                            if (['push', 'pop', 'shift', 'unshift', 'splice'].includes(prop)) {
+                                return function(...args) {
+                                    isInArrayMethod = true
+                                    arrayMethodName = prop
+                                    
+                                    const result = value.apply(proxy, args)
+                                    
+                                    isInArrayMethod = false
+                                    
+                                    let change
+                                    
+                                    if (prop === 'push') {
+                                        change = { 
+                                            key: fullKey, 
+                                            action: 'push',
+                                            items: args
+                                        }
+                                    } 
+                                    else if (prop === 'pop') {
+                                        change = { 
+                                            key: fullKey, 
+                                            action: 'pop'
+                                        }
+                                    } 
+                                    else if (prop === 'shift') {
+                                        change = { 
+                                            key: fullKey, 
+                                            action: 'shift'
+                                        }
+                                    } 
+                                    else if (prop === 'unshift') {
+                                        change = { 
+                                            key: fullKey, 
+                                            action: 'unshift',
+                                            items: args
+                                        }
+                                    } 
+                                    else if (prop === 'splice') {
+                                        change = { 
+                                            key: fullKey, 
+                                            action: 'splice', 
+                                            startIndex: args[0], 
+                                            deleteCount: args[1] || 0, 
+                                            items: args.slice(2)
+                                        }
+                                    }
+                                    
+                                    if (change) {
+                                        refresh(topData, change)
+                                    }
+                                    
+                                    arrayMethodName = null
+                                    return result
+                                }
+                            }
+                        }
+
+                        if (value && typeof value === 'object') {
+                            return _reactive(value, _fullKey) // tiefes Wrappen des Proxys
+                        }
+
+                        return value
+                    },
+
+                    set(target, prop, value) {
+                        target[prop] = value
+
+                        if (prop !== 'length' && !isInArrayMethod) {
+                            _fullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
+                            let change = { key: _fullKey, action: 'update' }
+                            refresh(topData, change)
+                        }
+
+                        return true
+                    }/*,
+
+                    deleteProperty(target, prop) {
+                        delete target[prop]
+
+                        _fullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
+
+                        const change = { key: _fullKey, action: 'delete' }
+                        refresh(topData, change)
+
+                        return true
+                    }*/
+                })
+                
+                return proxy
+            }
+
+            return _reactive(data)
+        }
+    }
 
 })()
 
