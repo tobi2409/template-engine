@@ -244,7 +244,7 @@ const TemplateEngine = (function () {
             const list = resolve(change.key, data)
             const arrayMap = linkedNodeHolders
             
-            // Cleanup: Entferne NodeHolders für das gelöschte Item
+            // Cleanup: Entferne NodeHolder-Keys für das gelöschte Array-Element
             const deletedIndex = list.length
             arrayMap.delete(String(deletedIndex))
             
@@ -261,10 +261,10 @@ const TemplateEngine = (function () {
             const list = resolve(change.key, data)
             const arrayMap = linkedNodeHolders
             
-            // Cleanup: Entferne Index 0
+            // Cleanup: Entferne NodeHolder-Keys für Index 0
             arrayMap.delete('0')
             
-            // Reindex: Verschiebe alle Indices um 1 nach unten
+            // Reindex: Verschiebe alle NodeHolder-Keys um 1 nach unten
             reindexArrayMap(arrayMap, 1, -1, list.length)
             
             for (const nodeHolder of linkedNodeHolders.get('holders')) {
@@ -280,7 +280,7 @@ const TemplateEngine = (function () {
             const list = resolve(change.key, data)
             const arrayMap = linkedNodeHolders
             
-            // Reindex: Verschiebe alle Indices um items.length nach oben
+            // Reindex: Verschiebe alle NodeHolder-Keys um items.length nach oben
             reindexArrayMap(arrayMap, 0, change.items.length, list.length - change.items.length - 1)
             
             for (const nodeHolder of linkedNodeHolders.get('holders')) {
@@ -303,12 +303,12 @@ const TemplateEngine = (function () {
             
             const oldLength = list.length - change.items.length + change.deleteCount
 
-            // 1. Cleanup: Lösche die zu entfernenden Elemente
+            // 1. Cleanup: Lösche die zu entfernenden NodeHolder-Keys
             for (let i = 0; i < change.deleteCount; i++) {
                 arrayMap.delete(String(change.startIndex + i))
             }
 
-            // 2. Reindex: Verschiebe bestehende Elemente
+            // 2. Reindex: Verschiebe bestehende NodeHolder-Keys
             const shift = change.items.length - change.deleteCount
             if (shift !== 0) {
                 reindexArrayMap(
@@ -320,7 +320,7 @@ const TemplateEngine = (function () {
             }
 
             for (const nodeHolder of linkedNodeHolders.get('holders')) {
-                // Zuerst Elemente löschen
+                // Zuerst DOM-Elemente löschen
                 if (change.deleteCount > 0) {
                     for (let i = 0; i < change.deleteCount; i++) {
                         const childToRemove = nodeHolder.mountNode.children[change.startIndex]
@@ -330,7 +330,7 @@ const TemplateEngine = (function () {
                     }
                 }
                 
-                // Dann neue Elemente einfügen
+                // Dann neue DOM-Elemente einfügen
                 if (change.items.length > 0) {
                     const endIndex = change.startIndex + change.items.length - 1
                     createItemsNodes(
@@ -418,47 +418,20 @@ const TemplateEngine = (function () {
                                     
                                     isInArrayMethod = false
                                     
-                                    let change
-                                    
-                                    if (prop === 'push') {
-                                        change = { 
-                                            key: fullKey, 
-                                            action: 'push',
-                                            items: args
-                                        }
-                                    } 
-                                    else if (prop === 'pop') {
-                                        change = { 
-                                            key: fullKey, 
-                                            action: 'pop'
-                                        }
-                                    } 
-                                    else if (prop === 'shift') {
-                                        change = { 
-                                            key: fullKey, 
-                                            action: 'shift'
-                                        }
-                                    } 
-                                    else if (prop === 'unshift') {
-                                        change = { 
-                                            key: fullKey, 
-                                            action: 'unshift',
-                                            items: args
-                                        }
-                                    } 
-                                    else if (prop === 'splice') {
-                                        change = { 
-                                            key: fullKey, 
-                                            action: 'splice', 
-                                            startIndex: args[0], 
-                                            deleteCount: args[1] || 0, 
-                                            items: args.slice(2)
-                                        }
+                                    const change = { 
+                                        key: fullKey, 
+                                        action: prop
                                     }
                                     
-                                    if (change) {
-                                        refresh(topData, change)
+                                    if (prop === 'push' || prop === 'unshift') {
+                                        change.items = args
+                                    } else if (prop === 'splice') {
+                                        change.startIndex = args[0]
+                                        change.deleteCount = args[1] || 0
+                                        change.items = args.slice(2)
                                     }
+                                    
+                                    refresh(topData, change)
                                     
                                     arrayMethodName = null
                                     return result
