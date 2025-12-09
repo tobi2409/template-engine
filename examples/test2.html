@@ -69,6 +69,7 @@
         data.persons[0].childs.splice(1, 0, { name: 'inserted_to_Person1', childs: [] })
         data.persons.splice(1, 0, { name: 'inserted_Person', childs: [{ name: 'inserted_Person_1', childs: [] }] })
         data.persons[0].childs.splice(2, 1)
+        data.persons.pop()
 
         console.log(data)
     </script>

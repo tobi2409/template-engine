@@ -2,79 +2,71 @@ const TemplateEngine = (function () {
 
     const nodeHoldersByKeys = new Map()
 
-    nodeHoldersByKeys.appendToKey = function(fullKey, nodeHolder) {
+    // Hilfsfunktion: navigiert durch die Map-Struktur
+    nodeHoldersByKeys.navigate = function(fullKey, create = false) {
         const segments = fullKey.split('.')
-
         let ref = nodeHoldersByKeys
 
-        for (let i = 0; i < segments.length; i++) {
-            const segment = segments[i]
-
+        for (const segment of segments) {
             const isIndex = /^\d+$/.test(segment)
 
             if (isIndex) {
-                // Array-Index → behandle als array
-                if (!Array.isArray(ref.items)) {
+                if (!ref.items) {
+                    if (!create) return undefined
                     ref.items = []
                 }
-
                 if (!ref.items[segment]) {
+                    if (!create) return undefined
                     ref.items[segment] = {}
                 }
-            
                 ref = ref.items[segment]
             } else {
-                // normales Objektfeld
                 if (!ref[segment]) {
+                    if (!create) return undefined
                     ref[segment] = {}
                 }
-
                 ref = ref[segment]
             }
         }
 
-        // Am Ende: Liste erzeugen falls nicht existiert
+        return ref
+    }
+
+    nodeHoldersByKeys.appendToKey = function(fullKey, nodeHolder) {
+        const ref = this.navigate(fullKey, true)
+        
         if (!ref.holders) {
             ref.holders = []
         }
-
-        // Duplikate verhindern
+        
         if (!ref.holders.some(e => e.node === nodeHolder.node)) {
             ref.holders.push(nodeHolder)
         }
     }
 
     nodeHoldersByKeys.get = function(fullKey) {
+        return this.navigate(fullKey, false)
+    }
+
+    nodeHoldersByKeys.cleanup = function(fullKey) {
         const segments = fullKey.split('.')
-        let ref = nodeHoldersByKeys
-
-        for (let i = 0; i < segments.length; i++) {
-            const segment = segments[i]
-
-            const isIndex = /^\d+$/.test(segment)
-
-            if (isIndex) {
-                // Index eines Arrays
-                if (!ref.items) {
-                    return undefined
-                }
-
-                ref = ref.items[segment]
-                
-                if (!ref) {
-                    return undefined
-                }
-            } else {
-                // norm. property
-                ref = ref[segment]
-
-                if (!ref) {
-                    return undefined
-                }
-            }
+        
+        if (segments.length === 0) return
+        
+        // Navigiere zum Parent
+        const parentKey = segments.slice(0, -1).join('.')
+        const parent = parentKey ? this.navigate(parentKey, false) : nodeHoldersByKeys
+        
+        if (!parent) return
+        
+        const lastSegment = segments[segments.length - 1]
+        const isIndex = /^\d+$/.test(lastSegment)
+        
+        if (isIndex && parent.items) {
+            delete parent.items[lastSegment]
+        } else {
+            delete parent[lastSegment]
         }
-
-        return ref
     }
 
     function convertToFullKey(relativeKey, contextStack = new Map()) {
@@ -271,6 +263,7 @@ const TemplateEngine = (function () {
 
         function popHandler() {
             const linkedNodeHolders = nodeHoldersByKeys.get(change.key)
+            const list = resolve(change.key, data)
             
             for (const nodeHolder of linkedNodeHolders.holders) {
                 const lastChild = nodeHolder.mountNode.lastElementChild
@@ -278,6 +271,10 @@ const TemplateEngine = (function () {
                     nodeHolder.mountNode.removeChild(lastChild)
                 }
             }
+            
+            // Cleanup: Entferne NodeHolders für das gelöschte Item
+            const deletedIndex = list.length
+            nodeHoldersByKeys.cleanup(`${change.key}.${deletedIndex}`)
         }
 
         function shiftHandler() {
@@ -289,6 +286,9 @@ const TemplateEngine = (function () {
                     nodeHolder.mountNode.removeChild(firstChild)
                 }
             }
+            
+            // Cleanup: Entferne NodeHolders für Index 0
+            nodeHoldersByKeys.cleanup(`${change.key}.0`)
         }
 
         function unshiftHandler() {
@@ -333,6 +333,12 @@ const TemplateEngine = (function () {
                         endIndex
                     )
                 }
+            }
+            
+            // Cleanup: Entferne NodeHolders für alle gelöschten Items
+            for (let i = 0; i < change.deleteCount; i++) {
+                const deletedIndex = change.startIndex + i
+                nodeHoldersByKeys.cleanup(`${change.key}.${deletedIndex}`)
             }
         }
 
