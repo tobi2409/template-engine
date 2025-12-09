@@ -68,6 +68,7 @@
         data.persons[0].childs.push({ name: 'Person1_4', childs: [ { name: 'Person1_4_1', childs: [ { name: 'Person1_4_1_1', childs: [] } ] } ] })
         data.persons[0].childs.splice(1, 0, { name: 'inserted_to_Person1', childs: [] })
         data.persons.splice(1, 0, { name: 'inserted_Person', childs: [{ name: 'inserted_Person_1', childs: [] }] })
+        data.persons[1].name = '__inserted_Person__'
         data.persons[0].childs.splice(2, 1)
         data.persons.pop()
 

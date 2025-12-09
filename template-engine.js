@@ -27,18 +27,6 @@ const TemplateEngine = (function () {
         }
     }
 
-    nodeHoldersByKeys.cleanup = function(fullKey) {
-        const segments = fullKey.split('.')
-        if (segments.length === 0) return
-        
-        const parentKey = segments.slice(0, -1).join('.')
-        const parent = parentKey ? this.getByKey(parentKey) : nodeHoldersByKeys
-        
-        if (!parent) return
-        
-        parent.delete(segments[segments.length - 1])
-    }
-
     function convertToFullKey(relativeKey, contextStack = new Map()) {
         const splitted = relativeKey.split('.')
         const isFirstContext = contextStack.has(splitted[0])
@@ -213,6 +201,26 @@ const TemplateEngine = (function () {
             handleEachNode(data, contextStack, params, eachNode, mountNode, true, startIndex, endIndex)
         }
 
+        function reindexArrayMap(arrayMap, startIndex, shift, maxIndex) {
+            // Verschiebe Indices um 'shift' Positionen
+            // shift > 0: von hinten nach vorne (um nicht zu überschreiben)
+            // shift < 0: von vorne nach hinten
+            if (shift === 0) return
+            
+            const start = shift > 0 ? maxIndex : startIndex
+            const end = shift > 0 ? startIndex : maxIndex
+            const step = shift > 0 ? -1 : 1
+            
+            for (let i = start; shift > 0 ? i >= end : i <= end; i += step) {
+                const oldIndex = String(i)
+                const newIndex = String(i + shift)
+                if (arrayMap.has(oldIndex)) {
+                    arrayMap.set(newIndex, arrayMap.get(oldIndex))
+                    arrayMap.delete(oldIndex)
+                }
+            }
+        }
+
         function pushHandler() {
             const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.key)
             const list = resolve(change.key, data)
@@ -234,6 +242,11 @@ const TemplateEngine = (function () {
         function popHandler() {
             const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.key)
             const list = resolve(change.key, data)
+            const arrayMap = linkedNodeHolders
+            
+            // Cleanup: Entferne NodeHolders für das gelöschte Item
+            const deletedIndex = list.length
+            arrayMap.delete(String(deletedIndex))
             
             for (const nodeHolder of linkedNodeHolders.get('holders')) {
                 const lastChild = nodeHolder.mountNode.lastElementChild
@@ -241,14 +254,18 @@ const TemplateEngine = (function () {
                     nodeHolder.mountNode.removeChild(lastChild)
                 }
             }
-            
-            // Cleanup: Entferne NodeHolders für das gelöschte Item
-            const deletedIndex = list.length
-            nodeHoldersByKeys.cleanup(`${change.key}.${deletedIndex}`)
         }
 
         function shiftHandler() {
             const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.key)
+            const list = resolve(change.key, data)
+            const arrayMap = linkedNodeHolders
+            
+            // Cleanup: Entferne Index 0
+            arrayMap.delete('0')
+            
+            // Reindex: Verschiebe alle Indices um 1 nach unten
+            reindexArrayMap(arrayMap, 1, -1, list.length)
             
             for (const nodeHolder of linkedNodeHolders.get('holders')) {
                 const firstChild = nodeHolder.mountNode.firstElementChild
@@ -256,13 +273,15 @@ const TemplateEngine = (function () {
                     nodeHolder.mountNode.removeChild(firstChild)
                 }
             }
-            
-            // Cleanup: Entferne NodeHolders für Index 0
-            nodeHoldersByKeys.cleanup(`${change.key}.0`)
         }
 
         function unshiftHandler() {
             const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.key)
+            const list = resolve(change.key, data)
+            const arrayMap = linkedNodeHolders
+            
+            // Reindex: Verschiebe alle Indices um items.length nach oben
+            reindexArrayMap(arrayMap, 0, change.items.length, list.length - change.items.length - 1)
             
             for (const nodeHolder of linkedNodeHolders.get('holders')) {
                 const endIndex = change.items.length - 1
@@ -279,6 +298,26 @@ const TemplateEngine = (function () {
 
         function spliceHandler() {
             const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.key)
+            const list = resolve(change.key, data)
+            const arrayMap = linkedNodeHolders
+            
+            const oldLength = list.length - change.items.length + change.deleteCount
+
+            // 1. Cleanup: Lösche die zu entfernenden Elemente
+            for (let i = 0; i < change.deleteCount; i++) {
+                arrayMap.delete(String(change.startIndex + i))
+            }
+
+            // 2. Reindex: Verschiebe bestehende Elemente
+            const shift = change.items.length - change.deleteCount
+            if (shift !== 0) {
+                reindexArrayMap(
+                    arrayMap, 
+                    change.startIndex + change.deleteCount, 
+                    shift, 
+                    oldLength - 1
+                )
+            }
 
             for (const nodeHolder of linkedNodeHolders.get('holders')) {
                 // Zuerst Elemente löschen
@@ -303,12 +342,6 @@ const TemplateEngine = (function () {
                         endIndex
                     )
                 }
-            }
-            
-            // Cleanup: Entferne NodeHolders für alle gelöschten Items
-            for (let i = 0; i < change.deleteCount; i++) {
-                const deletedIndex = change.startIndex + i
-                nodeHoldersByKeys.cleanup(`${change.key}.${deletedIndex}`)
             }
         }
 
