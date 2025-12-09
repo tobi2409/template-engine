@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Template Engine Performance Test</title>
+<style>
+  #app { font-family: sans-serif; }
+  .item { padding: 2px 0; border-bottom: 1px solid #eee; }
+</style>
+</head>
+<body>
+
+    <div id="app"></div>
+
+    <template id="app-template">
+        <each of="items" as="item">
+            <div class="item"><get>item.name</get> - <get>item.value</get></div>
+        </each>
+    </template>
+
+    <template-use id="app-template-use" template-id="app-template" mount-id="app"></template-use>
+
+    <script type="module">
+
+        import TemplateEngine from '../template-engine.js'
+
+        const N = 200000
+        const items = Array.from({ length: N }, (_, i) => ({
+            id: i + 1,
+            name: "Item " + (i + 1),
+            value: i + 1 //Math.floor(Math.random() * 1000)
+        }))
+
+        console.time('Initial Render (200000 Items)')
+        const model = TemplateEngine.reactive({ items }, document.getElementById('app-template-use'));
+        console.timeEnd('Initial Render (200000 Items)')
+
+        setTimeout(() => {
+            console.time("Update 100000 Items")
+            for (let i = 0; i < 100000; i++) {
+                const idx = Math.floor(Math.random() * N)
+                model.items[idx].value = Math.floor(Math.random() * 1000)
+            }
+            console.timeEnd("Update 100000 Items")
+        }, 2000)
+
+        setTimeout(() => {
+            console.time("Add 100 Items")
+            for (let i = 0; i < 100; i++) {
+                const id = model.items.length + 1
+                model.items.push({ id, name: "Item " + id, value: Math.floor(Math.random() * 1000) })
+            }
+            console.timeEnd("Add 100 Items")
+        }, 4000)
+    </script>
+</body>
+</html>
