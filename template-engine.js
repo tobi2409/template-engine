@@ -2,71 +2,41 @@ const TemplateEngine = (function () {
 
     const nodeHoldersByKeys = new Map()
 
-    // Hilfsfunktion: navigiert durch die Map-Struktur
-    nodeHoldersByKeys.navigate = function(fullKey, create = false) {
+    nodeHoldersByKeys.getByKey = function(fullKey, create = false) {
         const segments = fullKey.split('.')
         let ref = nodeHoldersByKeys
-
+        
         for (const segment of segments) {
-            const isIndex = /^\d+$/.test(segment)
-
-            if (isIndex) {
-                if (!ref.items) {
-                    if (!create) return undefined
-                    ref.items = []
-                }
-                if (!ref.items[segment]) {
-                    if (!create) return undefined
-                    ref.items[segment] = {}
-                }
-                ref = ref.items[segment]
-            } else {
-                if (!ref[segment]) {
-                    if (!create) return undefined
-                    ref[segment] = {}
-                }
-                ref = ref[segment]
+            if (!ref.has(segment)) {
+                if (!create) return undefined
+                ref.set(segment, new Map())
             }
+            ref = ref.get(segment)
         }
-
+        
         return ref
     }
 
     nodeHoldersByKeys.appendToKey = function(fullKey, nodeHolder) {
-        const ref = this.navigate(fullKey, true)
+        const ref = this.getByKey(fullKey, true)
         
-        if (!ref.holders) {
-            ref.holders = []
+        if (!ref.has('holders')) ref.set('holders', [])
+        const holders = ref.get('holders')
+        if (!holders.some(e => e.node === nodeHolder.node)) {
+            holders.push(nodeHolder)
         }
-        
-        if (!ref.holders.some(e => e.node === nodeHolder.node)) {
-            ref.holders.push(nodeHolder)
-        }
-    }
-
-    nodeHoldersByKeys.get = function(fullKey) {
-        return this.navigate(fullKey, false)
     }
 
     nodeHoldersByKeys.cleanup = function(fullKey) {
         const segments = fullKey.split('.')
-        
         if (segments.length === 0) return
         
-        // Navigiere zum Parent
         const parentKey = segments.slice(0, -1).join('.')
-        const parent = parentKey ? this.navigate(parentKey, false) : nodeHoldersByKeys
+        const parent = parentKey ? this.getByKey(parentKey) : nodeHoldersByKeys
         
         if (!parent) return
         
-        const lastSegment = segments[segments.length - 1]
-        const isIndex = /^\d+$/.test(lastSegment)
-        
-        if (isIndex && parent.items) {
-            delete parent.items[lastSegment]
-        } else {
-            delete parent[lastSegment]
-        }
+        parent.delete(segments[segments.length - 1])
     }
 
     function convertToFullKey(relativeKey, contextStack = new Map()) {
@@ -244,10 +214,10 @@ const TemplateEngine = (function () {
         }
 
         function pushHandler() {
-            const linkedNodeHolders = nodeHoldersByKeys.get(change.key)
+            const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.key)
             const list = resolve(change.key, data)
             
-            for (const nodeHolder of linkedNodeHolders.holders) {
+            for (const nodeHolder of linkedNodeHolders.get('holders')) {
                 const startIndex = list.length - change.items.length
                 const endIndex = list.length - 1
                 createItemsNodes(
@@ -262,10 +232,10 @@ const TemplateEngine = (function () {
         }
 
         function popHandler() {
-            const linkedNodeHolders = nodeHoldersByKeys.get(change.key)
+            const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.key)
             const list = resolve(change.key, data)
             
-            for (const nodeHolder of linkedNodeHolders.holders) {
+            for (const nodeHolder of linkedNodeHolders.get('holders')) {
                 const lastChild = nodeHolder.mountNode.lastElementChild
                 if (lastChild) {
                     nodeHolder.mountNode.removeChild(lastChild)
@@ -278,9 +248,9 @@ const TemplateEngine = (function () {
         }
 
         function shiftHandler() {
-            const linkedNodeHolders = nodeHoldersByKeys.get(change.key)
+            const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.key)
             
-            for (const nodeHolder of linkedNodeHolders.holders) {
+            for (const nodeHolder of linkedNodeHolders.get('holders')) {
                 const firstChild = nodeHolder.mountNode.firstElementChild
                 if (firstChild) {
                     nodeHolder.mountNode.removeChild(firstChild)
@@ -292,9 +262,9 @@ const TemplateEngine = (function () {
         }
 
         function unshiftHandler() {
-            const linkedNodeHolders = nodeHoldersByKeys.get(change.key)
+            const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.key)
             
-            for (const nodeHolder of linkedNodeHolders.holders) {
+            for (const nodeHolder of linkedNodeHolders.get('holders')) {
                 const endIndex = change.items.length - 1
                 createItemsNodes(
                     nodeHolder.contextStack, 
@@ -308,9 +278,9 @@ const TemplateEngine = (function () {
         }
 
         function spliceHandler() {
-            const linkedNodeHolders = nodeHoldersByKeys.get(change.key)
+            const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.key)
 
-            for (const nodeHolder of linkedNodeHolders.holders) {
+            for (const nodeHolder of linkedNodeHolders.get('holders')) {
                 // Zuerst Elemente löschen
                 if (change.deleteCount > 0) {
                     for (let i = 0; i < change.deleteCount; i++) {
@@ -343,7 +313,7 @@ const TemplateEngine = (function () {
         }
 
         function updateHandler() {
-            const linkedNodeHolders = nodeHoldersByKeys.get(change.key)
+            const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.key)
 
             function updateGet(node) {
                 if (!(node.tagName === 'SPAN'
@@ -354,7 +324,7 @@ const TemplateEngine = (function () {
                 node.innerText = resolve(change.key, data) // change.key is already fullKey
             }
 
-            for (const nodeHolder of linkedNodeHolders.holders) {
+            for (const nodeHolder of linkedNodeHolders.get('holders')) {
                 switch (nodeHolder.updateHandler) {
                     case 'updateGet':
                         updateGet(nodeHolder.node)
