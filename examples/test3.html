@@ -10,8 +10,8 @@
     <div id="app"></div>
 
     <template id="list-template">
-        <ul>
-            <each of="*list" as="p">
+        <each of="*list" as="p">
+            <!--<if test="p.showChilds">-->
                 <li><get>p.name</get> ist <get>p.age</get> Jahre alt
 
                     <ul>
@@ -19,8 +19,8 @@
                     </ul>
 
                 </li>
-            </each>
-        </ul>
+            <!--</if>-->
+        </each>
     </template>
 
     <template id="app-template">
@@ -35,13 +35,15 @@
             <p>Mein Gehalt: <get>wage</get></p>
         </if>
 
-        <template-use template-id="list-template" data-list="persons"></template-use>
+        <ul>
+            <template-use template-id="list-template" data-list="persons"></template-use>
+        </ul>
     </template>
 
     <template-use id="app-template-use" template-id="app-template" mount-id="app" data-param1="Test"></template-use>
 
     <script type="module">
-        import TemplateEngine from '../template-engine.js'
+        import TemplateEngine from '../src/template-engine.js'
 
         const data = TemplateEngine.reactive({
             name: 'Tobias',
@@ -52,20 +54,24 @@
                 name: 'Person1',
                 childs: [{
                     name: 'Person1_1',
-                    childs: []
+                    childs: [],
+                    showChilds: true
                 }, {
                     name: 'Person1_2',
-                    childs: []
+                    childs: [],
+                    showChilds: true
                 }],
                 age: 23,
-                ref: '{{ name }}'
+                showChilds: true
             }, {
                 name: 'Person2',
                 childs: [{
                     name: 'Person2_1',
-                    childs: []
+                    childs: [],
+                    showChilds: true
                 }],
-                age: 25
+                age: 25,
+                showChilds: true
             }]
         }, document.getElementById('app-template-use'))
 
