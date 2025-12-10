@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+
+    <div id="app"></div>
+
+    <template id="list-template">
+        <ul>
+            <each of="*list" as="p">
+                <li><get>p.name</get> ist <get>p.age</get> Jahre alt
+
+                    <ul>
+                        <template-use template-id="list-template" data-list="p.childs"></template-use>
+                    </ul>
+
+                </li>
+            </each>
+        </ul>
+    </template>
+
+    <template id="app-template">
+        <div>Hallo <span>--</span> <get>name</get>
+
+            <div>Du bist <get>name</get> und <get>age</get> Jahre alt</div>
+        </div>
+
+        <div>Hallo <get>param1</get></div>
+
+        <if test="showWage">
+            <p>Mein Gehalt: <get>wage</get></p>
+        </if>
+
+        <template-use template-id="list-template" data-list="persons"></template-use>
+    </template>
+
+    <template-use id="app-template-use" template-id="app-template" mount-id="app" data-param1="Test"></template-use>
+
+    <script type="module">
+        import TemplateEngine from '../template-engine.js'
+
+        const data = TemplateEngine.reactive({
+            name: 'Tobias',
+            age: 31,
+            wage: 5000,
+            showWage: true,
+            persons: [{
+                name: 'Person1',
+                childs: [{
+                    name: 'Person1_1',
+                    childs: []
+                }, {
+                    name: 'Person1_2',
+                    childs: []
+                }],
+                age: 23,
+                ref: '{{ name }}'
+            }, {
+                name: 'Person2',
+                childs: [{
+                    name: 'Person2_1',
+                    childs: []
+                }],
+                age: 25
+            }]
+        }, document.getElementById('app-template-use'))
+
+        data.persons[0].name = 'Test'
+        data.persons[0].childs.push({ name: 'Person1_3', childs: [] })
+        data.persons[0].childs.push({ name: 'Person1_4', childs: [ { name: 'Person1_4_1', childs: [ { name: 'Person1_4_1_1', childs: [] } ] } ] })
+        data.persons[0].childs.splice(1, 0, { name: 'inserted_to_Person1', childs: [] })
+        data.persons.splice(1, 0, { name: 'inserted_Person', childs: [{ name: 'inserted_Person_1', childs: [] }] })
+        data.persons[1].name = '__inserted_Person__'
+        data.persons[0].childs.splice(2, 1)
+        data.persons.pop()
+        data.persons[0].childs[1].name = '__inserted_to_Person1__'
+        data.persons[0].childs[2].name = '__Person1_3__'
+        data.showWage = false
+        data.showWage = true
+
+        console.log(data)
+    </script>
+
+</body>
+
+</html>

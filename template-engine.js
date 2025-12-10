@@ -95,7 +95,8 @@ const TemplateEngine = (function () {
         resolvedTextSpan.innerText = resolved.value
         mount(resolvedTextSpan, mountNode, insertBeforeAnchor)
         
-        nodeHoldersByKeys.appendToKey(resolved.fullKey, { node: resolvedTextSpan, updateHandler: 'updateGet' })
+        nodeHoldersByKeys.appendToKey(resolved.fullKey,
+            { updateHandler: 'updateGet', node: resolvedTextSpan })
     }
 
     function handleEachNode(data, contextStack = new Map(), params = new Map(), eachNode, mountNode, refreshMode = false, startIndex = 0, endIndex = undefined) {
@@ -106,7 +107,7 @@ const TemplateEngine = (function () {
 
         if (!refreshMode) {
             nodeHoldersByKeys.appendToKey(resolvedOf.fullKey,
-                { node: eachNode, mountNode: mountNode, updateHandler: 'setArray', contextStack: new Map(contextStack), params: params })
+                { updateHandler: 'updateArray', contextStack: new Map(contextStack), params: params, eachNode: eachNode, mountNode: mountNode })
         }
 
         const list = resolvedOf.value
@@ -131,6 +132,22 @@ const TemplateEngine = (function () {
             // Nested containers are positioned based on their parent container's position.
             walk(data, childContextStack, params, eachNode.childNodes, mountNode, insertBeforeAnchor)
         }
+    }
+
+    function handleIfNode(data, contextStack = new Map(), params = new Map(), ifNode, mountNode) {
+        const test = ifNode.getAttribute('test')
+        const resolvedTest = resolveEx(test, data, contextStack, params)
+
+        let wrapper
+
+        if (resolvedTest.value) {
+            wrapper = document.createElement('div')
+            mount(wrapper, mountNode)
+            walk(data, contextStack, params, ifNode.childNodes, wrapper)
+        }
+
+        nodeHoldersByKeys.appendToKey(resolvedTest.fullKey,
+            { updateHandler: 'updateIf', contextStack: contextStack, params: params, ifNode: ifNode, mountNode: mountNode, wrapper: wrapper })
     }
 
     function handleTemplateUse(data, contextStack = new Map(), params = new Map(), templateUseNode, mountNode) {
@@ -166,6 +183,9 @@ const TemplateEngine = (function () {
                     break
                 case 'EACH':
                     handleEachNode(data, contextStack, params, node, mountNode)
+                    break
+                case 'IF':
+                    handleIfNode(data, contextStack, params, node, mountNode, insertBeforeAnchor)
                     break
                 case 'TEMPLATE-USE':
                     handleTemplateUse(data, contextStack, params, node, mountNode)
@@ -222,8 +242,8 @@ const TemplateEngine = (function () {
         }
 
         function pushHandler() {
-            const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.key)
-            const list = resolve(change.key, data)
+            const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.fullKey)
+            const list = resolve(change.fullKey, data)
             
             for (const nodeHolder of linkedNodeHolders.get('holders')) {
                 const startIndex = list.length - change.items.length
@@ -231,7 +251,7 @@ const TemplateEngine = (function () {
                 createItemsNodes(
                     nodeHolder.contextStack, 
                     nodeHolder.params, 
-                    nodeHolder.node, 
+                    nodeHolder.eachNode, 
                     nodeHolder.mountNode, 
                     startIndex, 
                     endIndex
@@ -240,8 +260,8 @@ const TemplateEngine = (function () {
         }
 
         function popHandler() {
-            const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.key)
-            const list = resolve(change.key, data)
+            const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.fullKey)
+            const list = resolve(change.fullKey, data)
             const arrayMap = linkedNodeHolders
             
             // Cleanup: Entferne NodeHolder-Keys für das gelöschte Array-Element
@@ -257,8 +277,8 @@ const TemplateEngine = (function () {
         }
 
         function shiftHandler() {
-            const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.key)
-            const list = resolve(change.key, data)
+            const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.fullKey)
+            const list = resolve(change.fullKey, data)
             const arrayMap = linkedNodeHolders
             
             // Cleanup: Entferne NodeHolder-Keys für Index 0
@@ -276,8 +296,8 @@ const TemplateEngine = (function () {
         }
 
         function unshiftHandler() {
-            const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.key)
-            const list = resolve(change.key, data)
+            const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.fullKey)
+            const list = resolve(change.fullKey, data)
             const arrayMap = linkedNodeHolders
             
             // Reindex: Verschiebe alle NodeHolder-Keys um items.length nach oben
@@ -288,7 +308,7 @@ const TemplateEngine = (function () {
                 createItemsNodes(
                     nodeHolder.contextStack, 
                     nodeHolder.params, 
-                    nodeHolder.node, 
+                    nodeHolder.eachNode, 
                     nodeHolder.mountNode, 
                     0, 
                     endIndex
@@ -297,8 +317,8 @@ const TemplateEngine = (function () {
         }
 
         function spliceHandler() {
-            const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.key)
-            const list = resolve(change.key, data)
+            const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.fullKey)
+            const list = resolve(change.fullKey, data)
             const arrayMap = linkedNodeHolders
             
             const oldLength = list.length - change.items.length + change.deleteCount
@@ -336,7 +356,7 @@ const TemplateEngine = (function () {
                     createItemsNodes(
                         nodeHolder.contextStack, 
                         nodeHolder.params, 
-                        nodeHolder.node, 
+                        nodeHolder.eachNode, 
                         nodeHolder.mountNode, 
                         change.startIndex, 
                         endIndex
@@ -346,7 +366,7 @@ const TemplateEngine = (function () {
         }
 
         function updateHandler() {
-            const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.key)
+            const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.fullKey)
 
             function updateGet(node) {
                 if (!(node.tagName === 'SPAN'
@@ -354,13 +374,27 @@ const TemplateEngine = (function () {
                         throw new Error("get wasn't resolved correctly")
                     }
 
-                node.innerText = resolve(change.key, data) // change.key is already fullKey
+                node.innerText = resolve(change.fullKey, data)
+            }
+
+            function updateIf(contextStack, params, ifNode, mountNode, wrapper) {
+                nodeHoldersByKeys.delete(change.fullKey)
+
+                if (wrapper) {
+                    wrapper.remove()
+                }
+
+                handleIfNode(data, contextStack, params, ifNode, mountNode)
             }
 
             for (const nodeHolder of linkedNodeHolders.get('holders')) {
                 switch (nodeHolder.updateHandler) {
                     case 'updateGet':
                         updateGet(nodeHolder.node)
+                        break
+                    case 'updateIf':
+                        updateIf(nodeHolder.contextStack, nodeHolder.params,
+                            nodeHolder.ifNode, nodeHolder.mountNode, nodeHolder.wrapper)
                         break
                 }
             }
@@ -395,15 +429,15 @@ const TemplateEngine = (function () {
 
             const topData = data
 
-            function _reactive(data, fullKey = '') {
+            function innerReactive(data, fullKey = '') {
 
-                let _fullKey = ''
+                let nextFullKey = ''
                 let isInArrayMethod = false
                 let arrayMethodName = null
                 
                 const proxy = new Proxy(data, {
                     get(target, prop) {
-                        _fullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
+                        nextFullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
 
                         const value = target[prop]
                         
@@ -419,7 +453,7 @@ const TemplateEngine = (function () {
                                     isInArrayMethod = false
                                     
                                     const change = { 
-                                        key: fullKey, 
+                                        fullKey: fullKey, 
                                         action: prop
                                     }
                                     
@@ -440,7 +474,7 @@ const TemplateEngine = (function () {
                         }
 
                         if (value && typeof value === 'object') {
-                            return _reactive(value, _fullKey) // tiefes Wrappen des Proxys
+                            return innerReactive(value, nextFullKey) // tiefes Wrappen des Proxys
                         }
 
                         return value
@@ -450,8 +484,8 @@ const TemplateEngine = (function () {
                         target[prop] = value
 
                         if (prop !== 'length' && !isInArrayMethod) {
-                            _fullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
-                            let change = { key: _fullKey, action: 'update' }
+                            nextFullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
+                            let change = { fullKey: nextFullKey, action: 'update' }
                             refresh(topData, change)
                         }
 
@@ -473,7 +507,7 @@ const TemplateEngine = (function () {
                 return proxy
             }
 
-            return _reactive(data)
+            return innerReactive(data)
         }
     }
 
