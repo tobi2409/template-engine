@@ -76,17 +76,27 @@ export function handleEachNode(data, contextStack = new Map(), params = new Map(
     const _endIndex = endIndex !== undefined ? endIndex : list.length - 1
 
     const insertBeforeAnchor = refreshInfo ? mountNode.children[_startIndex] : undefined
+    
+    // Use DocumentFragment for batch rendering to minimize DOM operations
+    // Fragment collects all nodes in memory, then inserts them in one operation
+    const fragment = document.createDocumentFragment()
 
     for (let index = _startIndex ; index <= _endIndex ; index++) {
         const listElement = list[index]
         const childContextStack = new Map(contextStack)
         childContextStack.set(asAttribute, { isEachContext: true, data: listElement, of: resolvedOf.fullKey, index: index })
         
-        // insertBeforeAnchor is passed down only one each level.
-        // The insertion position matters only within the current container.
-        // Nested containers are positioned based on their parent container's position.
-        walk(data, childContextStack, params, eachNode.childNodes, mountNode, insertBeforeAnchor)
+        // walk() appends nodes to fragment sequentially (no insertBeforeAnchor needed inside fragment)
+        // When walk() recursively processes child nodes, each child becomes a new container
+        // The insertion position only matters for the root element being inserted into mountNode
+        // Inside nested containers, nodes are always appended sequentially
+        walk(data, childContextStack, params, eachNode.childNodes, fragment, undefined)
     }
+    
+    // Insert complete fragment in one DOM operation at correct position
+    // insertBeforeAnchor is needed for operations like unshift/splice that insert at specific positions
+    // If undefined, fragment is appended at the end (for push or initial render)
+    mount(fragment, mountNode, insertBeforeAnchor)
 }
 
 export function handleEachNodeRefresh(data, refreshInfo) {
