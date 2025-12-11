@@ -1,8 +1,28 @@
-// Render-Komponente: Initiales Rendering der Templates
+// Render Component: Initial template rendering
 
 import { nodeHoldersByKeys } from './utils/node-holders.js'
 import { resolve, resolveEx } from './utils/resolver.js'
 import { mount } from './utils/dom.js'
+
+function reindexArrayMap(arrayMap, startIndex, shift, maxIndex) {
+    // Shift indices by 'shift' positions
+    // shift > 0: backward (to avoid overwriting)
+    // shift < 0: forward
+    if (shift === 0) return
+    
+    const start = shift > 0 ? maxIndex : startIndex
+    const end = shift > 0 ? startIndex : maxIndex
+    const step = shift > 0 ? -1 : 1
+    
+    for (let i = start; shift > 0 ? i >= end : i <= end; i += step) {
+        const oldIndex = String(i)
+        const newIndex = String(i + shift)
+        if (arrayMap.has(oldIndex)) {
+            arrayMap.set(newIndex, arrayMap.get(oldIndex))
+            arrayMap.delete(oldIndex)
+        }
+    }
+}
 
 // textNode only contains text, nothing more -> no walk anymore
 function handleTextNode(textNode, mountNode, insertBeforeAnchor = undefined) {
@@ -11,12 +31,7 @@ function handleTextNode(textNode, mountNode, insertBeforeAnchor = undefined) {
 }
 
 // getNode only contains key, nothing more -> no walk anymore
-export function handleGetNode(data, contextStack = new Map(), params = new Map(), getNode, mountNode, insertBeforeAnchor = undefined, refreshInfo = undefined) {
-    if (refreshInfo) {
-        refreshInfo.existingNode.innerText = resolve(refreshInfo.fullKey, data)
-        return
-    }
-
+export function handleGetNode(data, contextStack = new Map(), params = new Map(), getNode, mountNode, insertBeforeAnchor = undefined) {
     const key = getNode.innerText
     const resolved = resolveEx(key, data, contextStack, params)
 
@@ -25,9 +40,13 @@ export function handleGetNode(data, contextStack = new Map(), params = new Map()
     resolvedTextSpan.innerText = resolved.value
     mount(resolvedTextSpan, mountNode, insertBeforeAnchor)
     
-    // NodeHolder-Struktur: getNode wird für refresh benötigt
+    // NodeHolder structure: getNode is needed for refresh
     nodeHoldersByKeys.appendToKey(resolved.fullKey,
         { action: 'updateGet', getNode: getNode, node: resolvedTextSpan })
+}
+
+export function handleGetNodeRefresh(data, refreshInfo) {
+    refreshInfo.existingNode.innerText = resolve(refreshInfo.fullKey, data)
 }
 
 export function handleEachNode(data, contextStack = new Map(), params = new Map(), eachNode, mountNode, refreshInfo = undefined) {
@@ -37,8 +56,8 @@ export function handleEachNode(data, contextStack = new Map(), params = new Map(
     const asAttribute = eachNode.getAttribute('as')
 
     if (!refreshInfo) {
-        // Vollständige NodeHolder-Struktur: contextStack/params/eachNode werden benötigt,
-        // um bei Array-Updates das Template mit relativen Keys neu zu rendern
+        // Complete NodeHolder structure: contextStack/params/eachNode are needed
+        // to re-render the template with relative keys on array updates
         nodeHoldersByKeys.appendToKey(resolvedOf.fullKey,
             { action: 'updateArray', contextStack: new Map(contextStack), params: params, eachNode: eachNode, mountNode: mountNode })
     }
@@ -70,26 +89,65 @@ export function handleEachNode(data, contextStack = new Map(), params = new Map(
     }
 }
 
-export function handleIfNode(data, contextStack = new Map(), params = new Map(), ifNode, mountNode, insertBeforeAnchor = undefined, refreshInfo = undefined) {
+export function handleEachNodeRefresh(data, refreshInfo) {
+    const linkedNodeHolders = nodeHoldersByKeys.getByKey(refreshInfo.fullKey)
+    const { deleteStartIndex = 0, deleteCount = 0, insertStartIndex = 0, insertCount = 0, reindexStartIndex = 0, reindexShift = 0, reindexMaxIndex = 0 } = refreshInfo
+    
+    // 1. Cleanup: Delete NodeHolder keys
+    for (let i = 0; i < deleteCount; i++) {
+        linkedNodeHolders.delete(String(deleteStartIndex + i))
+    }
+    
+    // 2. Reindex: Shift NodeHolder keys
+    if (reindexShift !== 0) {
+        reindexArrayMap(linkedNodeHolders, reindexStartIndex, reindexShift, reindexMaxIndex)
+    }
+    
+    // 3. DOM updates for all registered holders
+    for (const nodeHolder of linkedNodeHolders.get('holders')) {
+        // Delete DOM elements
+        for (let i = 0; i < deleteCount; i++) {
+            const childToRemove = nodeHolder.mountNode.children[deleteStartIndex]
+            if (childToRemove) {
+                nodeHolder.mountNode.removeChild(childToRemove)
+            }
+        }
+        
+        // Insert new DOM elements
+        if (insertCount > 0) {
+            handleEachNode(data, nodeHolder.contextStack, nodeHolder.params, nodeHolder.eachNode, nodeHolder.mountNode,
+                { startIndex: insertStartIndex, endIndex: insertStartIndex + insertCount - 1 })
+        }
+    }
+}
+
+export function handleIfNode(data, contextStack = new Map(), params = new Map(), ifNode, mountNode, insertBeforeAnchor = undefined) {
     const test = ifNode.getAttribute('test')
     const resolvedTest = resolveEx(test, data, contextStack, params)
 
-    let wrapper = refreshInfo?.wrapper
-
-    if (!wrapper) {
-        wrapper = document.createElement('div')
+    const wrapper = resolvedTest.value ? document.createElement('div') : undefined
+    if (wrapper) {
         mount(wrapper, mountNode, insertBeforeAnchor)
     }
-
     if (resolvedTest.value) {
         walk(data, contextStack, params, ifNode.childNodes, wrapper)
     }
 
-    // Re-rendering NodeHolder-Struktur: contextStack/params nicht unbedingt nötig,
-    // aber mitgenommen um Code-Duplikation zu vermeiden (updateHandler ruft handleIfNode nochmal auf)
-    // Könnte optimiert werden durch direktes wrapper-Toggle, aber current approach ist einfacher
+    // Re-rendering NodeHolder structure: contextStack/params not strictly necessary,
+    // but included to avoid code duplication (updateHandler calls handleIfNode again)
+    // Could be optimized with direct wrapper toggle, but current approach is simpler
     nodeHoldersByKeys.appendToKey(resolvedTest.fullKey,
         { action: 'updateIf', contextStack: contextStack, params: params, ifNode: ifNode, wrapper: wrapper })
+}
+
+export function handleIfNodeRefresh(data, refreshInfo) {
+    const wrapper = refreshInfo.wrapper
+    wrapper?.replaceChildren()
+    
+    const testValue = resolve(refreshInfo.fullKey, data)
+    if (testValue) {
+        walk(data, refreshInfo.contextStack, refreshInfo.params, refreshInfo.ifNode.childNodes, wrapper)
+    }
 }
 
 function handleTemplateUse(data, contextStack = new Map(), params = new Map(), templateUseNode, mountNode) {

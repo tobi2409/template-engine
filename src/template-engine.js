@@ -18,35 +18,35 @@ const TemplateEngine = (function () {
                     get(target, prop) {
                         const value = target[prop]
                         
-                        // Array-Methoden abfangen
-                        if (Array.isArray(target) && typeof value === 'function' && 
-                            ['push', 'pop', 'shift', 'unshift', 'splice'].includes(prop)) {
-                            return function(...args) {
-                                isInArrayMethod = true
-                                const result = value.apply(proxy, args)
-                                isInArrayMethod = false
-                                
-                                const change = { fullKey, action: prop }
-                                
-                                if (prop === 'push' || prop === 'unshift') {
-                                    change.items = args
-                                } else if (prop === 'splice') {
-                                    change.startIndex = args[0]
-                                    change.deleteCount = args[1] || 0
-                                    change.items = args.slice(2)
-                                }
-                                
-                                refresh(topData, change)
-                                return result
+                        // Handle non-array-method cases first
+                        if (!Array.isArray(target) || typeof value !== 'function' || 
+                            !['push', 'pop', 'shift', 'unshift', 'splice'].includes(prop)) {
+                            if (value && typeof value === 'object') {
+                                const nextFullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
+                                return innerReactive(value, nextFullKey)
                             }
+                            return value
                         }
 
-                        if (value && typeof value === 'object') {
-                            const nextFullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
-                            return innerReactive(value, nextFullKey)
+                        // Intercept array methods
+                        return function(...args) {
+                            isInArrayMethod = true
+                            const result = value.apply(proxy, args)
+                            isInArrayMethod = false
+                            
+                            const change = { fullKey, action: prop }
+                            
+                            if (prop === 'push' || prop === 'unshift') {
+                                change.items = args
+                            } else if (prop === 'splice') {
+                                change.startIndex = args[0]
+                                change.deleteCount = args[1] || 0
+                                change.items = args.slice(2)
+                            }
+                            
+                            refresh(topData, change)
+                            return result
                         }
-
-                        return value
                     },
 
                     set(target, prop, value) {
