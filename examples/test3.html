@@ -11,7 +11,7 @@
 
     <template id="list-template">
         <each of="*list" as="p">
-            <!--<if test="p.showChilds">-->
+            <if test="p.show">
                 <li><get>p.name</get> ist <get>p.age</get> Jahre alt
 
                     <ul>
@@ -19,7 +19,7 @@
                     </ul>
 
                 </li>
-            <!--</if>-->
+            </if>
         </each>
     </template>
 
@@ -55,31 +55,31 @@
                 childs: [{
                     name: 'Person1_1',
                     childs: [],
-                    showChilds: true
+                    show: true
                 }, {
                     name: 'Person1_2',
                     childs: [],
-                    showChilds: true
+                    show: true
                 }],
                 age: 23,
-                showChilds: true
+                show: true
             }, {
                 name: 'Person2',
                 childs: [{
                     name: 'Person2_1',
                     childs: [],
-                    showChilds: true
+                    show: false
                 }],
                 age: 25,
-                showChilds: true
+                show: true
             }]
         }, document.getElementById('app-template-use'))
 
         data.persons[0].name = 'Test'
-        data.persons[0].childs.push({ name: 'Person1_3', childs: [] })
-        data.persons[0].childs.push({ name: 'Person1_4', childs: [ { name: 'Person1_4_1', childs: [ { name: 'Person1_4_1_1', childs: [] } ] } ] })
-        data.persons[0].childs.splice(1, 0, { name: 'inserted_to_Person1', childs: [] })
-        data.persons.splice(1, 0, { name: 'inserted_Person', childs: [{ name: 'inserted_Person_1', childs: [] }] })
+        data.persons[0].childs.push({ show: true, name: 'Person1_3', childs: [] })
+        data.persons[0].childs.push({ show: true, name: 'Person1_4', childs: [ { show: true, name: 'Person1_4_1', childs: [ { show: true, name: 'Person1_4_1_1', childs: [] } ] } ] })
+        data.persons[0].childs.splice(1, 0, { show: true, name: 'inserted_to_Person1', childs: [] })
+        data.persons.splice(1, 0, { show: true, name: 'inserted_Person', childs: [{ show: true, name: 'inserted_Person_1', childs: [] }] })
         data.persons[1].name = '__inserted_Person__'
         data.persons[0].childs.splice(2, 1)
         data.persons.pop()
@@ -87,6 +87,7 @@
         data.persons[0].childs[2].name = '__Person1_3__'
         data.showWage = false
         data.showWage = true
+        data.persons[0].childs[2].show = false
 
         console.log(data)
     </script>

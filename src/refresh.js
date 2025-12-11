@@ -29,15 +29,8 @@ function reindexArrayMap(arrayMap, startIndex, shift, maxIndex) {
     }
 }
 
-function handleArrayMutation(data, change, {
-    deleteStartIndex = null,
-    deleteCount = 0,
-    insertStartIndex = null,
-    insertCount = 0,
-    reindexStartIndex = null,
-    reindexShift = 0,
-    reindexMaxIndex = null
-}) {
+function handleArrayMutation(data, change, 
+    { deleteStartIndex = null, deleteCount = 0, insertStartIndex = null, insertCount = 0, reindexStartIndex = null, reindexShift = 0, reindexMaxIndex = null }) {
     const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.fullKey)
     
     // 1. Cleanup: Lösche NodeHolder-Keys
@@ -62,15 +55,8 @@ function handleArrayMutation(data, change, {
         
         // Neue DOM-Elemente einfügen
         if (insertCount > 0) {
-            createItemsNodes(
-                data,
-                nodeHolder.contextStack,
-                nodeHolder.params,
-                nodeHolder.eachNode,
-                nodeHolder.mountNode,
-                insertStartIndex,
-                insertStartIndex + insertCount - 1
-            )
+            createItemsNodes(data, nodeHolder.contextStack, nodeHolder.params, nodeHolder.eachNode, nodeHolder.mountNode,
+                insertStartIndex, insertStartIndex + insertCount - 1)
         }
     }
 }
@@ -130,8 +116,10 @@ export function refresh(data, change, app) {
         case 'updateIf': {
             const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.fullKey)
             for (const nodeHolder of linkedNodeHolders.get('holders')) {
+                nodeHolder.wrapper.replaceChildren()
+                
                 handleIfNode(data, nodeHolder.contextStack, nodeHolder.params, nodeHolder.ifNode, null, undefined,
-                    { wrapper: nodeHolder.wrapper, fullKeyTest: change.fullKey })
+                    { wrapper: nodeHolder.wrapper })
             }
             break
         }

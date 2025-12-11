@@ -71,14 +71,17 @@ export function handleEachNode(data, contextStack = new Map(), params = new Map(
 }
 
 export function handleIfNode(data, contextStack = new Map(), params = new Map(), ifNode, mountNode, insertBeforeAnchor = undefined, refreshInfo = undefined) {
-    const test = refreshInfo?.fullKeyTest || ifNode.getAttribute('test')
-    const resolvedTest = refreshInfo?.fullKeyTest ? resolve(refreshInfo.fullKeyTest, data) : resolveEx(test, data, contextStack, params)
-console.log(resolvedTest)
-    let wrapper
+    const test = ifNode.getAttribute('test')
+    const resolvedTest = resolveEx(test, data, contextStack, params)
 
-    if (resolvedTest.value) {
+    let wrapper = refreshInfo?.wrapper
+
+    if (!wrapper) {
         wrapper = document.createElement('div')
         mount(wrapper, mountNode, insertBeforeAnchor)
+    }
+
+    if (resolvedTest.value) {
         walk(data, contextStack, params, ifNode.childNodes, wrapper)
     }
 
@@ -86,7 +89,7 @@ console.log(resolvedTest)
     // aber mitgenommen um Code-Duplikation zu vermeiden (updateHandler ruft handleIfNode nochmal auf)
     // Könnte optimiert werden durch direktes wrapper-Toggle, aber current approach ist einfacher
     nodeHoldersByKeys.appendToKey(resolvedTest.fullKey,
-        { action: 'updateIf', ifNode: ifNode, wrapper: wrapper })
+        { action: 'updateIf', contextStack: contextStack, params: params, ifNode: ifNode, wrapper: wrapper })
 }
 
 function handleTemplateUse(data, contextStack = new Map(), params = new Map(), templateUseNode, mountNode) {
