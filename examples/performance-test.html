@@ -45,12 +45,12 @@
         }, 2000)
 
         setTimeout(() => {
-            console.time("Add 100 Items")
-            for (let i = 0; i < 100; i++) {
+            console.time("Add 1000 Items")
+            for (let i = 0; i < 1000; i++) {
                 const id = model.items.length + 1
                 model.items.push({ id, name: "Item " + id, value: Math.floor(Math.random() * 1000) })
             }
-            console.timeEnd("Add 100 Items")
+            console.timeEnd("Add 1000 Items")
         }, 4000)
     </script>
 </body>
