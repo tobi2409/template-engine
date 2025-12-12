@@ -4,26 +4,6 @@ import { nodeHoldersByKeys } from './utils/node-holders.js'
 import { resolve, resolveEx } from './utils/resolver.js'
 import { mount } from './utils/dom.js'
 
-function reindexArrayMap(arrayMap, startIndex, shift, maxIndex) {
-    // Shift indices by 'shift' positions
-    // shift > 0: backward (to avoid overwriting)
-    // shift < 0: forward
-    if (shift === 0) return
-    
-    const start = shift > 0 ? maxIndex : startIndex
-    const end = shift > 0 ? startIndex : maxIndex
-    const step = shift > 0 ? -1 : 1
-    
-    for (let i = start; shift > 0 ? i >= end : i <= end; i += step) {
-        const oldIndex = String(i)
-        const newIndex = String(i + shift)
-        if (arrayMap.has(oldIndex)) {
-            arrayMap.set(newIndex, arrayMap.get(oldIndex))
-            arrayMap.delete(oldIndex)
-        }
-    }
-}
-
 // textNode only contains text, nothing more -> no walk anymore
 function handleTextNode(textNode, mountNode, insertBeforeAnchor = undefined) {
     const cloned = textNode.cloneNode(false)
@@ -59,7 +39,7 @@ export function handleEachNode(data, contextStack = new Map(), params = new Map(
         // Complete NodeHolder structure: contextStack/params/eachNode are needed
         // to re-render the template with relative keys on array updates
         nodeHoldersByKeys.appendToKey(resolvedOf.fullKey,
-            { action: 'updateArray', contextStack: new Map(contextStack), params: params, eachNode: eachNode, mountNode: mountNode })
+            { action: 'updateEach', contextStack: new Map(contextStack), params: params, eachNode: eachNode, mountNode: mountNode })
     }
 
     const list = resolvedOf.value
@@ -97,6 +77,26 @@ export function handleEachNode(data, contextStack = new Map(), params = new Map(
     // insertBeforeAnchor is needed for operations like unshift/splice that insert at specific positions
     // If undefined, fragment is appended at the end (for push or initial render)
     mount(fragment, mountNode, insertBeforeAnchor)
+}
+
+function reindexArrayMap(arrayMap, startIndex, shift, maxIndex) {
+    // Shift indices by 'shift' positions
+    // shift > 0: backward (to avoid overwriting)
+    // shift < 0: forward
+    if (shift === 0) return
+    
+    const start = shift > 0 ? maxIndex : startIndex
+    const end = shift > 0 ? startIndex : maxIndex
+    const step = shift > 0 ? -1 : 1
+    
+    for (let i = start; shift > 0 ? i >= end : i <= end; i += step) {
+        const oldIndex = String(i)
+        const newIndex = String(i + shift)
+        if (arrayMap.has(oldIndex)) {
+            arrayMap.set(newIndex, arrayMap.get(oldIndex))
+            arrayMap.delete(oldIndex)
+        }
+    }
 }
 
 export function handleEachNodeRefresh(data, refreshInfo) {
@@ -171,11 +171,40 @@ function handleTemplateUse(data, contextStack = new Map(), params = new Map(), t
     walk(data, contextStack, childParams, templateNode.content.children, mountNode)
 }
 
+// Helper function to apply attribute value to DOM element
+function applyAttribute(node, attrName, value) {
+    if (attrName.startsWith('style-')) {
+        node.style[attrName.slice(6)] = value
+    } else if (attrName.startsWith('attr-')) {
+        node.setAttribute(attrName.slice(5), value)
+    }
+}
+
 function handleDefaultNode(data, contextStack = new Map(), params = new Map(), defaultNode, mountNode, insertBeforeAnchor = undefined) {
     const cloned = defaultNode.cloneNode(false)
+
+    for (const attr of defaultNode.attributes) {
+        const resolved = resolveEx(attr.value, data, contextStack, params)
+
+        applyAttribute(cloned, attr.name, resolved.value)
+        cloned.removeAttribute(attr.name)
+
+        nodeHoldersByKeys.appendToKey(resolved.fullKey, 
+                { action: 'updateDefault', type: 'attribute', node: cloned, attributeName: attr.name })
+    }
+
     mount(cloned, mountNode, insertBeforeAnchor)
     // What is with insertBeforeAnchor? see handleEachNode
     walk(data, contextStack, params, defaultNode.childNodes, cloned)
+}
+
+export function handleDefaultNodeRefresh(data, refreshInfo) {
+    if (refreshInfo.type !== 'attribute') {
+        return
+    }
+    
+    const value = resolve(refreshInfo.fullKey, data)
+    applyAttribute(refreshInfo.node, refreshInfo.attributeName, value)
 }
 
 function walk(data, contextStack = new Map(), params = new Map(), nodes, mountNode, insertBeforeAnchor = undefined) {

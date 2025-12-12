@@ -2,7 +2,7 @@
 
 import { nodeHoldersByKeys } from './utils/node-holders.js'
 import { resolve } from './utils/resolver.js'
-import { handleGetNodeRefresh, handleEachNodeRefresh, handleIfNodeRefresh } from './render.js'
+import { handleGetNodeRefresh, handleEachNodeRefresh, handleIfNodeRefresh, handleDefaultNodeRefresh } from './render.js'
 
 export function refresh(data, change, app) {
     switch (change.action) {
@@ -50,6 +50,13 @@ export function refresh(data, change, app) {
             const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.fullKey)
             for (const nodeHolder of linkedNodeHolders.get('holders')) {
                 handleIfNodeRefresh(data, { wrapper: nodeHolder.wrapper, fullKey: change.fullKey, contextStack: nodeHolder.contextStack, params: nodeHolder.params, ifNode: nodeHolder.ifNode })
+            }
+            break
+        }
+        case 'updateDefault': {
+            const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.fullKey)
+            for (const nodeHolder of linkedNodeHolders.get('holders')) {
+                handleDefaultNodeRefresh(data, { node: nodeHolder.node, type: nodeHolder.type, fullKey: change.fullKey, attributeName: nodeHolder.attributeName })
             }
             break
         }
