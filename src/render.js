@@ -1,7 +1,7 @@
 // Render Component: Initial template rendering
 
 import { nodeHoldersByKeys } from './utils/node-holders.js'
-import { resolve, resolveEx } from './utils/resolver.js'
+import { resolve, resolveEx, setByPath } from './utils/resolver.js'
 import { mount } from './utils/dom.js'
 
 // textNode only contains text, nothing more -> no walk anymore
@@ -45,7 +45,7 @@ export function handleEachNode(data, contextStack = new Map(), params = new Map(
     const list = resolvedOf.value
 
     if (list.constructor.name !== 'Array') {
-        throw new Error('each-of must be an Array')
+        throw new Error('[TemplateEngine] each-of must be an Array')
     }
 
     const startIndex = refreshInfo?.startIndex ?? 0
@@ -135,10 +135,16 @@ export function handleIfNode(data, contextStack = new Map(), params = new Map(),
     const test = ifNode.getAttribute('test')
     const resolvedTest = resolveEx(test, data, contextStack, params)
 
+    if (typeof resolvedTest.value !== 'boolean') {
+        throw new Error('[TemplateEngine] if-test must resolve to a boolean')
+    }
+
     const wrapper = resolvedTest.value ? document.createElement('div') : undefined
+
     if (wrapper) {
         mount(wrapper, mountNode, insertBeforeAnchor)
     }
+    
     if (resolvedTest.value) {
         walk(data, contextStack, params, ifNode.childNodes, wrapper)
     }
@@ -152,7 +158,12 @@ export function handleIfNode(data, contextStack = new Map(), params = new Map(),
 
 export function handleIfNodeRefresh(data, refreshInfo) {
     const wrapper = refreshInfo.wrapper
-    wrapper?.replaceChildren()
+
+    if (!wrapper) {
+        throw new Error('[TemplateEngine] wrapper element missing in IfNodeRefresh')
+    }
+
+    wrapper.replaceChildren()
     
     const testValue = resolve(refreshInfo.fullKey, data)
     if (testValue) {
@@ -197,7 +208,7 @@ function handleDefaultNode(data, contextStack = new Map(), params = new Map(), d
             
             // Add event listener for data binding (UI → Data)
             cloned.addEventListener(event, (e) => {
-                data[resolved.fullKey] = e.target[property]
+                setByPath(resolved.fullKey, data, e.target[property])
             })
             
             cloned.removeAttribute(attr.name)
@@ -234,6 +245,10 @@ function walk(data, contextStack = new Map(), params = new Map(), nodes, mountNo
     for (const node of nodes) {
         // What is with insertBeforeAnchor? see handleEachNode
 
+        if (node.nodeType === Node.COMMENT_NODE) {
+            continue
+        }
+
         if (node.nodeType === Node.TEXT_NODE) {
             handleTextNode(node, mountNode, insertBeforeAnchor)
             continue
@@ -267,7 +282,7 @@ function initialTemplateUse(data, contextStack = new Map(), templateUseNode) {
 
 export function run(data, templateUseNode) {
     if (templateUseNode.tagName !== 'TEMPLATE-USE') {
-        throw new Error('entry point must be template-use')
+        throw new Error('[TemplateEngine] entry point must be template-use')
     }
 
     const contextStack = new Map()

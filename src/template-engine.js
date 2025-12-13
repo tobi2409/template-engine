@@ -21,10 +21,12 @@ const TemplateEngine = (function () {
                         // Handle non-array-method cases first
                         if (!Array.isArray(target) || typeof value !== 'function' || 
                             !['push', 'pop', 'shift', 'unshift', 'splice'].includes(prop)) {
+                                
                             if (value && typeof value === 'object') {
                                 const nextFullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
                                 return innerReactive(value, nextFullKey)
                             }
+
                             return value
                         }
 
@@ -59,10 +61,14 @@ const TemplateEngine = (function () {
                             // [0] reicht aus, da normalerweise alle holders für denselben Key die gleiche Action haben
                             // (z.B. alle <get>data.name</get> haben 'updateGet', alle <if test="data.flag"> haben 'updateIf')
                             const linkedNodeHolders = nodeHoldersByKeys.getByKey(nextFullKey)
-                            const action = linkedNodeHolders?.get('holders')?.[0]?.action || 'update'
+                            const action = linkedNodeHolders.get('holders')[0].action || 'update'
                             
-                            const change = { fullKey: nextFullKey, action }
-                            refresh(topData, change)
+                            try {
+                                const change = { fullKey: nextFullKey, action }
+                                refresh(topData, change)
+                            } catch (error) {
+                                throw new Error(`[TemplateEngine] Error during refresh of "${nextFullKey}": ${error.message}`)
+                            }
                         }
 
                         return true

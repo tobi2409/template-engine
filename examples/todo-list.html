@@ -14,7 +14,16 @@
 
         <ul>
             <each of="todos" as="todo">
-                <li><get>todo.name</get></li>
+                <li attr-item-id="todo.id">
+                    <get>todo.name</get>
+
+                    <!--<if test="todo.showEdit">-->
+                        <input type="text" bind-input-value="todo.name" />
+                        <!--<button class="save-button">Speichern</button>
+                    </if>-->
+
+                    <button class="edit-button">Bearbeiten</button>
+                </li>
             </each>
         </ul>
 
@@ -36,8 +45,26 @@
         const addTodoBtn = document.getElementById('add-todo-btn')
 
         addTodoBtn.addEventListener('click', () => {
-            data.todos.push({ name: data.newTodo })
+            data.todos.push({ id: data.todos.length + 1, name: data.newTodo, showEdit: true })
             data.newTodo = ''
+        })
+
+        // Event Delegation: Listener auf dem Parent-Element
+        document.getElementById('app').addEventListener('click', (event) => {
+            const itemId = event.target.parentElement.getAttribute('item-id')
+            const todo = data.todos.find(t => t.id == itemId)
+            
+            if (!todo) return
+            
+            // Edit button clicked
+            if (event.target.classList.contains('edit-button')) {
+                todo.showEdit = !todo.showEdit
+            }
+            
+            // Save button clicked (thanks to bind-input-value, todo.name is already updated!)
+            if (event.target.classList.contains('save-button')) {
+                todo.showEdit = false
+            }
         })
 
         data.newTodo = 'Mein erstes Todo'
