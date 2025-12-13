@@ -3,92 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Conditional Rendering Demo - Template Engine</title>
 </head>
 <body>
 
     <div id="app"></div>
 
-    <template id="list-template">
-        <each of="*list" as="p">
-            <if test="p.show">
-                <li><get>p.name</get> ist <get>p.age</get> Jahre alt
+    <template id="team-template">
+        <each of="*list" as="member">
+            <if test="member.active" wrapper="li">
+                <get>member.name</get> - <get>member.role</get>
 
-                    <ul>
-                        <template-use template-id="list-template" data-list="p.childs"></template-use>
-                    </ul>
-
-                </li>
+                <ul>
+                    <template-use template-id="team-template" data-list="member.reports"></template-use>
+                </ul>
             </if>
         </each>
     </template>
 
     <template id="app-template">
-        <div>Hallo <span>--</span> <get>name</get>
+        <h1>👤 User Dashboard</h1>
+        <p>Welcome back, <strong><get>name</get></strong></p>
+        <p>Environment: <get>param1</get></p>
 
-            <div>Du bist <get>name</get> und <get>age</get> Jahre alt</div>
-        </div>
-
-        <div>Hallo <get>param1</get></div>
-
-        <if test="showWage">
-            <p>Mein Gehalt: <get>wage</get></p>
+        <if test="showSalary">
+            <p>💰 Annual Salary: $<get>salary</get></p>
         </if>
 
+        <h2>Active Team Members</h2>
         <ul>
-            <template-use template-id="list-template" data-list="persons"></template-use>
+            <template-use template-id="team-template" data-list="team"></template-use>
         </ul>
     </template>
 
-    <template-use id="app-template-use" template-id="app-template" mount-id="app" data-param1="Test"></template-use>
+    <template-use id="app-template-use" template-id="app-template" mount-id="app" data-param1="Production"></template-use>
 
     <script type="module">
         import TemplateEngine from '../src/template-engine.js'
 
         const data = TemplateEngine.reactive({
-            name: 'Tobias',
-            age: 31,
-            wage: 5000,
-            showWage: true,
-            persons: [{
-                name: 'Person1',
-                childs: [{
-                    name: 'Person1_1',
-                    childs: [],
-                    show: true
+            name: 'Morgan Davis',
+            salary: 85000,
+            showSalary: true,
+            team: [{
+                name: 'Sophie Turner',
+                role: 'Senior Engineer',
+                active: true,
+                reports: [{
+                    name: 'Liam Chen',
+                    role: 'Mid-level Engineer',
+                    reports: [],
+                    active: true
                 }, {
-                    name: 'Person1_2',
-                    childs: [],
-                    show: true
-                }],
-                age: 23,
-                show: true
+                    name: 'Olivia Martinez',
+                    role: 'Junior Engineer',
+                    reports: [],
+                    active: true
+                }]
             }, {
-                name: 'Person2',
-                childs: [{
-                    name: 'Person2_1',
-                    childs: [],
-                    show: false
-                }],
-                age: 25,
-                show: true
+                name: 'Noah Anderson',
+                role: 'Designer',
+                active: true,
+                reports: [{
+                    name: 'Emma Wilson',
+                    role: 'UI Designer',
+                    reports: [],
+                    active: false
+                }]
             }]
         }, document.getElementById('app-template-use'))
 
-        data.persons[0].name = 'Test'
-        data.persons[0].childs.push({ show: true, name: 'Person1_3', childs: [] })
-        data.persons[0].childs.push({ show: true, name: 'Person1_4', childs: [ { show: true, name: 'Person1_4_1', childs: [ { show: true, name: 'Person1_4_1_1', childs: [] } ] } ] })
-        data.persons[0].childs.splice(1, 0, { show: true, name: 'inserted_to_Person1', childs: [] })
-        data.persons.splice(1, 0, { show: true, name: 'inserted_Person', childs: [{ show: true, name: 'inserted_Person_1', childs: [] }] })
-        data.persons[1].name = '__inserted_Person__'
-        data.persons[0].childs.splice(2, 1)
-        data.persons[0].childs[1].name = '__inserted_to_Person1__'
-        data.persons[0].childs[2].name = '__Person1_3__'
-        data.showWage = false
-        data.showWage = true
-        data.persons[0].childs[2].show = false
+        // Demonstrate conditional rendering updates
+        data.team[0].name = 'Sophie Turner (Team Lead)'
+        data.team[0].reports.push({ active: true, name: 'Ava Johnson', role: 'Intern', reports: [] })
+        data.team[0].reports.push({ active: true, name: 'Ethan Brown', role: 'Engineer', reports: [ { active: true, name: 'Isabella Garcia', role: 'Contractor', reports: [ { active: true, name: 'Mason Lee', role: 'Consultant', reports: [] } ] } ] })
+        data.team[0].reports.splice(1, 0, { active: true, name: 'James Miller', role: 'DevOps', reports: [] })
+        data.team.splice(1, 0, { active: true, name: 'Charlotte Davis', role: 'Product Manager', reports: [{ active: true, name: 'Benjamin Moore', role: 'Product Analyst', reports: [] }] })
+        data.team[1].name = 'Charlotte Davis (New)'
+        data.team[0].reports.splice(2, 1)
+        data.team[0].reports[1].name = 'James Miller (Updated)'
+        data.team[0].reports[2].name = 'Ava Johnson (Promoted)'
+        data.showSalary = false
+        data.showSalary = true
+        data.team[0].reports[2].active = false
 
-        console.log(data)
+        console.log('Dashboard data:', data)
     </script>
 
 </body>

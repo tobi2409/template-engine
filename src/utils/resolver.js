@@ -1,4 +1,4 @@
-// Key-Resolution: Konvertierung und Dereferenzierung von Keys
+// Key Resolution: Conversion and dereferencing of keys
 
 export function convertToFullKey(relativeKey, contextStack = new Map()) {
     const splitted = relativeKey.split('.')
@@ -27,14 +27,14 @@ export function resolve(key, data, params = new Map()) {
 
     for (const [index, segment] of splitted.entries()) {
         if (index === 0 && params.has(segment)) {
-            // a paramname (eg. param1) is always represented by a single-key
+            // A param name (e.g., param1) is always represented by a single key
             return params.get(segment)
         }
 
         try {
             value = value[segment]
         } catch (error) {
-            // console.warn because not every data must be rendered and present in NodeHolders
+            // console.warn because not all data needs to be rendered and present in NodeHolders
             console.warn(`[TemplateEngine] Error resolving key segment "${segment}": ${error.message}`)
         }
     }
@@ -43,7 +43,7 @@ export function resolve(key, data, params = new Map()) {
 }
 
 export function resolveEx(key, data, contextStack = new Map(), params = new Map()) {
-    // only a paramname is supported for dereferencing
+    // Only param names are supported for dereferencing
     const dereferencedKey = key.startsWith('*') && params.has(key.slice(1)) ? dereferenceKey(key, data, params) : key
     const fullKey = convertToFullKey(dereferencedKey, contextStack)
     return { fullKey: fullKey, value: resolve(fullKey, data, params) }
@@ -53,16 +53,15 @@ export function setByPath(key, data, newValue) {
     const splitted = key.split('.')
     let target = data
 
-    // Navigate to the parent object
+    // Navigate to parent object
     for (let i = 0; i < splitted.length - 1; i++) {
         target = target[splitted[i]]
         if (!target) {
-            console.error(`[TemplateEngine] Cannot set "${key}": path does not exist`)
-            return
+            throw new Error(`[TemplateEngine] Cannot set "${key}": path does not exist`)
         }
     }
 
-    // Set the final property
+    // Set final property (triggers Proxy setter if target is a Proxy)
     const lastKey = splitted[splitted.length - 1]
     target[lastKey] = newValue
 }

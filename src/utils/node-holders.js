@@ -1,4 +1,4 @@
-// NodeHolder-Verwaltung: Tracking von DOM-Nodes und deren Registrierung
+// NodeHolder Management: Tracking of DOM nodes and their registration
 
 export const nodeHoldersByKeys = new Map()
 

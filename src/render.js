@@ -3,6 +3,7 @@
 import { nodeHoldersByKeys } from './utils/node-holders.js'
 import { resolve, resolveEx, setByPath } from './utils/resolver.js'
 import { mount } from './utils/dom.js'
+import { refresh } from './refresh.js'
 
 // textNode only contains text, nothing more -> no walk anymore
 function handleTextNode(textNode, mountNode, insertBeforeAnchor = undefined) {
@@ -139,13 +140,14 @@ export function handleIfNode(data, contextStack = new Map(), params = new Map(),
         throw new Error('[TemplateEngine] if-test must resolve to a boolean')
     }
 
-    const wrapper = resolvedTest.value ? document.createElement('div') : undefined
-
-    if (wrapper) {
-        mount(wrapper, mountNode, insertBeforeAnchor)
-    }
+    const wrapperTag = ifNode.getAttribute('wrapper') || 'div'
+    const wrapper = document.createElement(wrapperTag)
+    wrapper.style.display = 'none'
+    
+    mount(wrapper, mountNode, insertBeforeAnchor)
     
     if (resolvedTest.value) {
+        wrapper.style.display = ''
         walk(data, contextStack, params, ifNode.childNodes, wrapper)
     }
 
@@ -164,9 +166,11 @@ export function handleIfNodeRefresh(data, refreshInfo) {
     }
 
     wrapper.replaceChildren()
+    wrapper.style.display = 'none'
     
     const testValue = resolve(refreshInfo.fullKey, data)
     if (testValue) {
+        wrapper.style.display = ''
         walk(data, refreshInfo.contextStack, refreshInfo.params, refreshInfo.ifNode.childNodes, wrapper)
     }
 }
@@ -207,8 +211,24 @@ function handleDefaultNode(data, contextStack = new Map(), params = new Map(), d
             cloned[property] = resolved.value
             
             // Add event listener for data binding (UI → Data)
+            // Note: Manual refresh is required because 'data' in the closure is the original
+            // (non-proxied) data object from initial rendering. Nested objects (e.g., array
+            // elements like todos[0]) are not wrapped in Proxies, so setByPath won't trigger
+            // the Proxy setter. Therefore, we manually refresh all affected NodeHolders.
             cloned.addEventListener(event, (e) => {
+                // Update data directly (no Proxy setter triggered for nested objects)
                 setByPath(resolved.fullKey, data, e.target[property])
+                
+                // Manually trigger refresh for all NodeHolders of this key
+                // This ensures both <get> nodes and bound <input> elements update
+                // (e.g., updating todos.0.name refreshes both the display text and input value)
+                const linkedNodeHolders = nodeHoldersByKeys.getByKey(resolved.fullKey)
+                for (const nodeHolder of linkedNodeHolders.get('holders')) {
+                    // Each NodeHolder has its own action (updateGet, updateDefault, etc.)
+                    // No array-specific information needed since we're updating a property, not mutating an array
+                    const change = { fullKey: resolved.fullKey, action: nodeHolder.action }
+                    refresh(data, change)
+                }
             })
             
             cloned.removeAttribute(attr.name)

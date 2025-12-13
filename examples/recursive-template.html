@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Recursive Templates Demo - Template Engine</title>
 </head>
 <body>
 
     <div id="app"></div>
 
-    <template id="list-template">
-        <each of="*list" as="p">
-            <li><get>p.name</get> ist <get>p.age</get> Jahre alt
+    <template id="folder-template">
+        <each of="*list" as="item">
+            <li>📁 <get>item.name</get> (<get>item.size</get> items)
 
                 <ul>
-                    <template-use template-id="list-template" data-list="p.childs"></template-use>
+                    <template-use template-id="folder-template" data-list="item.childs"></template-use>
                 </ul>
 
             </li>
@@ -22,59 +22,59 @@
     </template>
 
     <template id="app-template">
-        <div>Hallo <span>--</span> <get>name</get>
+        <h1>📂 File System Browser</h1>
+        <p>Current user: <strong><get>name</get></strong></p>
+        <p>Browsing: <get>param1</get> drive</p>
 
-            <div>Du bist <get>name</get> und <get>age</get> Jahre alt</div>
-        </div>
-
-        <div>Hallo <get>param1</get></div>
-
+        <h2>Directory Structure</h2>
         <ul>
-            <template-use template-id="list-template" data-list="persons"></template-use>
+            <template-use template-id="folder-template" data-list="folders"></template-use>
         </ul>
     </template>
 
-    <template-use id="app-template-use" template-id="app-template" mount-id="app" data-param1="Test"></template-use>
+    <template-use id="app-template-use" template-id="app-template" mount-id="app" data-param1="/home"></template-use>
 
     <script type="module">
         import TemplateEngine from '../src/template-engine.js'
 
         const data = TemplateEngine.reactive({
-            name: 'Tobias',
-            age: 31,
-            persons: [{
-                name: 'Person1',
+            name: 'Alex Johnson',
+            folders: [{
+                name: 'projects',
+                size: 2,
                 childs: [{
-                    name: 'Person1_1',
+                    name: 'website',
+                    size: 0,
                     childs: []
                 }, {
-                    name: 'Person1_2',
+                    name: 'mobile-app',
+                    size: 0,
                     childs: []
-                }],
-                age: 23,
-                ref: '{{ name }}'
+                }]
             }, {
-                name: 'Person2',
+                name: 'documents',
+                size: 1,
                 childs: [{
-                    name: 'Person2_1',
+                    name: 'reports',
+                    size: 0,
                     childs: []
-                }],
-                age: 25
+                }]
             }]
         }, document.getElementById('app-template-use'))
 
-        data.persons[0].name = 'Test'
-        data.persons[0].childs.push({ name: 'Person1_3', childs: [] })
-        data.persons[0].childs.push({ name: 'Person1_4', childs: [ { name: 'Person1_4_1', childs: [ { name: 'Person1_4_1_1', childs: [] } ] } ] })
-        data.persons[0].childs.splice(1, 0, { name: 'inserted_to_Person1', childs: [] })
-        data.persons.splice(1, 0, { name: 'inserted_Person', childs: [{ name: 'inserted_Person_1', childs: [] }] })
-        data.persons[1].name = '__inserted_Person__'
-        data.persons[0].childs.splice(2, 1)
-        data.persons.pop()
-        data.persons[0].childs[1].name = '__inserted_to_Person1__'
-        data.persons[0].childs[2].name = '__Person1_3__'
+        // Demonstrate deep nesting and dynamic updates
+        data.folders[0].name = 'projects (active)'
+        data.folders[0].childs.push({ name: 'data-analysis', size: 0, childs: [] })
+        data.folders[0].childs.push({ name: 'api-server', size: 1, childs: [ { name: 'controllers', size: 1, childs: [ { name: 'auth', size: 0, childs: [] } ] } ] })
+        data.folders[0].childs.splice(1, 0, { name: 'tools', size: 0, childs: [] })
+        data.folders.splice(1, 0, { name: 'downloads', size: 1, childs: [{ name: 'archives', size: 0, childs: [] }] })
+        data.folders[1].name = 'downloads (recent)'
+        data.folders[0].childs.splice(2, 1)
+        data.folders.pop()
+        data.folders[0].childs[1].name = 'scripts'
+        data.folders[0].childs[2].name = 'data-science'
 
-        console.log(data)
+        console.log('File system data:', data)
     </script>
 
 </body>

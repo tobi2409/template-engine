@@ -3,27 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Nested Lists Demo - Template Engine</title>
 </head>
 <body>
 
     <div id="app"></div>
 
     <template id="app-template">
-        <div>Hallo <span>--</span> <get>name</get>
+        <h1>🏢 Company Organization Chart</h1>
+        <p>User: <strong><get>name</get></strong> (<get>age</get> years old)</p>
+        <p>Department: <get>param1</get></p>
 
-            <div>Du bist <get>name</get> und <get>age</get> Jahre alt</div>
-        </div>
-
-        <div>Hallo <get>param1</get></div>
-
+        <h2>Team Structure</h2>
         <ul>
             <each of="persons" as="p">
-                <li><get>p.name</get> ist <get>p.age</get> Jahre alt
+                <li><strong><get>p.name</get></strong> - <get>p.role</get>
 
                     <ul>
                         <each of="p.childs" as="c">
-                            <li><get>c.name</get> <get>param1</get></li>
+                            <li><get>c.name</get> (<get>param1</get> team)</li>
                         </each>
                     </ul>
 
@@ -32,40 +30,41 @@
         </ul>
     </template>
 
-    <template-use id="app-template-use" template-id="app-template" mount-id="app" data-param1="Test"></template-use>
+    <template-use id="app-template-use" template-id="app-template" mount-id="app" data-param1="Engineering"></template-use>
 
     <script type="module">
         import TemplateEngine from '../src/template-engine.js'
 
         const data = TemplateEngine.reactive({
-            name: 'Tobias',
-            age: 31,
+            name: 'Sarah Wilson',
+            age: 28,
             persons: [{
-                name: 'Person1',
+                name: 'Alex Chen',
+                role: 'Tech Lead',
                 childs: [{
-                    name: 'Person1_1',
+                    name: 'Maya Patel - Senior Developer',
                     childs: []
                 }, {
-                    name: 'Person1_2',
+                    name: 'Jordan Kim - Frontend Developer',
                     childs: []
-                }],
-                age: 23
+                }]
             }, {
-                name: 'Person2',
+                name: 'Chris Martinez',
+                role: 'Product Manager',
                 childs: [{
-                    name: 'Person2_1',
+                    name: 'Taylor Brown - UX Designer',
                     childs: []
-                }],
-                age: 25
+                }]
             }]
         }, document.getElementById('app-template-use'))
 
-        data.persons[0].name = 'Test'
-        data.persons[0].childs.push({ name: 'Person1_3', childs: [] })
-        data.persons[0].childs.splice(1, 0, { name: 'inserted_to_Person1', childs: [] })
-        data.persons.splice(1, 0, { name: 'inserted_Person', childs: [{ name: 'inserted_Person_1', childs: [] }] })
+        // Demonstrate dynamic updates
+        data.persons[0].name = 'Alex Chen (updated)'
+        data.persons[0].childs.push({ name: 'Sam Lee - Junior Developer', childs: [] })
+        data.persons[0].childs.splice(1, 0, { name: 'Jamie Torres - DevOps Engineer', childs: [] })
+        data.persons.splice(1, 0, { name: 'Riley Cooper', role: 'QA Lead', childs: [{ name: 'Casey Morgan - QA Engineer', childs: [] }] })
 
-        console.log(data)
+        console.log('Organization data:', data)
     </script>
 
 </body>

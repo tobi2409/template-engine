@@ -1,4 +1,4 @@
-// DOM-Utilities: Mounting und DOM-Operationen
+// DOM Utilities: Mounting and DOM operations
 
 export function mount(node, mountNode, insertBeforeAnchor = undefined) {
     if (insertBeforeAnchor) {

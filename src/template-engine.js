@@ -1,4 +1,4 @@
-// Proxy-Komponente: Reaktivität durch Proxy-basierte Datenüberwachung
+// Proxy Component: Reactivity through proxy-based data observation
 
 import { nodeHoldersByKeys } from './utils/node-holders.js'
 import { run } from './render.js'
@@ -57,11 +57,11 @@ const TemplateEngine = (function () {
                         if (prop !== 'length' && !isInArrayMethod) {
                             const nextFullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
                             
-                            // Ermittle Action basierend auf registrierten NodeHolders
-                            // [0] reicht aus, da normalerweise alle holders für denselben Key die gleiche Action haben
-                            // (z.B. alle <get>data.name</get> haben 'updateGet', alle <if test="data.flag"> haben 'updateIf')
+                            // Determine action based on registered NodeHolders
+                            // [0] is sufficient since typically all holders for the same key have the same action
+                            // (e.g., all <get>data.name</get> have 'updateGet', all <if test="data.flag"> have 'updateIf')
                             const linkedNodeHolders = nodeHoldersByKeys.getByKey(nextFullKey)
-                            const action = linkedNodeHolders.get('holders')[0].action || 'update'
+                            const action = linkedNodeHolders?.get('holders')?.[0].action || 'update'
                             
                             try {
                                 const change = { fullKey: nextFullKey, action }

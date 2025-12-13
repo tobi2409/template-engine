@@ -1,4 +1,4 @@
-// Refresh-Komponente: Updates und Reaktivität
+// Refresh Component: Updates and reactivity
 
 import { nodeHoldersByKeys } from './utils/node-holders.js'
 import { resolve } from './utils/resolver.js'
