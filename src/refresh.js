@@ -56,7 +56,11 @@ export function refresh(data, change, app) {
         case 'updateDefault': {
             const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.fullKey)
             for (const nodeHolder of linkedNodeHolders.get('holders')) {
-                handleDefaultNodeRefresh(data, { node: nodeHolder.node, type: nodeHolder.type, fullKey: change.fullKey, attributeName: nodeHolder.attributeName })
+                if (nodeHolder.type === 'bind') {
+                    handleDefaultNodeRefresh(data, { node: nodeHolder.node, type: nodeHolder.type, fullKey: change.fullKey, property: nodeHolder.property })
+                } else if (nodeHolder.type === 'attribute') {
+                    handleDefaultNodeRefresh(data, { node: nodeHolder.node, type: nodeHolder.type, fullKey: change.fullKey, attributeName: nodeHolder.attributeName })
+                }
             }
             break
         }

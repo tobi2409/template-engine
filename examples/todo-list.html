@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+    <div id="app"></div>
+
+    <template id="app-template">
+        <h1>Todo-Liste</h1>
+
+        <ul>
+            <each of="todos" as="todo">
+                <li><get>todo.name</get></li>
+            </each>
+        </ul>
+
+        <input id="new-todo-input" type="text" placeholder="Neues Todo" bind-input-value="newTodo" />
+        <button id="add-todo-btn">Hinzufügen</button>
+    </template>
+
+    <template-use id="app-template-use" template-id="app-template" mount-id="app"></template-use>
+
+    <script type="module">
+
+        import TemplateEngine from '../src/template-engine.js'
+
+        const data = TemplateEngine.reactive({
+            todos: [],
+            newTodo: ''
+        }, document.getElementById('app-template-use'))
+
+        const addTodoBtn = document.getElementById('add-todo-btn')
+
+        addTodoBtn.addEventListener('click', () => {
+            data.todos.push({ name: data.newTodo })
+            data.newTodo = ''
+        })
+
+        data.newTodo = 'Mein erstes Todo'
+
+    </script>
+
+</body>
+</html>

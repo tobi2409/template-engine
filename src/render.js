@@ -186,11 +186,32 @@ function handleDefaultNode(data, contextStack = new Map(), params = new Map(), d
     for (const attr of defaultNode.attributes) {
         const resolved = resolveEx(attr.value, data, contextStack, params)
 
-        applyAttribute(cloned, attr.name, resolved.value)
-        cloned.removeAttribute(attr.name)
+        if (attr.name.startsWith('bind-')) {
+            // Two-way binding: bind-{event}-{property}="dataKey"
+            const parts = attr.name.split('-')
+            const event = parts[1]      // e.g., 'input'
+            const property = parts[2]   // e.g., 'value'
+            
+            // Set initial value
+            cloned[property] = resolved.value
+            
+            // Add event listener for data binding (UI → Data)
+            cloned.addEventListener(event, (e) => {
+                data[resolved.fullKey] = e.target[property]
+            })
+            
+            cloned.removeAttribute(attr.name)
+            
+            // Register NodeHolder for refresh (Data → UI)
+            nodeHoldersByKeys.appendToKey(resolved.fullKey, 
+                { action: 'updateDefault', type: 'bind', node: cloned, property: property })
+        } else if (attr.name.startsWith('attr-') || attr.name.startsWith('style-')) {
+            applyAttribute(cloned, attr.name, resolved.value)
+            cloned.removeAttribute(attr.name)
 
-        nodeHoldersByKeys.appendToKey(resolved.fullKey, 
+            nodeHoldersByKeys.appendToKey(resolved.fullKey, 
                 { action: 'updateDefault', type: 'attribute', node: cloned, attributeName: attr.name })
+        }
     }
 
     mount(cloned, mountNode, insertBeforeAnchor)
@@ -199,12 +220,14 @@ function handleDefaultNode(data, contextStack = new Map(), params = new Map(), d
 }
 
 export function handleDefaultNodeRefresh(data, refreshInfo) {
-    if (refreshInfo.type !== 'attribute') {
-        return
-    }
-    
     const value = resolve(refreshInfo.fullKey, data)
-    applyAttribute(refreshInfo.node, refreshInfo.attributeName, value)
+    
+    if (refreshInfo.type === 'bind') {
+        // Update bound property (Data → UI)
+        refreshInfo.node[refreshInfo.property] = value
+    } else if (refreshInfo.type === 'attribute') {
+        applyAttribute(refreshInfo.node, refreshInfo.attributeName, value)
+    }
 }
 
 function walk(data, contextStack = new Map(), params = new Map(), nodes, mountNode, insertBeforeAnchor = undefined) {
