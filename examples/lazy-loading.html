@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lazy Loading Demo - Template Engine</title>
+    <style>
+        body { font-family: system-ui, sans-serif; padding: 20px; }
+        .folder { cursor: pointer; user-select: none; }
+        .folder:hover { background: #f0f0f0; }
+        .expand-btn { 
+            display: inline-block; 
+            width: 20px; 
+            text-align: center;
+            font-weight: bold;
+        }
+        ul { list-style: none; }
+    </style>
+</head>
+<body>
+
+    <div id="app"></div>
+
+    <template id="folder-template">
+        <each of="*list" as="folder">
+            <li>
+                <div class="folder" attr-folder-id="folder.id">
+                    <span class="expand-btn"><get>folder.expandIcon</get></span>
+                    📁 <get>folder.name</get>
+                </div>
+
+                <if test="folder.expanded" wrapper="li">
+                    <ul>
+                        <template-use template-id="folder-template" data-list="folder.children"></template-use>
+                    </ul>
+                </if>
+            </li>
+        </each>
+    </template>
+
+    <template id="app-template">
+        <h1>📂 Lazy-Loading File System</h1>
+        <p>Click on folders to expand and load their contents</p>
+        <p>Current user: <strong><get>userName</get></strong></p>
+
+        <ul>
+            <template-use template-id="folder-template" data-list="folders"></template-use>
+        </ul>
+    </template>
+
+    <template-use id="app-template-use" template-id="app-template" mount-id="app"></template-use>
+
+    <script type="module">
+        import TemplateEngine from '../src/template-engine.js'
+
+        const data = TemplateEngine.reactive({
+            userName: 'Sarah Miller',
+            folders: [
+                { 
+                    id: 1, 
+                    name: 'components', 
+                    hasChildren: true, 
+                    expanded: false, 
+                    expandIcon: '▶', 
+                    children: [
+                        { id: 11, name: 'Header.jsx', hasChildren: false, expanded: false, expandIcon: ' ', children: [] },
+                        { id: 12, name: 'Footer.jsx', hasChildren: false, expanded: false, expandIcon: ' ', children: [] },
+                        { id: 13, name: 'main', hasChildren: true, expanded: false, expandIcon: '▶', children: [
+                            { id: 131, name: 'Dashboard.jsx', hasChildren: false, expanded: false, expandIcon: ' ', children: [] }
+                        ] }
+                    ]
+                },
+                { 
+                    id: 2, 
+                    name: 'documents', 
+                    hasChildren: true, 
+                    expanded: false, 
+                    expandIcon: '▶', 
+                    children: [
+                        { id: 21, name: 'report.pdf', hasChildren: false, expanded: false, expandIcon: ' ', children: [] },
+                        { id: 22, name: 'notes.txt', hasChildren: false, expanded: false, expandIcon: ' ', children: [] }
+                    ]
+                }
+            ]
+        }, document.getElementById('app-template-use'))
+
+        function findFolder(folders, id) {
+            for (const folder of folders) {
+                if (folder.id == id) return folder
+                if (folder.children.length > 0) {
+                    const found = findFolder(folder.children, id)
+                    if (found) return found
+                }
+            }
+            return null
+        }
+
+        document.getElementById('app').addEventListener('click', (event) => {
+            const folderElement = event.target.closest('.folder')
+            if (!folderElement) return
+
+            const folderId = folderElement.getAttribute('folder-id')
+            const folder = findFolder(data.folders, folderId)
+            if (!folder || !folder.hasChildren) return
+
+            folder.expanded = !folder.expanded
+            folder.expandIcon = folder.expanded ? '▼' : '▶'
+        })
+    </script>
+
+</body>
+</html>
