@@ -104,17 +104,17 @@ export function handleEachNodeRefresh(data, refreshInfo) {
     const linkedNodeHolders = nodeHoldersByKeys.getByKey(refreshInfo.fullKey)
     const { deleteStartIndex = 0, deleteCount = 0, insertStartIndex = 0, insertCount = 0, reindexStartIndex = 0, reindexShift = 0, reindexMaxIndex = 0 } = refreshInfo
     
-    // 1. Cleanup: Delete NodeHolder keys
+    // Delete NodeHolder keys
     for (let i = 0; i < deleteCount; i++) {
         linkedNodeHolders.delete(String(deleteStartIndex + i))
     }
     
-    // 2. Reindex: Shift NodeHolder keys
+    // Shift NodeHolder keys
     if (reindexShift !== 0) {
         reindexArrayMap(linkedNodeHolders, reindexStartIndex, reindexShift, reindexMaxIndex)
     }
     
-    // 3. DOM updates for all registered holders
+    // DOM updates for all registered holders
     for (const nodeHolder of linkedNodeHolders.get('holders')) {
         // Delete DOM elements
         for (let i = 0; i < deleteCount; i++) {
