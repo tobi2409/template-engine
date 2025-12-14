@@ -1,9 +1,9 @@
 // Render Component: Initial template rendering
 
 import { nodeHoldersByKeys } from './utils/node-holders.js'
-import { resolve, resolveEx, setByPath } from './utils/resolver.js'
+import { resolve, resolveEx } from './utils/resolver.js'
 import { mount } from './utils/dom.js'
-import { refresh } from './refresh.js'
+import { applyAttribute, handleActionAttribute, handleBindAttribute, handleStyleOrAttrAttribute } from './default-node-attributes.js'
 
 // textNode only contains text, nothing more -> no walk anymore
 function handleTextNode(textNode, mountNode, insertBeforeAnchor = undefined) {
@@ -186,62 +186,18 @@ function handleTemplateUse(data, contextStack = new Map(), params = new Map(), t
     walk(data, contextStack, childParams, templateNode.content.children, mountNode)
 }
 
-// Helper function to apply attribute value to DOM element
-function applyAttribute(node, attrName, value) {
-    if (attrName.startsWith('style-')) {
-        node.style[attrName.slice(6)] = value
-    } else if (attrName.startsWith('attr-')) {
-        node.setAttribute(attrName.slice(5), value)
-    }
-}
-
 function handleDefaultNode(data, contextStack = new Map(), params = new Map(), defaultNode, mountNode, insertBeforeAnchor = undefined) {
     const cloned = defaultNode.cloneNode(false)
 
     for (const attr of defaultNode.attributes) {
         const resolved = resolveEx(attr.value, data, contextStack, params)
 
-        if (attr.name.startsWith('bind-')) {
-            // Two-way binding: bind-{event}-{property}="dataKey"
-            const parts = attr.name.split('-')
-            const event = parts[1]      // e.g., 'input'
-            const property = parts[2]   // e.g., 'value'
-            
-            // Set initial value
-            cloned[property] = resolved.value
-            
-            // Add event listener for data binding (UI → Data)
-            // Note: Manual refresh is required because 'data' in the closure is the original
-            // (non-proxied) data object from initial rendering. Nested objects (e.g., array
-            // elements like todos[0]) are not wrapped in Proxies, so setByPath won't trigger
-            // the Proxy setter. Therefore, we manually refresh all affected NodeHolders.
-            cloned.addEventListener(event, (e) => {
-                // Update data directly (no Proxy setter triggered for nested objects)
-                setByPath(resolved.fullKey, data, e.target[property])
-                
-                // Manually trigger refresh for all NodeHolders of this key
-                // This ensures both <get> nodes and bound <input> elements update
-                // (e.g., updating todos.0.name refreshes both the display text and input value)
-                const linkedNodeHolders = nodeHoldersByKeys.getByKey(resolved.fullKey)
-                for (const nodeHolder of linkedNodeHolders.get('holders')) {
-                    // Each NodeHolder has its own action (updateGet, updateDefault, etc.)
-                    // No array-specific information needed since we're updating a property, not mutating an array
-                    const change = { fullKey: resolved.fullKey, action: nodeHolder.action }
-                    refresh(data, change)
-                }
-            })
-            
-            cloned.removeAttribute(attr.name)
-            
-            // Register NodeHolder for refresh (Data → UI)
-            nodeHoldersByKeys.appendToKey(resolved.fullKey, 
-                { action: 'updateDefault', type: 'bind', node: cloned, property: property })
+        if (attr.name.startsWith('action-')) {
+            handleActionAttribute(cloned, attr, data, contextStack, params)
+        } else if (attr.name.startsWith('bind-')) {
+            handleBindAttribute(cloned, attr, resolved, data)
         } else if (attr.name.startsWith('attr-') || attr.name.startsWith('style-')) {
-            applyAttribute(cloned, attr.name, resolved.value)
-            cloned.removeAttribute(attr.name)
-
-            nodeHoldersByKeys.appendToKey(resolved.fullKey, 
-                { action: 'updateDefault', type: 'attribute', node: cloned, attributeName: attr.name })
+            handleStyleOrAttrAttribute(cloned, attr, resolved)
         }
     }
 
@@ -255,6 +211,7 @@ export function handleDefaultNodeRefresh(data, refreshInfo) {
     
     if (refreshInfo.type === 'bind') {
         // Update bound property (Data → UI)
+        // synchronize all other UI elements bound to the same data key
         refreshInfo.node[refreshInfo.property] = value
     } else if (refreshInfo.type === 'attribute') {
         applyAttribute(refreshInfo.node, refreshInfo.attributeName, value)

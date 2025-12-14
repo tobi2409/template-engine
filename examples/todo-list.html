@@ -22,14 +22,14 @@
                         <input type="text" bind-input-value="todo.name" placeholder="Edit task..." />
                     </if>
 
-                    <button class="edit-button">✏️ Edit</button>
+                    <button class="edit-button" action-click="edit">✏️ Edit</button>
                 </li>
             </each>
         </ul>
 
         <label for="new-todo-input">New task:</label>
         <input id="new-todo-input" type="text" bind-input-value="newTodo" placeholder="What needs to be done?" />
-        <button id="add-todo-btn">➕ Add Task</button>
+        <button id="add-todo-btn" action-click="add">➕ Add Task</button>
     </template>
 
     <template-use id="app-template-use" template-id="app-template" mount-id="app"></template-use>
@@ -44,29 +44,20 @@
                 { id: 2, name: 'Update documentation', showEdit: false },
                 { id: 3, name: 'Fix responsive layout', showEdit: false }
             ],
-            newTodo: ''
+            newTodo: '',
+            add: function() {
+                if (data.newTodo.trim()) {
+                    data.todos.push({ id: data.todos.length + 1, name: data.newTodo, showEdit: false })
+                    data.newTodo = ''
+                }
+            },
+            edit: function(e) {
+                const todo = data.todos.find(t => t.id == e.target.parentElement.getAttribute('item-id'))
+                if (todo) {
+                    todo.showEdit = !todo.showEdit
+                }
+            }
         }, document.getElementById('app-template-use'))
-
-        const addTodoBtn = document.getElementById('add-todo-btn')
-
-        addTodoBtn.addEventListener('click', () => {
-            if (data.newTodo.trim()) {
-                data.todos.push({ id: data.todos.length + 1, name: data.newTodo, showEdit: false })
-                data.newTodo = ''
-            }
-        })
-
-        // Event delegation for dynamically rendered elements
-        document.getElementById('app').addEventListener('click', (event) => {
-            const itemId = event.target.parentElement.getAttribute('item-id')
-            const todo = data.todos.find(t => t.id == itemId)
-            
-            if (!todo) return
-            
-            if (event.target.classList.contains('edit-button')) {
-                todo.showEdit = !todo.showEdit
-            }
-        })
 
         data.todos.push({ id: 4, name: 'Plan team meeting', showEdit: false })
 
