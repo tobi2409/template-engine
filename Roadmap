@@ -1,3 +1,2 @@
 1. NodeHolder cleanup on data-element removal
-2. Improved error messages with context
-3. Expression evaluation in templates (expr-eval integration)
+2. Expression evaluation in templates (expr-eval integration)
