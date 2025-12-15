@@ -7,7 +7,11 @@ import { refresh } from './refresh.js'
 const TemplateEngine = (function () {
     return {
         reactive(data, node) {
-            run(data, node)
+            try {
+                run(data, node)
+            } catch (error) {
+                throw new Error(`[TemplateEngine] Error during initial render: ${error.message}`)
+            }
 
             const topData = data
 
@@ -33,8 +37,16 @@ const TemplateEngine = (function () {
                         // Intercept array methods
                         return function(...args) {
                             isInArrayMethod = true
-                            const result = value.apply(proxy, args)
-                            isInArrayMethod = false
+
+                            let result
+
+                            try {
+                                result = value.apply(proxy, args)
+                            } catch (error) {
+                                throw new Error(`[TemplateEngine] Error executing ${prop} on "${fullKey}": ${error.message}`)
+                            } finally {
+                                isInArrayMethod = false
+                            }
                             
                             const change = { fullKey, action: prop }
                             
@@ -46,7 +58,12 @@ const TemplateEngine = (function () {
                                 change.items = args.slice(2)
                             }
                             
-                            refresh(topData, change)
+                            try {
+                                refresh(topData, change)
+                            } catch (error) {
+                                throw new Error(`[TemplateEngine] Error during refresh of "${fullKey}" after "${prop}": ${error.message}`)
+                            }
+
                             return result
                         }
                     },
@@ -61,10 +78,16 @@ const TemplateEngine = (function () {
                             // [0] is sufficient since typically all holders for the same key have the same action
                             // (e.g., all <get>data.name</get> have 'updateGet', all <if test="data.flag"> have 'updateIf')
                             const linkedNodeHolders = nodeHoldersByKeys.getByKey(nextFullKey)
+
+                            // Early return if no UI elements depend on this property
+                            if (!linkedNodeHolders || linkedNodeHolders.get('holders')?.length === 0) {
+                                return true
+                            }
+
                             const action = linkedNodeHolders?.get('holders')?.[0].action || 'update'
+                            const change = { fullKey: nextFullKey, action }
                             
                             try {
-                                const change = { fullKey: nextFullKey, action }
                                 refresh(topData, change)
                             } catch (error) {
                                 throw new Error(`[TemplateEngine] Error during refresh of "${nextFullKey}": ${error.message}`)
