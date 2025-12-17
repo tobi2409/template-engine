@@ -24,7 +24,7 @@ function handleTextNode(textNode, mountNode, insertBeforeAnchor = undefined) {
 }
 
 // getNode only contains key, nothing more -> no walk anymore
-export function handleGetNode(data, contextStack = new Map(), params = new Map(), getNode, mountNode, insertBeforeAnchor = undefined) {
+export function handleGetNode(data, contextStack = new Map(), params = new Map(), getNode, mountNode, insertBeforeAnchor = undefined, dependencies = {}) {
     try {
         const key = getNode.innerText
         const resolved = resolveEx(key, data, contextStack, params)
@@ -35,9 +35,17 @@ export function handleGetNode(data, contextStack = new Map(), params = new Map()
 
         mount(resolvedTextSpan, mountNode, insertBeforeAnchor)
         
-        // NodeHolder structure: getNode is needed for refresh
-        nodeHoldersByKeys.appendToKey(resolved.fullKey,
-            { action: 'updateGet', getNode: getNode, node: resolvedTextSpan })
+        const nodeHolder = { action: 'updateGet', getNode: getNode, node: resolvedTextSpan, refreshKey: resolved.fullKey }
+        nodeHoldersByKeys.appendToKey(resolved.fullKey, nodeHolder)
+        
+        // Check if OTHER keys depend on THIS key
+        // If model.firstName changes, fullName should also refresh
+        for (const [sourceKey, dependentKeys] of Object.entries(dependencies)) {
+            if (dependentKeys.includes(resolved.fullKey)) {
+                // Register this nodeHolder also under the source key
+                nodeHoldersByKeys.appendToKey(sourceKey, nodeHolder)
+            }
+        }
     } catch (error) {
         throw new Error(`[TemplateEngine] Error in handleGetNode: ${error.message}`)
     }
@@ -51,7 +59,7 @@ export function handleGetNodeRefresh(data, refreshInfo) {
     }
 }
 
-export function handleEachNode(data, contextStack = new Map(), params = new Map(), eachNode, mountNode, refreshInfo = undefined) {
+export function handleEachNode(data, contextStack = new Map(), params = new Map(), eachNode, mountNode, refreshInfo = undefined, dependencies = {}) {
     try {
         const ofAttribute = eachNode.getAttribute('of')
         const resolvedOf = resolveEx(ofAttribute, data, contextStack, params)
@@ -59,7 +67,7 @@ export function handleEachNode(data, contextStack = new Map(), params = new Map(
         const asAttribute = eachNode.getAttribute('as')
 
         if (!refreshInfo) {
-            // Complete NodeHolder structure: contextStack/params/eachNode are needed
+            // complete NodeHolder structure: contextStack/params/eachNode are needed
             // to re-render the template with relative keys on array updates
             nodeHoldersByKeys.appendToKey(resolvedOf.fullKey,
                 { action: 'updateEach', contextStack: new Map(contextStack), params: params, eachNode: eachNode, mountNode: mountNode })
@@ -80,8 +88,8 @@ export function handleEachNode(data, contextStack = new Map(), params = new Map(
 
         const insertBeforeAnchor = refreshInfo ? mountNode.children[_startIndex] : undefined
         
-        // Use DocumentFragment for batch rendering to minimize DOM operations
-        // Fragment collects all nodes in memory, then inserts them in one operation
+        // use DocumentFragment for batch rendering to minimize DOM operations
+        // fragment collects all nodes in memory, then inserts them in one operation
         const fragment = document.createDocumentFragment()
 
         for (let index = _startIndex ; index <= _endIndex ; index++) {
@@ -90,15 +98,15 @@ export function handleEachNode(data, contextStack = new Map(), params = new Map(
             childContextStack.set(asAttribute, { isEachContext: true, data: listElement, of: resolvedOf.fullKey, index: index })
             
             // walk() appends nodes to fragment sequentially (no insertBeforeAnchor needed inside fragment)
-            // When walk() recursively processes child nodes, each child becomes a new container
-            // The insertion position only matters for the root element being inserted into mountNode
-            // Inside nested containers, nodes are always appended sequentially
-            walk(data, childContextStack, params, eachNode.childNodes, fragment, undefined)
+            // when walk() recursively processes child nodes, each child becomes a new container
+            // the insertion position only matters for the root element being inserted into mountNode
+            // inside nested containers, nodes are always appended sequentially
+            walk(data, childContextStack, params, eachNode.childNodes, fragment, undefined, dependencies)
         }
         
-        // Insert complete fragment in one DOM operation at correct position
+        // insert complete fragment in one DOM operation at correct position
         // insertBeforeAnchor is needed for operations like unshift/splice that insert at specific positions
-        // If undefined, fragment is appended at the end (for push or initial render)
+        // if undefined, fragment is appended at the end (for push or initial render)
         mount(fragment, mountNode, insertBeforeAnchor)
     } catch (error) {
         throw new Error(`[TemplateEngine] Error in handleEachNode: ${error.message}`)
@@ -129,20 +137,19 @@ export function handleEachNodeRefresh(data, refreshInfo) {
     try {
         const linkedNodeHolders = nodeHoldersByKeys.getByKey(refreshInfo.fullKey)
         const { deleteStartIndex = 0, deleteCount = 0, insertStartIndex = 0, insertCount = 0, reindexStartIndex = 0, reindexShift = 0, reindexMaxIndex = 0 } = refreshInfo
-        
-        // Delete NodeHolder keys
+
+        // delete NodeHolder keys
         for (let i = 0; i < deleteCount; i++) {
             linkedNodeHolders.delete(String(deleteStartIndex + i))
         }
         
-        // Shift NodeHolder keys
+        // shift NodeHolder keys
         if (reindexShift !== 0) {
             reindexArrayMap(linkedNodeHolders, reindexStartIndex, reindexShift, reindexMaxIndex)
         }
         
-        // DOM updates for all registered holders
         for (const nodeHolder of linkedNodeHolders.get('holders')) {
-            // Delete DOM elements
+            // delete DOM elements
             for (let i = 0; i < deleteCount; i++) {
                 const childToRemove = nodeHolder.mountNode.children[deleteStartIndex]
                 if (childToRemove) {
@@ -150,7 +157,7 @@ export function handleEachNodeRefresh(data, refreshInfo) {
                 }
             }
             
-            // Insert new DOM elements
+            // insert new DOM elements
             if (insertCount > 0) {
                 handleEachNode(data, nodeHolder.contextStack, nodeHolder.params, nodeHolder.eachNode, nodeHolder.mountNode,
                     { startIndex: insertStartIndex, endIndex: insertStartIndex + insertCount - 1 })
@@ -161,7 +168,7 @@ export function handleEachNodeRefresh(data, refreshInfo) {
     }
 }
 
-export function handleIfNode(data, contextStack = new Map(), params = new Map(), ifNode, mountNode, insertBeforeAnchor = undefined) {
+export function handleIfNode(data, contextStack = new Map(), params = new Map(), ifNode, mountNode, insertBeforeAnchor = undefined, dependencies = {}) {
     try {
         const test = ifNode.getAttribute('test')
         const resolvedTest = resolveEx(test, data, contextStack, params)
@@ -178,12 +185,12 @@ export function handleIfNode(data, contextStack = new Map(), params = new Map(),
         
         if (resolvedTest.value) {
             wrapper.style.display = ''
-            walk(data, contextStack, params, ifNode.childNodes, wrapper)
+            walk(data, contextStack, params, ifNode.childNodes, wrapper, undefined, dependencies)
         }
 
         // Re-rendering NodeHolder structure: contextStack/params not strictly necessary,
         // but included to avoid code duplication (updateHandler calls handleIfNode again)
-        // Could be optimized with direct wrapper toggle, but current approach is simpler
+        // could be optimized with direct wrapper toggle, but current approach is simpler
         nodeHoldersByKeys.appendToKey(resolvedTest.fullKey,
             { action: 'updateIf', contextStack: contextStack, params: params, ifNode: ifNode, wrapper: wrapper })
     } catch (error) {
@@ -212,9 +219,9 @@ export function handleIfNodeRefresh(data, refreshInfo) {
     }
 }
 
-function handleTemplateUse(data, contextStack = new Map(), params = new Map(), templateUseNode, mountNode) {
+function handleTemplateUse(data, contextStack = new Map(), params = new Map(), templateUseNode, mountNode, dependencies = {}) {
     try {
-        const childParams = new Map(params) // Inherit parent params
+        const childParams = new Map(params) // inherit parent params
         
         for (const key in templateUseNode.dataset) {
             childParams.set(key, templateUseNode.dataset[key])
@@ -227,13 +234,13 @@ function handleTemplateUse(data, contextStack = new Map(), params = new Map(), t
             throw new Error(`[TemplateEngine] Template with id "${templateId}" not found`)
         }
         
-        walk(data, contextStack, childParams, templateNode.content.children, mountNode)
+        walk(data, contextStack, childParams, templateNode.content.children, mountNode, undefined, dependencies)
     } catch (error) {
         throw new Error(`[TemplateEngine] Error in handleTemplateUse: ${error.message}`)
     }
 }
 
-function handleDefaultNode(data, contextStack = new Map(), params = new Map(), defaultNode, mountNode, insertBeforeAnchor = undefined) {
+function handleDefaultNode(data, contextStack = new Map(), params = new Map(), defaultNode, mountNode, insertBeforeAnchor = undefined, dependencies = {}) {
     try {
         const cloned = defaultNode.cloneNode(false)
 
@@ -252,7 +259,7 @@ function handleDefaultNode(data, contextStack = new Map(), params = new Map(), d
         mount(cloned, mountNode, insertBeforeAnchor)
         
         // What is with insertBeforeAnchor? see handleEachNode
-        walk(data, contextStack, params, defaultNode.childNodes, cloned)
+        walk(data, contextStack, params, defaultNode.childNodes, cloned, undefined, dependencies)
     } catch (error) {
         throw new Error(`[TemplateEngine] Error in handleDefaultNode: ${error.message}`)
     }
@@ -263,7 +270,7 @@ export function handleDefaultNodeRefresh(data, refreshInfo) {
         const value = resolve(refreshInfo.fullKey, data)
         
         if (refreshInfo.type === 'bind') {
-            // Update bound property (Data → UI)
+            // update bound property (Data → UI)
             // synchronize all other UI elements bound to the same data key
             refreshInfo.node[refreshInfo.property] = value
         } else if (refreshInfo.type === 'attribute') {
@@ -274,7 +281,7 @@ export function handleDefaultNodeRefresh(data, refreshInfo) {
     }
 }
 
-function walk(data, contextStack = new Map(), params = new Map(), nodes, mountNode, insertBeforeAnchor = undefined) {
+function walk(data, contextStack = new Map(), params = new Map(), nodes, mountNode, insertBeforeAnchor = undefined, dependencies = {}) {
     for (const node of nodes) {
         // What is with insertBeforeAnchor? see handleEachNode
 
@@ -295,19 +302,19 @@ function walk(data, contextStack = new Map(), params = new Map(), nodes, mountNo
         try {
             switch (node.tagName) {
                 case 'GET':
-                    handleGetNode(data, contextStack, params, node, mountNode, insertBeforeAnchor)
+                    handleGetNode(data, contextStack, params, node, mountNode, insertBeforeAnchor, dependencies)
                     break
                 case 'EACH':
-                    handleEachNode(data, contextStack, params, node, mountNode)
+                    handleEachNode(data, contextStack, params, node, mountNode, undefined, dependencies)
                     break
                 case 'IF':
-                    handleIfNode(data, contextStack, params, node, mountNode, insertBeforeAnchor)
+                    handleIfNode(data, contextStack, params, node, mountNode, insertBeforeAnchor, dependencies)
                     break
                 case 'TEMPLATE-USE':
-                    handleTemplateUse(data, contextStack, params, node, mountNode)
+                    handleTemplateUse(data, contextStack, params, node, mountNode, dependencies)
                     break
                 default:
-                    handleDefaultNode(data, contextStack, params, node, mountNode, insertBeforeAnchor)
+                    handleDefaultNode(data, contextStack, params, node, mountNode, insertBeforeAnchor, dependencies)
                     break
             }
         } catch (error) {
@@ -316,18 +323,18 @@ function walk(data, contextStack = new Map(), params = new Map(), nodes, mountNo
     }
 }
 
-function initialTemplateUse(data, contextStack = new Map(), templateUseNode) {
+function initialTemplateUse(data, contextStack = new Map(), templateUseNode, dependencies = {}) {
     try {
         const params = new Map()
         const mountNode = document.getElementById(templateUseNode.attributes.getNamedItem('mount-id').value)
 
-        handleTemplateUse(data, contextStack, params, templateUseNode, mountNode)
+        handleTemplateUse(data, contextStack, params, templateUseNode, mountNode, dependencies)
     } catch (error) {
         throw new Error(`[TemplateEngine] Error in initialTemplateUse: ${error.message}`)
     }
 }
 
-export function run(data, templateUseNode) {
+export function run(data, templateUseNode, dependencies = {}) {
     if (templateUseNode.tagName !== 'TEMPLATE-USE') {
         throw new Error('[TemplateEngine] entry point must be template-use')
     }
@@ -335,7 +342,7 @@ export function run(data, templateUseNode) {
     const contextStack = new Map()
 
     try {
-        initialTemplateUse(data, contextStack, templateUseNode)
+        initialTemplateUse(data, contextStack, templateUseNode, dependencies)
     } catch (error) {
         throw new Error(`[TemplateEngine] Error during initial rendering: ${error.message}`)
     }

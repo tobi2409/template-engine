@@ -31,7 +31,8 @@ export function refresh(data, change, app) {
             case 'unshift': {
                 const list = resolve(change.fullKey, data)
                 handleEachNodeRefresh(data,
-                    { fullKey: change.fullKey, insertStartIndex: 0, insertCount: change.items.length, reindexStartIndex: 0, reindexShift: change.items.length, reindexMaxIndex: list.length - change.items.length - 1 })
+                    { fullKey: change.fullKey, insertStartIndex: 0, insertCount: change.items.length,
+                        reindexStartIndex: 0, reindexShift: change.items.length, reindexMaxIndex: list.length - change.items.length - 1 })
                 
                 break
             }
@@ -41,14 +42,25 @@ export function refresh(data, change, app) {
                 const oldLength = list.length - change.items.length + change.deleteCount
                 
                 handleEachNodeRefresh(data,
-                    { fullKey: change.fullKey, deleteStartIndex: change.startIndex, deleteCount: change.deleteCount, insertStartIndex: change.startIndex, insertCount: change.items.length, reindexStartIndex: change.startIndex + change.deleteCount, reindexShift: shift, reindexMaxIndex: oldLength - 1 })
+                    { fullKey: change.fullKey, deleteStartIndex: change.startIndex, deleteCount: change.deleteCount,
+                        insertStartIndex: change.startIndex, insertCount: change.items.length,
+                        reindexStartIndex: change.startIndex + change.deleteCount, reindexShift: shift, reindexMaxIndex: oldLength - 1 })
+                
+                break
+            }
+            case 'updateEach': {
+                const list = resolve(change.fullKey, data)
+                handleEachNodeRefresh(data,
+                    { fullKey: change.fullKey, deleteStartIndex: 0, deleteCount: list.length,
+                        insertStartIndex: 0, insertCount: list.length })
                 
                 break
             }
             case 'updateGet': {
                 const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.fullKey)
                 for (const nodeHolder of linkedNodeHolders.get('holders')) {
-                    handleGetNodeRefresh(data, { existingNode: nodeHolder.node, fullKey: change.fullKey })
+                    const refreshKey = nodeHolder.refreshKey || change.fullKey
+                    handleGetNodeRefresh(data, { existingNode: nodeHolder.node, fullKey: refreshKey })
                 }
 
                 break

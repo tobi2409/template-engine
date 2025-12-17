@@ -15,7 +15,7 @@ export function applyAttribute(node, attrName, value) {
 
 export function handleActionAttribute(cloned, attr, data, contextStack, params) {
     try {
-        // Event binding: action-{event}="dataKey"
+        // event binding: action-{event}="dataKey"
         const event = attr.name.slice(7) // e.g., 'click', 'input'
         const methodName = attr.value
         
@@ -34,12 +34,12 @@ export function handleActionAttribute(cloned, attr, data, contextStack, params) 
 
 export function handleBindAttribute(cloned, attr, resolved, data) {
     try {
-        // Two-way binding: bind-{event}-{property}="dataKey"
+        // two-way binding: bind-{event}-{property}="dataKey"
         const parts = attr.name.split('-')
         const event = parts[1] // e.g., 'input'
         const property = parts[2] // e.g., 'value'
         
-        // Set initial value
+        // set initial value
         cloned[property] = resolved.value
         
         // Add event listener for data binding (UI → Data)
@@ -65,7 +65,7 @@ export function handleBindAttribute(cloned, attr, resolved, data) {
         
         cloned.removeAttribute(attr.name)
         
-        // Register NodeHolder for refresh (Data → UI)
+        // refresh data -> UI
         nodeHoldersByKeys.appendToKey(resolved.fullKey, 
             { action: 'updateDefault', type: 'bind', node: cloned, property: property })
     } catch (error) {

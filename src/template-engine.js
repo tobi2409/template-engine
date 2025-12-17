@@ -6,14 +6,15 @@ import { refresh } from './refresh.js'
 
 const TemplateEngine = (function () {
     return {
-        reactive(data, node) {
+        reactive(data, node, dependencies = {}) {
             try {
-                run(data, node)
+                run(data, node, dependencies)
             } catch (error) {
                 throw new Error(`[TemplateEngine] Error during initial render: ${error.message}`)
             }
 
             const topData = data
+            const deps = dependencies
 
             function innerReactive(data, fullKey = '') {
                 let isInArrayMethod = false
@@ -22,19 +23,19 @@ const TemplateEngine = (function () {
                     get(target, prop) {
                         const value = target[prop]
                         
-                        // Handle non-array-method cases first
+                        // handle non-array-method cases first
                         if (!Array.isArray(target) || typeof value !== 'function' || 
                             !['push', 'pop', 'shift', 'unshift', 'splice'].includes(prop)) {
                                 
                             if (value && typeof value === 'object') {
                                 const nextFullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
-                                return innerReactive(value, nextFullKey)
+                                return innerReactive(value, nextFullKey) // deep wrapping
                             }
 
                             return value
                         }
 
-                        // Intercept array methods
+                        // intercept array methods
                         return function(...args) {
                             isInArrayMethod = true
 
@@ -91,6 +92,24 @@ const TemplateEngine = (function () {
                                 refresh(topData, change)
                             } catch (error) {
                                 throw new Error(`[TemplateEngine] Error during refresh of "${nextFullKey}": ${error.message}`)
+                            }
+                            
+                            // Trigger refreshes for dependent keys
+                            const dependentKeys = deps[nextFullKey]
+                            if (dependentKeys) {
+                                for (const dependentKey of dependentKeys) {
+                                    const dependentNodeHolders = nodeHoldersByKeys.getByKey(dependentKey)
+                                    if (dependentNodeHolders && dependentNodeHolders.get('holders')?.length > 0) {
+                                        const dependentAction = dependentNodeHolders.get('holders')[0].action || 'update'
+                                        const dependentChange = { fullKey: dependentKey, action: dependentAction }
+                                        
+                                        try {
+                                            refresh(topData, dependentChange)
+                                        } catch (error) {
+                                            throw new Error(`[TemplateEngine] Error during refresh of dependent "${dependentKey}": ${error.message}`)
+                                        }
+                                    }
+                                }
                             }
                         }
 
