@@ -6,7 +6,14 @@ import { nodeHoldersByKeys } from './node-holders.js'
 // Find all dependency keys that match the changed fullKey
 // Supports nested paths: if 'model.rawPersonData.0.name' changes,
 // dependencies on 'model.rawPersonData' should also be triggered
-export function findMatchingDependencies(fullKey, dependencies) {
+// Recursively resolves transitive dependencies: A → B → C
+export function findMatchingDependencies(fullKey, dependencies, visited = new Set()) {
+    if (visited.has(fullKey)) {
+        return []
+    }
+
+    visited.add(fullKey)
+    
     const matches = []
     
     // Direct match
@@ -16,21 +23,30 @@ export function findMatchingDependencies(fullKey, dependencies) {
     
     // Check if fullKey is a subpath of any dependency key
     // e.g., fullKey='model.rawPersonData.0.name' matches dependencyKey='model.rawPersonData'
-    for (const [depKey, dependents] of Object.entries(dependencies)) {
-        if (fullKey.startsWith(depKey + '.')) {
+    for (const [dependencyKey, dependencyValue] of Object.entries(dependencies)) {
+        if (fullKey.startsWith(dependencyKey + '.')) {
             // Extract the suffix after the dependency key
             // fullKey='model.rawPersonData.0.name', depKey='model.rawPersonData' → suffix='.0.name'
-            const suffix = fullKey.substring(depKey.length)
+            const suffix = fullKey.substring(dependencyKey.length)
             
             // Append suffix to each dependent to get the specific path
             // e.g., 'beautifiedPersonData' + '.0.name' = 'beautifiedPersonData.0.name'
-            for (const dependent of dependents) {
+            for (const dependent of dependencyValue) {
                 matches.push(dependent + suffix)
             }
         }
     }
     
-    return [...new Set(matches)] // Remove duplicates
+    // Recursively find transitive dependencies
+    // e.g., if fullName depends on model.firstName, and fullInfo depends on fullName,
+    // then model.firstName changing should also refresh fullInfo
+    const allMatches = [...matches]
+    for (const match of matches) {
+        const transitive = findMatchingDependencies(match, dependencies, visited)
+        allMatches.push(...transitive)
+    }
+    
+    return [...new Set(allMatches)] // Remove duplicates
 }
 
 export function notifyDependencies(data, dependencyValues, sourceChange = null) {

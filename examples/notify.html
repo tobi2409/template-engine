@@ -10,7 +10,7 @@
     <div id="app"></div>
 
     <template id="app-template">
-        <h1>Hello World</h1>
+        <h1>👋 Hello World</h1>
 
         <p>First Name: <get>model.firstName</get></p>
         <p>Last Name: <get>model.lastName</get></p>
@@ -36,6 +36,13 @@
             <each of="beautifiedPersonData" as="personInfo">
                 <li attr-item-index="personInfo.id">
                     <get>personInfo.name</get> (<get>personInfo.age</get> years old)
+
+                    <!--<if test="personInfo.showEdit">-->
+                        <input type="text" bind-input-value="personInfo.name" placeholder="Name ..." />
+                        <input type="text" attr-value="personInfo.age" map-input-value="mapAgeToBirthYear" placeholder="Age ..." />
+                    <!--</if>-->
+
+                    <button action-click="editPersonInfo">Edit</button>
                 </li>
             </each>
         </ul>
@@ -55,6 +62,12 @@
 
         const viewModel = TemplateEngine.reactive({
             model: model,
+
+            editPersonInfo: function(event) {
+                const index = parseInt(event.target.parentElement.getAttribute('item-index'))
+                const person = viewModel.beautifiedPersonData.find(p => p.id == index)
+                person.showEdit = !person.showEdit
+            },
             
             get fullName() {
                 return `${model.firstName} ${model.lastName}`
@@ -73,14 +86,22 @@
                     const age = new Date().getFullYear() - p.birthyear
                     return { id: p.id, name: p.name, age: age, showEdit: true }
                 })
+            },
+
+            mapAgeToBirthYear: function(age, context) {
+                const index = parseInt(event.target.parentElement.getAttribute('item-index'))
+                const birthyear = new Date().getFullYear() - parseInt(age)
+                const person = viewModel.model.rawPersonData.find(p => p.id == index)
+                person.birthyear = birthyear
+                console.log(model.rawPersonData)
             }
         }, document.getElementById('app-template-use'), {
-            'model.firstName': ['fullName', 'fullInfo'],
-            'model.lastName': ['fullName', 'fullInfo'],
+            'model.firstName': ['fullName'],
+            'model.lastName': ['fullName'],
             'model.wage': ['showWage'],
-            'model.rawPersonData': ['beautifiedPersonData']
+            'model.rawPersonData': ['beautifiedPersonData'],
             /*'model.rawPersonData.0.name': ['beautifiedPersonData.0.name']*/
-            /*'fullName': ['fullInfo']*/
+            'fullName': ['fullInfo']
         })
 
         viewModel.model.firstName = 'Emily'
@@ -88,6 +109,8 @@
         viewModel.model.rawPersonData.push({ id: 3, name: 'Sample', birthyear: 1985 })
         viewModel.model.rawPersonData[0].name = 'Test Updated'
         viewModel.model.rawPersonData.splice(1, 1)
+        console.log(viewModel.model.rawPersonData)
+        console.log(viewModel.beautifiedPersonData)
     </script>
 
 </body>
