@@ -10,7 +10,7 @@
     <div id="app"></div>
 
     <template id="app-template">
-        <h1>Hello</h1>
+        <h1>Hello World</h1>
 
         <p>First Name: <get>model.firstName</get></p>
         <p>Last Name: <get>model.lastName</get></p>
@@ -34,7 +34,16 @@
 
         <ul>
             <each of="beautifiedPersonData" as="personInfo">
-                <li><get>personInfo.name</get> (<get>personInfo.age</get> years old)</li>
+                <li attr-item-index="personInfo.id">
+                    <get>personInfo.name</get> (<get>personInfo.age</get> years old)
+
+                    <if test="personInfo.showEdit">
+                        <input type="text" bind-input-value="personInfo.name" placeholder="Name ..." />
+                        <input type="text" bind-input-value="personInfo.age" placeholder="Age ..." />
+                    </if>
+
+                    <button action-click="editPersonInfo">Edit</button>
+                </li>
             </each>
         </ul>
     </template>
@@ -48,11 +57,17 @@
             firstName: 'Alex',
             lastName: 'Gonzales',
             wage: 800,
-            rawPersonData: [{ name: 'Test', birthyear: 1995 }, { name: 'Demo', birthyear: 1990 }]
+            rawPersonData: [{ id: 1, name: 'Test', birthyear: 1995 }, { id: 2, name: 'Demo', birthyear: 1990 }]
         }
 
         const viewModel = TemplateEngine.reactive({
             model: model,
+
+            editPersonInfo: function(event) {
+                const index = parseInt(event.target.parentElement.getAttribute('item-index'))
+                const person = viewModel.beautifiedPersonData.find(p => p.id == index)
+                person.showEdit = !person.showEdit
+            },
             
             get fullName() {
                 return `${model.firstName} ${model.lastName}`
@@ -69,12 +84,12 @@
             get beautifiedPersonData() {
                 return model.rawPersonData.map(p => {
                     const age = new Date().getFullYear() - p.birthyear
-                    return { name: p.name, age: age }
+                    return { id: p.id, name: p.name, age: age, showEdit: true }
                 })
             }
         }, document.getElementById('app-template-use'), {
-            'model.firstName': ['fullName'],
-            'model.lastName': ['fullName'],
+            'model.firstName': ['fullName', 'fullInfo'],
+            'model.lastName': ['fullName', 'fullInfo'],
             'model.wage': ['showWage'],
             'model.rawPersonData': ['beautifiedPersonData']
             /*'model.rawPersonData.0.name': ['beautifiedPersonData.0.name']*/
@@ -83,9 +98,10 @@
 
         viewModel.model.firstName = 'Emily'
         viewModel.model.wage = 200
-        viewModel.model.rawPersonData.push({ name: 'Sample', birthyear: 1985 })
+        viewModel.model.rawPersonData.push({ id: 3, name: 'Sample', birthyear: 1985 })
         viewModel.model.rawPersonData[0].name = 'Test Updated'
         viewModel.model.rawPersonData.splice(1, 1)
+        console.log(viewModel.beautifiedPersonData)
     </script>
 
 </body>

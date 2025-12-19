@@ -51,7 +51,7 @@ export function notifyDependencies(data, dependencyValues, sourceChange = null) 
                 if (sourceChange.startIndex !== undefined) dependencyChange.startIndex = sourceChange.startIndex
                 if (sourceChange.deleteCount !== undefined) dependencyChange.deleteCount = sourceChange.deleteCount
             }
-            console.log(dependencyChange)
+            
             refresh(data, dependencyChange)
         }
     } catch (error) {
