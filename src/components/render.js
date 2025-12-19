@@ -3,7 +3,7 @@
 import { nodeHoldersByKeys } from './utils/node-holders.js'
 import { resolve, resolveEx } from './utils/resolver.js'
 import { mount } from './utils/dom.js'
-import { applyAttribute, handleActionAttribute, handleBindAttribute, handleStyleOrAttrAttribute, handleMapInputAttribute } from './default-node-attributes.js'
+import { applyAttribute, handleActionAttribute, handleBindAttribute, handleStyleOrAttrAttribute } from './default-node-attributes.js'
 
 // Error Handling Strategy:
 // All handler methods are wrapped in a single try-catch block from start to end.
@@ -243,8 +243,6 @@ function handleDefaultNode(data, contextStack = new Map(), params = new Map(), d
                 handleActionAttribute(cloned, attr, data, contextStack, params)
             } else if (attr.name.startsWith('bind-')) {
                 handleBindAttribute(cloned, attr, resolved, data, dependencies)
-            } else if (attr.name.startsWith('map-')) {
-                handleMapInputAttribute(cloned, attr, data, contextStack, params, dependencies)
             } else if (attr.name.startsWith('attr-') || attr.name.startsWith('style-')) {
                 handleStyleOrAttrAttribute(cloned, attr, resolved)
             }

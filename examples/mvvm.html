@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+
+    <div id="app"></div>
+
+    <template id="app-template">
+        <h1>👋 Hello World</h1>
+
+        <p>First Name: <get>firstName</get></p>
+        <p>Last Name: <get>lastName</get></p>
+        <p><b>Full Name: <get>fullName</get></b></p>
+
+        <input type="text" bind-input-value="firstName" placeholder="First Name ..."/>
+        <input type="text" bind-input-value="lastName" placeholder="Last Name ..."/>
+
+        <br/><br/>
+
+        <div>
+            <if test="showWage">
+                <p>💵 Wage: $<get>wage</get></p>
+                <p><b><get>fullInfo</get></b></p>
+            </if>
+
+            <input type="number" bind-input-value="wage" placeholder="Wage ..."/>
+        </div>
+
+        <h2>Person Data</h2>
+
+        <ul>
+            <each of="beautifiedPersonData" as="personInfo">
+                <li attr-item-index="personInfo.id">
+                    <get>personInfo.name</get> (<get>personInfo.age</get> years old)
+
+                    <if test="personInfo.showEdit">
+                        <input type="text" bind-input-value="personInfo.name" placeholder="Name ..." />
+                        <input type="number" bind-input-value="personInfo.age" placeholder="Age ..." />
+                    </if>
+
+                    <button action-click="editPersonInfo">Edit</button>
+                </li>
+            </each>
+        </ul>
+    </template>
+
+    <template-use id="app-template-use" template-id="app-template" mount-id="app"></template-use>
+    
+    <script type="module">
+        import TemplateEngine from '../src/template-engine.js'
+        import { createMappedArray } from '../src/mapped-array.js'
+
+        const model = {
+            firstName: 'Alex',
+            lastName: 'Gonzales',
+            wage: 800,
+            rawPersonData: [{ id: 1, name: 'Test', birthyear: 1995 }, { id: 2, name: 'Demo', birthyear: 1990 }]
+        }
+
+        const viewModel = TemplateEngine.reactive({
+            set firstName(value) {
+                model.firstName = value
+            },
+
+            get firstName() {
+                return model.firstName
+            },
+
+            set lastName(value) {
+                model.lastName = value
+            },
+
+            get lastName() {
+                return model.lastName
+            },
+            
+            get fullName() {
+                return `${this.firstName} ${this.lastName}`
+            },
+
+            set wage(value) {
+                model.wage = value
+            },
+
+            get wage() {
+                return model.wage
+            },
+
+            get showWage() {
+                return this.wage > 600
+            },
+
+            get fullInfo() {
+                return `${this.fullName} earns $${this.wage}`
+            },
+
+            get beautifiedPersonData() {
+                return createMappedArray(
+                    model.rawPersonData,
+                    (p, index) => ({
+                        id: p.id,
+                        name: p.name,
+                        age: new Date().getFullYear() - p.birthyear,
+                        _showEdit: false,
+                        set showEdit(value) {
+                            this._showEdit = value
+                        },
+                        get showEdit() {
+                            return this._showEdit
+                        }
+                    }),
+                    { name: 'name' },
+                    (item) => ({
+                        id: item.id,
+                        name: item.name,
+                        birthyear: item.birthyear || (new Date().getFullYear() - item.age)
+                    })
+                )
+            },
+
+            editPersonInfo: function(event) {
+                const index = parseInt(event.target.parentElement.getAttribute('item-index'))
+                const person = viewModel.beautifiedPersonData.find(p => p.id === index)
+                person.showEdit = !person.showEdit
+            }
+        }, document.getElementById('app-template-use'), {
+            'firstName': ['fullName'],
+            'lastName': ['fullName'],
+            'wage': ['showWage', 'fullInfo'],
+            'fullName': ['fullInfo']
+        })
+
+        viewModel.firstName = 'Emily'
+        viewModel.wage = 200
+        viewModel.beautifiedPersonData.push({ id: 3, name: 'Sample', birthyear: 1985 })
+        viewModel.beautifiedPersonData[0].name = 'Test Updated'
+        viewModel.beautifiedPersonData.splice(1, 1)
+        console.log(viewModel.beautifiedPersonData)
+    </script>
+
+</body>
+</html>
