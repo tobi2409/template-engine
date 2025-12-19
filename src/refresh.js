@@ -59,8 +59,7 @@ export function refresh(data, change, app) {
             case 'updateGet': {
                 const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.fullKey)
                 for (const nodeHolder of linkedNodeHolders.get('holders')) {
-                    const refreshKey = nodeHolder.refreshKey || change.fullKey
-                    handleGetNodeRefresh(data, { existingNode: nodeHolder.node, fullKey: refreshKey })
+                    handleGetNodeRefresh(data, { existingNode: nodeHolder.node, fullKey: change.fullKey })
                 }
 
                 break

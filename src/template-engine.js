@@ -3,6 +3,7 @@
 import { nodeHoldersByKeys } from './utils/node-holders.js'
 import { run } from './render.js'
 import { refresh } from './refresh.js'
+import { notifyDependencies, findMatchingDependencies } from './utils/notifier.js'
 
 const TemplateEngine = (function () {
     return {
@@ -14,7 +15,6 @@ const TemplateEngine = (function () {
             }
 
             const topData = data
-            const deps = dependencies
 
             function innerReactive(data, fullKey = '') {
                 let isInArrayMethod = false
@@ -60,7 +60,18 @@ const TemplateEngine = (function () {
                             }
                             
                             try {
-                                refresh(topData, change)
+                                // Check if there are NodeHolders or dependencies for this array
+                                const linkedNodeHolders = nodeHoldersByKeys.getByKey(fullKey)
+                                const matchingDependents = findMatchingDependencies(fullKey, dependencies)
+                                
+                                // Only refresh if array is used in template or has dependencies
+                                if (linkedNodeHolders && linkedNodeHolders.get('holders')?.length > 0) {
+                                    refresh(topData, change)
+                                }
+                                
+                                // Always notify dependencies (even if array itself not in template)
+                                // Pass the original change object so dependencies can use the same efficient operation
+                                notifyDependencies(topData, matchingDependents, change)
                             } catch (error) {
                                 throw new Error(`[TemplateEngine] Error during refresh of "${fullKey}" after "${prop}": ${error.message}`)
                             }
@@ -74,42 +85,33 @@ const TemplateEngine = (function () {
 
                         if (prop !== 'length' && !isInArrayMethod) {
                             const nextFullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
-                            
                             // Determine action based on registered NodeHolders
                             // [0] is sufficient since typically all holders for the same key have the same action
                             // (e.g., all <get>data.name</get> have 'updateGet', all <if test="data.flag"> have 'updateIf')
                             const linkedNodeHolders = nodeHoldersByKeys.getByKey(nextFullKey)
-
+                            
+                            // Find matching dependencies (direct match + nested paths)
+                            const matchingDependents = findMatchingDependencies(nextFullKey, dependencies)
+                            
                             // Early return if no UI elements depend on this property
-                            if (!linkedNodeHolders || linkedNodeHolders.get('holders')?.length === 0) {
+                            if ((!linkedNodeHolders || linkedNodeHolders.get('holders')?.length === 0)
+                                && matchingDependents.length === 0) {
                                 return true
                             }
 
-                            const action = linkedNodeHolders?.get('holders')?.[0].action || 'update'
-                            const change = { fullKey: nextFullKey, action }
-                            
                             try {
-                                refresh(topData, change)
-                            } catch (error) {
-                                throw new Error(`[TemplateEngine] Error during refresh of "${nextFullKey}": ${error.message}`)
-                            }
-                            
-                            // Trigger refreshes for dependent keys
-                            const dependentKeys = deps[nextFullKey]
-                            if (dependentKeys) {
-                                for (const dependentKey of dependentKeys) {
-                                    const dependentNodeHolders = nodeHoldersByKeys.getByKey(dependentKey)
-                                    if (dependentNodeHolders && dependentNodeHolders.get('holders')?.length > 0) {
-                                        const dependentAction = dependentNodeHolders.get('holders')[0].action || 'update'
-                                        const dependentChange = { fullKey: dependentKey, action: dependentAction }
-                                        
-                                        try {
-                                            refresh(topData, dependentChange)
-                                        } catch (error) {
-                                            throw new Error(`[TemplateEngine] Error during refresh of dependent "${dependentKey}": ${error.message}`)
-                                        }
+                                // Refresh all NodeHolders for this key (may have different actions)
+                                // e.g., both <get>model.wage</get> (updateGet) and <input bind-input-value="model.wage"> (updateDefault)
+                                if (linkedNodeHolders && linkedNodeHolders.get('holders')?.length > 0) {
+                                    for (const nodeHolder of linkedNodeHolders.get('holders')) {
+                                        const change = { fullKey: nextFullKey, action: nodeHolder.action }
+                                        refresh(topData, change)
                                     }
                                 }
+                                
+                                notifyDependencies(topData, matchingDependents)
+                            } catch (error) {
+                                throw new Error(`[TemplateEngine] Error during refresh of "${nextFullKey}": ${error.message}`)
                             }
                         }
 

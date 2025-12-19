@@ -3,6 +3,7 @@
 import { nodeHoldersByKeys } from './utils/node-holders.js'
 import { resolveEx, setByPath } from './utils/resolver.js'
 import { refresh } from './refresh.js'
+import { notifyDependencies, findMatchingDependencies } from './utils/notifier.js'
 
 // Helper function to apply attribute value to DOM element
 export function applyAttribute(node, attrName, value) {
@@ -32,7 +33,7 @@ export function handleActionAttribute(cloned, attr, data, contextStack, params) 
     }
 }
 
-export function handleBindAttribute(cloned, attr, resolved, data) {
+export function handleBindAttribute(cloned, attr, resolved, data, dependencies = {}) {
     try {
         // two-way binding: bind-{event}-{property}="dataKey"
         const parts = attr.name.split('-')
@@ -61,6 +62,10 @@ export function handleBindAttribute(cloned, attr, resolved, data) {
                 const change = { fullKey: resolved.fullKey, action: nodeHolder.action }
                 refresh(data, change)
             }
+            
+            // Trigger refreshes for dependent keys (including nested paths)
+            const matchingDependents = findMatchingDependencies(resolved.fullKey, dependencies)
+            notifyDependencies(data, matchingDependents)
         })
         
         cloned.removeAttribute(attr.name)

@@ -23,11 +23,20 @@
 
         <div>
             <if test="showWage">
-                <div>💵 Wage: $<get>model.wage</get></div>
+                <p>💵 Wage: $<get>model.wage</get></p>
+                <p><b><get>fullInfo</get></b></p>
             </if>
 
             <input type="number" bind-input-value="model.wage" placeholder="Wage ..."/>
         </div>
+
+        <h2>Person Data</h2>
+
+        <ul>
+            <each of="beautifiedPersonData" as="personInfo">
+                <li><get>personInfo.name</get> (<get>personInfo.age</get> years old)</li>
+            </each>
+        </ul>
     </template>
 
     <template-use id="app-template-use" template-id="app-template" mount-id="app"></template-use>
@@ -38,7 +47,8 @@
         const model = {
             firstName: 'Alex',
             lastName: 'Gonzales',
-            wage: 800
+            wage: 800,
+            rawPersonData: [{ name: 'Test', birthyear: 1995 }, { name: 'Demo', birthyear: 1990 }]
         }
 
         const viewModel = TemplateEngine.reactive({
@@ -50,12 +60,32 @@
 
             get showWage() {
                 return model.wage > 600
+            },
+
+            get fullInfo() {
+                return `${this.fullName} earns $${model.wage}`
+            },
+
+            get beautifiedPersonData() {
+                return model.rawPersonData.map(p => {
+                    const age = new Date().getFullYear() - p.birthyear
+                    return { name: p.name, age: age }
+                })
             }
         }, document.getElementById('app-template-use'), {
             'model.firstName': ['fullName'],
             'model.lastName': ['fullName'],
-            'model.wage': ['showWage']
+            'model.wage': ['showWage'],
+            'model.rawPersonData': ['beautifiedPersonData']
+            /*'model.rawPersonData.0.name': ['beautifiedPersonData.0.name']*/
+            /*'fullName': ['fullInfo']*/
         })
+
+        viewModel.model.firstName = 'Emily'
+        viewModel.model.wage = 200
+        viewModel.model.rawPersonData.push({ name: 'Sample', birthyear: 1985 })
+        viewModel.model.rawPersonData[0].name = 'Test Updated'
+        viewModel.model.rawPersonData.splice(1, 1)
     </script>
 
 </body>

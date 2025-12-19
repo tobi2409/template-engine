@@ -35,17 +35,9 @@ export function handleGetNode(data, contextStack = new Map(), params = new Map()
 
         mount(resolvedTextSpan, mountNode, insertBeforeAnchor)
         
-        const nodeHolder = { action: 'updateGet', getNode: getNode, node: resolvedTextSpan, refreshKey: resolved.fullKey }
-        nodeHoldersByKeys.appendToKey(resolved.fullKey, nodeHolder)
-        
-        // Check if OTHER keys depend on THIS key
-        // If model.firstName changes, fullName should also refresh
-        for (const [sourceKey, dependentKeys] of Object.entries(dependencies)) {
-            if (dependentKeys.includes(resolved.fullKey)) {
-                // Register this nodeHolder also under the source key
-                nodeHoldersByKeys.appendToKey(sourceKey, nodeHolder)
-            }
-        }
+        // NodeHolder structure: getNode is needed for refresh
+        nodeHoldersByKeys.appendToKey(resolved.fullKey,
+            { action: 'updateGet', getNode: getNode, node: resolvedTextSpan })
     } catch (error) {
         throw new Error(`[TemplateEngine] Error in handleGetNode: ${error.message}`)
     }
@@ -137,7 +129,7 @@ export function handleEachNodeRefresh(data, refreshInfo) {
     try {
         const linkedNodeHolders = nodeHoldersByKeys.getByKey(refreshInfo.fullKey)
         const { deleteStartIndex = 0, deleteCount = 0, insertStartIndex = 0, insertCount = 0, reindexStartIndex = 0, reindexShift = 0, reindexMaxIndex = 0 } = refreshInfo
-
+        
         // delete NodeHolder keys
         for (let i = 0; i < deleteCount; i++) {
             linkedNodeHolders.delete(String(deleteStartIndex + i))
@@ -250,7 +242,7 @@ function handleDefaultNode(data, contextStack = new Map(), params = new Map(), d
             if (attr.name.startsWith('action-')) {
                 handleActionAttribute(cloned, attr, data, contextStack, params)
             } else if (attr.name.startsWith('bind-')) {
-                handleBindAttribute(cloned, attr, resolved, data)
+                handleBindAttribute(cloned, attr, resolved, data, dependencies)
             } else if (attr.name.startsWith('attr-') || attr.name.startsWith('style-')) {
                 handleStyleOrAttrAttribute(cloned, attr, resolved)
             }
