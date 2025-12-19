@@ -47,11 +47,19 @@ export function notifyDependencies(data, dependencyValues, sourceChange = null) 
             
             // Copy additional properties from source change (e.g., items for push, startIndex for splice)
             if (sourceChange) {
-                if (sourceChange.items) dependencyChange.items = sourceChange.items
-                if (sourceChange.startIndex !== undefined) dependencyChange.startIndex = sourceChange.startIndex
-                if (sourceChange.deleteCount !== undefined) dependencyChange.deleteCount = sourceChange.deleteCount
+                if (sourceChange.items) {
+                    dependencyChange.items = sourceChange.items
+                }
+
+                if (sourceChange.startIndex !== undefined) {
+                    dependencyChange.startIndex = sourceChange.startIndex
+                }
+
+                if (sourceChange.deleteCount !== undefined) {
+                    dependencyChange.deleteCount = sourceChange.deleteCount
+                }
             }
-            
+
             refresh(data, dependencyChange)
         }
     } catch (error) {
