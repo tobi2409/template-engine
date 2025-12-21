@@ -192,6 +192,7 @@ export function handleIfNode(data, contextStack = new Map(), params = new Map(),
 
 export function handleIfNodeRefresh(data, refreshInfo) {
     try {
+        console.log(refreshInfo.contextStack)
         const wrapper = refreshInfo.wrapper
 
         if (!wrapper) {
@@ -202,6 +203,7 @@ export function handleIfNodeRefresh(data, refreshInfo) {
         wrapper.style.display = 'none'
         
         const testValue = resolve(refreshInfo.fullKey, data)
+
         if (testValue) {
             wrapper.style.display = ''
             walk(data, refreshInfo.contextStack, refreshInfo.params, refreshInfo.ifNode.childNodes, wrapper)
@@ -242,7 +244,7 @@ function handleDefaultNode(data, contextStack = new Map(), params = new Map(), d
             if (attr.name.startsWith('action-')) {
                 handleActionAttribute(cloned, attr, data, contextStack, params)
             } else if (attr.name.startsWith('bind-')) {
-                handleBindAttribute(cloned, attr, resolved, data, dependencies)
+                handleBindAttribute(cloned, attr, resolved, data, contextStack, params, dependencies)
             } else if (attr.name.startsWith('attr-') || attr.name.startsWith('style-')) {
                 handleStyleOrAttrAttribute(cloned, attr, resolved)
             }
