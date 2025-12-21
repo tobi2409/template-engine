@@ -40,9 +40,9 @@
 
         const data = TemplateEngine.reactive({
             todos: [
-                { id: 1, name: 'Review pull requests', showEdit: false },
-                { id: 2, name: 'Update documentation', showEdit: false },
-                { id: 3, name: 'Fix responsive layout', showEdit: false }
+                { id: 1, name: 'Review pull requests', showEdit: true },
+                { id: 2, name: 'Update documentation', showEdit: true },
+                { id: 3, name: 'Fix responsive layout', showEdit: true }
             ],
             newTodo: '',
             add: function() {
@@ -59,7 +59,8 @@
             }
         }, document.getElementById('app-template-use'))
 
-        data.todos.push({ id: 4, name: 'Plan team meeting', showEdit: false })
+        data.todos.push({ id: 4, name: 'Plan team meeting', showEdit: true })
+        data.todos.splice(1, 1)
 
     </script>
 

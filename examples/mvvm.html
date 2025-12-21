@@ -37,12 +37,12 @@
                 <li attr-item-index="personInfo.id">
                     <get>personInfo.name</get> (<get>personInfo.age</get> years old)
 
-                    <if test="personInfo.showEdit">
+                    <!--<if test="personInfo.showEdit">-->
                         <input type="text" bind-input-value="personInfo.name" placeholder="Name ..." />
                         <input type="number" bind-input-value="personInfo.age" placeholder="Age ..." />
-                    </if>
+                    <!--</if>-->
 
-                    <button action-click="editPersonInfo">Edit</button>
+                    <button action-click="editPersonInfo">✏️ Edit</button>
                 </li>
             </each>
         </ul>
@@ -62,6 +62,8 @@
         }
 
         const viewModel = TemplateEngine.reactive({
+            _editStates: {},
+
             set firstName(value) {
                 model.firstName = value
             },
@@ -105,20 +107,16 @@
                         id: p.id,
                         name: p.name,
                         age: new Date().getFullYear() - p.birthyear,
-                        _showEdit: false,
-                        set showEdit(value) {
-                            this._showEdit = value
-                        },
-                        get showEdit() {
-                            return this._showEdit
-                        }
+                        showEdit: false
                     }),
                     { name: 'name' },
                     (item) => ({
                         id: item.id,
                         name: item.name,
                         birthyear: item.birthyear || (new Date().getFullYear() - item.age)
-                    })
+                    }),
+                    { showEdit: this._editStates },
+                    { idProperty: 'id' }
                 )
             },
 
@@ -131,7 +129,8 @@
             'firstName': ['fullName'],
             'lastName': ['fullName'],
             'wage': ['showWage', 'fullInfo'],
-            'fullName': ['fullInfo']
+            'fullName': ['fullInfo']//,
+            //'model.rawPersonData': ['beautifiedPersonData']
         })
 
         viewModel.firstName = 'Emily'
@@ -140,6 +139,7 @@
         viewModel.beautifiedPersonData[0].name = 'Test Updated'
         viewModel.beautifiedPersonData.splice(1, 1)
         console.log(viewModel.beautifiedPersonData)
+        console.log(model.rawPersonData)
     </script>
 
 </body>
