@@ -90,11 +90,13 @@ export function handleEachNode(data, contextStack = new Map(), params = new Map(
             // Set hidden __item_index__ property on item for dynamic index tracking
             listElement.__item_index__ = index
             
+            // Extract only the last property name (e.g., "childs" from "p.childs")
+            const propName = ofAttribute.split('.').pop()
+            
             const childContextStack = new Map(contextStack)
             childContextStack.set(asAttribute, { 
-                isEachContext: true, 
                 data: listElement,  // Store item reference with __item_index__
-                of: resolvedOf.fullKey 
+                prop: propName  // Only the immediate property name (e.g., "childs")
             })
             // walk() appends nodes to fragment sequentially (no insertBeforeAnchor needed inside fragment)
             // when walk() recursively processes child nodes, each child becomes a new container

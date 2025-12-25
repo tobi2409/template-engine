@@ -27,9 +27,7 @@ const TemplateEngine = (function () {
                         if (!Array.isArray(target) || typeof value !== 'function' || 
                             !['push', 'pop', 'shift', 'unshift', 'splice'].includes(prop)) {
                                 
-                            // Check if value is already a Proxy by checking if it's already reactive
-                            // If value is an object but not a Proxy, wrap it
-                            if (value && typeof value === 'object' && !value[Symbol.for('isProxy')]) {
+                            if (value && typeof value === 'object') {
                                 const nextFullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
                                 return innerReactive(value, nextFullKey) // deep wrapping
                             }
@@ -52,7 +50,7 @@ const TemplateEngine = (function () {
                             }
                             
                             // Wrap newly inserted items in proxies
-                            if (prop === 'push' || prop === 'unshift' || prop === 'splice') {
+                            /*if (prop === 'push' || prop === 'unshift' || prop === 'splice') {
                                 const startIdx = prop === 'push' ? target.length - args.length : 
                                                 prop === 'unshift' ? 0 : args[0]
                                 const itemCount = prop === 'splice' ? args.length - 2 : args.length
@@ -63,7 +61,7 @@ const TemplateEngine = (function () {
                                         target[idx] = innerReactive(target[idx], `${fullKey}.${idx}`)
                                     }
                                 }
-                            }
+                            }*/
                             
                             const change = { fullKey, action: prop }
                             
@@ -79,7 +77,7 @@ const TemplateEngine = (function () {
                                 // Check if there are NodeHolders or dependencies for this array
                                 const linkedNodeHolders = nodeHoldersByKeys.getByKey(fullKey)
                                 const matchingDependents = findMatchingDependencies(fullKey, dependencies)
-                                
+                                //console.log(target[prop])
                                 // Only refresh if array is used in template or has dependencies
                                 if (linkedNodeHolders && linkedNodeHolders.get('holders')?.length > 0) {
                                     refresh(topData, change)

@@ -29,7 +29,7 @@ export function handleActionAttribute(cloned, attr, data, contextStack, params) 
         // Get the last (innermost) each-context item from contextStack
         let contextItem = null
         for (const context of contextStack.values()) {
-            if (context.isEachContext && context.data) {
+            if (context.data) {
                 contextItem = context.data
             }
         }
@@ -95,7 +95,6 @@ export function handleBindAttribute(cloned, attr, resolved, data, contextStack =
 
 export function handleStyleOrAttrAttribute(cloned, attr, resolved) {
     try {
-        //console.log(attr.name + ' ' + resolved.value)
         applyAttribute(cloned, attr.name, resolved.value)
         cloned.removeAttribute(attr.name)
 

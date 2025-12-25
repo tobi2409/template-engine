@@ -27,7 +27,7 @@
 
                     <ul>
                         <each of="p.childs" as="c">
-                            <li attr-item-id="c.id">
+                            <li attr-item-id="c.id" attr-parent-item-id="p.id">
                                 <get>c.name</get> (<get>param1</get> team)
                                 <button action-click="toggleChildEdit">Edit</button>
                                 
@@ -68,7 +68,7 @@
                     childs: []
                 }]
             }, {
-                id: 2,
+                id: 3,
                 name: 'Chris Martinez',
                 role: 'Product Manager',
                 editing: false,
@@ -80,24 +80,29 @@
                 }]
             }],
             toggleEdit: (e, dataElement) => {
-                console.log(data.persons[dataElement.__item_index__])
-                //person.editing = !person.editing
+                //const person = data.persons.find(p => p.__item_index__ == dataElement.__item_index__)
+                //console.log(person)
+                const person = data.persons[dataElement.__item_index__]
+                person.editing = !person.editing
             },
             toggleChildEdit: (e, dataElement) => {
-                const person = data.persons.find(p => p.id == e.target.parentElement.getAttribute('item-id'))
-                person.editing = !person.editing
+                const person = data.persons.find(p => p.id == e.target.parentElement.getAttribute('parent-item-id'))
+                console.log(person.name)
+                const child = person.childs[dataElement.__item_index__]
+                console.log(child.name)
+                child.editing = !child.editing
             }
         }, document.getElementById('app-template-use'))
 
         // Demonstrate dynamic updates
         data.persons[0].name = 'Alex Chen (updated)'
-        data.persons[0].childs.push({ name: 'Sam Lee - Junior Developer', editing: false, childs: [] })
-        data.persons[0].childs.splice(1, 0, { name: 'Jamie Torres - DevOps Engineer', editing: false, childs: [] })
-        data.persons.splice(1, 0, { id: 3, name: 'Riley Cooper', role: 'QA Lead', editing: false,
+        data.persons[0].childs.push({ id: 3, name: 'Sam Lee - Junior Developer', editing: false, childs: [] })
+        data.persons[0].childs.splice(1, 0, { id: 4, name: 'Jamie Torres - DevOps Engineer', editing: false, childs: [] })
+        data.persons.splice(1, 0, { id: 2, name: 'Riley Cooper', role: 'QA Lead', editing: false,
                                 childs: [{ id: 1, name: 'Casey Morgan - QA Engineer', editing: false, childs: [] }] })
 
         console.log('Organization data:', data)
-        console.log(data.persons[0] === data.persons[0])
+        //console.log(data.persons[0] === data.persons[0])
     </script>
 
 </body>
