@@ -19,7 +19,8 @@
             <each of="persons" as="p">
                 <li attr-item-id="p.id">
                     <strong><get>p.name</get></strong> - <get>p.role</get>
-                    <button action-click="toggleEdit">Edit</button>
+                    <button action-click="toggleEdit">✏️ Edit</button>
+                    <button action-click="delete">🗑️ Delete</button>
                     
                     <if test="p.editing">
                         <input type="text" attr-value="p.name" readonly>
@@ -29,7 +30,9 @@
                         <each of="p.childs" as="c">
                             <li attr-item-id="c.id" attr-parent-item-id="p.id">
                                 <get>c.name</get> (<get>param1</get> team)
-                                <button action-click="toggleChildEdit">Edit</button>
+                                <button action-click="toggleChildEdit">✏️ Edit</button>
+                                <button action-click="deleteChild">🗑️ Delete</button>
+                                <get>watermark</get>
                                 
                                 <if test="c.editing">
                                     <input type="text" attr-value="c.name" readonly>
@@ -51,6 +54,7 @@
         const data = TemplateEngine.reactive({
             name: 'Sarah Wilson',
             age: 28,
+            watermark: 'Confidential',
             persons: [{
                 id: 1,
                 name: 'Alex Chen',
@@ -85,12 +89,25 @@
                 const person = data.persons[dataElement.__item_index__]
                 person.editing = !person.editing
             },
+            delete: (e, dataElement) => {
+                const personIndex = data.persons[dataElement.__item_index__] ? dataElement.__item_index__ : -1
+                if (personIndex !== -1) {
+                    data.persons.splice(personIndex, 1)
+                }
+            },
             toggleChildEdit: (e, dataElement) => {
                 const person = data.persons.find(p => p.id == e.target.parentElement.getAttribute('parent-item-id'))
                 console.log(person.name)
                 const child = person.childs[dataElement.__item_index__]
                 console.log(child.name)
                 child.editing = !child.editing
+            },
+            deleteChild: (e, dataElement) => {
+                const person = data.persons.find(p => p.id == e.target.parentElement.getAttribute('parent-item-id'))
+                const childIndex = dataElement.__item_index__
+                if (person && childIndex !== -1) {
+                    person.childs.splice(childIndex, 1)
+                }
             }
         }, document.getElementById('app-template-use'))
 
@@ -100,6 +117,7 @@
         data.persons[0].childs.splice(1, 0, { id: 4, name: 'Jamie Torres - DevOps Engineer', editing: false, childs: [] })
         data.persons.splice(1, 0, { id: 2, name: 'Riley Cooper', role: 'QA Lead', editing: false,
                                 childs: [{ id: 1, name: 'Casey Morgan - QA Engineer', editing: false, childs: [] }] })
+        data.watermark = 'Top Secret'
 
         console.log('Organization data:', data)
         //console.log(data.persons[0] === data.persons[0])
