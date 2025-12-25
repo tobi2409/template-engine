@@ -37,10 +37,10 @@
                 <li attr-item-index="personInfo.id">
                     <get>personInfo.name</get> (<get>personInfo.age</get> years old)
 
-                    <!--<if test="personInfo.showEdit">-->
+                    <if test="personInfo.showEdit">
                         <input type="text" bind-input-value="personInfo.name" placeholder="Name ..." />
                         <input type="number" bind-input-value="personInfo.age" placeholder="Age ..." />
-                    <!--</if>-->
+                    </if>
 
                     <button action-click="editPersonInfo">✏️ Edit</button>
                 </li>

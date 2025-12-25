@@ -86,9 +86,16 @@ export function handleEachNode(data, contextStack = new Map(), params = new Map(
 
         for (let index = _startIndex ; index <= _endIndex ; index++) {
             const listElement = list[index]
-            const childContextStack = new Map(contextStack)
-            childContextStack.set(asAttribute, { isEachContext: true, data: listElement, of: resolvedOf.fullKey, index: index })
             
+            // Set hidden __item_index__ property on item for dynamic index tracking
+            listElement.__item_index__ = index
+            
+            const childContextStack = new Map(contextStack)
+            childContextStack.set(asAttribute, { 
+                isEachContext: true, 
+                data: listElement,  // Store item reference with __item_index__
+                of: resolvedOf.fullKey 
+            })
             // walk() appends nodes to fragment sequentially (no insertBeforeAnchor needed inside fragment)
             // when walk() recursively processes child nodes, each child becomes a new container
             // the insertion position only matters for the root element being inserted into mountNode
@@ -138,6 +145,18 @@ export function handleEachNodeRefresh(data, refreshInfo) {
         // shift NodeHolder keys
         if (reindexShift !== 0) {
             reindexArrayMap(linkedNodeHolders, reindexStartIndex, reindexShift, reindexMaxIndex)
+        }
+        
+        // Update __item_index__ on all items after array mutation
+        // Array has already been mutated by Proxy, so we update based on current positions
+        //TODO: in case of push it's not necessary
+        const array = resolve(refreshInfo.fullKey, data)
+        if (Array.isArray(array)) {
+            for (let i = 0; i < array.length; i++) {
+                if (array[i] && typeof array[i] === 'object') {
+                    array[i].__item_index__ = i
+                }
+            }
         }
         
         for (const nodeHolder of linkedNodeHolders.get('holders')) {

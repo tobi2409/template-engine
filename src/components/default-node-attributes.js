@@ -26,7 +26,19 @@ export function handleActionAttribute(cloned, attr, data, contextStack, params) 
             throw new Error(`[TemplateEngine] action "${methodName}" must be a function`)
         }
 
-        cloned.addEventListener(event, resolvedMethod.value)
+        // Get the last (innermost) each-context item from contextStack
+        let contextItem = null
+        for (const context of contextStack.values()) {
+            if (context.isEachContext && context.data) {
+                contextItem = context.data
+            }
+        }
+
+        // Wrap the method to pass event and context item (or data if no context)
+        cloned.addEventListener(event, (e) => {
+            resolvedMethod.value(e, contextItem || data)
+        })
+
         cloned.removeAttribute(attr.name)
     } catch (error) {
         throw new Error(`[TemplateEngine] Error handling action attribute "${attr.name}": ${error.message}`)
@@ -49,9 +61,9 @@ export function handleBindAttribute(cloned, attr, resolved, data, contextStack =
         // elements like todos[0]) are not wrapped in Proxies, so setByPath won't trigger
         // the Proxy setter. Therefore, we manually refresh all affected NodeHolders.
         cloned.addEventListener(event, (e) => {
-            console.log(resolved.fullKey)
+            /*console.log(resolved.fullKey)
             console.log(contextStack)
-            console.log(resolveEx(attr.value, data, contextStack, params))
+            console.log(resolveEx(attr.value, data, contextStack, params))*/
             // Update data directly (no Proxy setter triggered for nested objects)
             setByPath(resolved.fullKey, data, e.target[property])
             
@@ -83,7 +95,7 @@ export function handleBindAttribute(cloned, attr, resolved, data, contextStack =
 
 export function handleStyleOrAttrAttribute(cloned, attr, resolved) {
     try {
-        console.log(attr.name + ' ' + resolved.value)
+        //console.log(attr.name + ' ' + resolved.value)
         applyAttribute(cloned, attr.name, resolved.value)
         cloned.removeAttribute(attr.name)
 

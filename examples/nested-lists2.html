@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nested Lists Demo - Template Engine</title>
+</head>
+<body>
+
+    <div id="app"></div>
+
+    <template id="app-template">
+        <h1>🏢 Company Organization Chart</h1>
+        <p>User: <strong><get>name</get></strong> (<get>age</get> years old)</p>
+        <p>Department: <get>param1</get></p>
+
+        <h2>Team Structure</h2>
+        <ul>
+            <each of="persons" as="p">
+                <li attr-item-id="p.id">
+                    <strong><get>p.name</get></strong> - <get>p.role</get>
+                    <button action-click="toggleEdit">Edit</button>
+                    
+                    <if test="p.editing">
+                        <input type="text" attr-value="p.name" readonly>
+                    </if>
+
+                    <ul>
+                        <each of="p.childs" as="c">
+                            <li attr-item-id="c.id">
+                                <get>c.name</get> (<get>param1</get> team)
+                                <button action-click="toggleChildEdit">Edit</button>
+                                
+                                <if test="c.editing">
+                                    <input type="text" attr-value="c.name" readonly>
+                                </if>
+                            </li>
+                        </each>
+                    </ul>
+
+                </li>
+            </each>
+        </ul>
+    </template>
+
+    <template-use id="app-template-use" template-id="app-template" mount-id="app" data-param1="Engineering"></template-use>
+
+    <script type="module">
+        import TemplateEngine from '../src/template-engine.js'
+
+        const data = TemplateEngine.reactive({
+            name: 'Sarah Wilson',
+            age: 28,
+            persons: [{
+                id: 1,
+                name: 'Alex Chen',
+                role: 'Tech Lead',
+                editing: false,
+                childs: [{
+                    id: 1,
+                    name: 'Maya Patel - Senior Developer',
+                    editing: false,
+                    childs: []
+                }, {
+                    id: 2,
+                    name: 'Jordan Kim - Frontend Developer',
+                    editing: false,
+                    childs: []
+                }]
+            }, {
+                id: 2,
+                name: 'Chris Martinez',
+                role: 'Product Manager',
+                editing: false,
+                childs: [{
+                    id: 1,
+                    name: 'Taylor Brown - UX Designer',
+                    editing: false,
+                    childs: []
+                }]
+            }],
+            toggleEdit: (e, dataElement) => {
+                console.log(data.persons[dataElement.__item_index__])
+                //person.editing = !person.editing
+            },
+            toggleChildEdit: (e, dataElement) => {
+                const person = data.persons.find(p => p.id == e.target.parentElement.getAttribute('item-id'))
+                person.editing = !person.editing
+            }
+        }, document.getElementById('app-template-use'))
+
+        // Demonstrate dynamic updates
+        data.persons[0].name = 'Alex Chen (updated)'
+        data.persons[0].childs.push({ name: 'Sam Lee - Junior Developer', editing: false, childs: [] })
+        data.persons[0].childs.splice(1, 0, { name: 'Jamie Torres - DevOps Engineer', editing: false, childs: [] })
+        data.persons.splice(1, 0, { id: 3, name: 'Riley Cooper', role: 'QA Lead', editing: false,
+                                childs: [{ id: 1, name: 'Casey Morgan - QA Engineer', editing: false, childs: [] }] })
+
+        console.log('Organization data:', data)
+        console.log(data.persons[0] === data.persons[0])
+    </script>
+
+</body>
+
+</html>

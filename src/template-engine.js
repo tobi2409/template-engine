@@ -27,7 +27,9 @@ const TemplateEngine = (function () {
                         if (!Array.isArray(target) || typeof value !== 'function' || 
                             !['push', 'pop', 'shift', 'unshift', 'splice'].includes(prop)) {
                                 
-                            if (value && typeof value === 'object') {
+                            // Check if value is already a Proxy by checking if it's already reactive
+                            // If value is an object but not a Proxy, wrap it
+                            if (value && typeof value === 'object' && !value[Symbol.for('isProxy')]) {
                                 const nextFullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
                                 return innerReactive(value, nextFullKey) // deep wrapping
                             }
@@ -47,6 +49,20 @@ const TemplateEngine = (function () {
                                 throw new Error(`[TemplateEngine] Error executing ${prop} on "${fullKey}": ${error.message}`)
                             } finally {
                                 isInArrayMethod = false
+                            }
+                            
+                            // Wrap newly inserted items in proxies
+                            if (prop === 'push' || prop === 'unshift' || prop === 'splice') {
+                                const startIdx = prop === 'push' ? target.length - args.length : 
+                                                prop === 'unshift' ? 0 : args[0]
+                                const itemCount = prop === 'splice' ? args.length - 2 : args.length
+                                
+                                for (let i = 0; i < itemCount; i++) {
+                                    const idx = startIdx + i
+                                    if (target[idx] && typeof target[idx] === 'object') {
+                                        target[idx] = innerReactive(target[idx], `${fullKey}.${idx}`)
+                                    }
+                                }
                             }
                             
                             const change = { fullKey, action: prop }

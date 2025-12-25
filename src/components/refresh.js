@@ -68,7 +68,8 @@ export function refresh(data, change, app) {
                 //console.log(change.fullKey)
                 const linkedNodeHolders = nodeHoldersByKeys.getByKey(change.fullKey)
                 for (const nodeHolder of linkedNodeHolders.get('holders')) {
-                    handleIfNodeRefresh(data, { wrapper: nodeHolder.wrapper, fullKey: change.fullKey, contextStack: nodeHolder.contextStack, params: nodeHolder.params, ifNode: nodeHolder.ifNode })
+                    handleIfNodeRefresh(data, { wrapper: nodeHolder.wrapper, fullKey: change.fullKey,
+                        contextStack: nodeHolder.contextStack, params: nodeHolder.params, ifNode: nodeHolder.ifNode })
                 }
 
                 break

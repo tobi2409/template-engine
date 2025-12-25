@@ -9,7 +9,12 @@ export function convertToFullKey(relativeKey, contextStack = new Map()) {
             return relativeKey
         }
 
-        return convertToFullKey(`${contextStack.get(splitted[0]).of}.${contextStack.get(splitted[0]).index}${splitted.length > 1 ? '.':''}${splitted.slice(1).join('.')}`,
+        const context = contextStack.get(splitted[0])
+        
+        // Get index from __item_index__ property on data object
+        const index = context.data.__item_index__
+
+        return convertToFullKey(`${context.of}.${index}${splitted.length > 1 ? '.':''}${splitted.slice(1).join('.')}`,
                                 contextStack)
     } catch (error) {
         throw new Error(`[TemplateEngine] Error converting to full key for "${relativeKey}": ${error.message}`)
