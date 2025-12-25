@@ -3,7 +3,7 @@
 import { nodeHoldersByKeys } from './utils/node-holders.js'
 import { resolve, resolveEx } from './utils/resolver.js'
 import { mount } from './utils/dom.js'
-import { applyAttribute, handleActionAttribute, handleBindAttribute, handleStyleOrAttrAttribute } from './default-node-attributes.js'
+import { applyAttribute, handleActionAttribute, /*handleBindAttribute,*/ handleStyleOrAttrAttribute } from './default-node-attributes.js'
 
 // Error Handling Strategy:
 // All handler methods are wrapped in a single try-catch block from start to end.
@@ -264,9 +264,9 @@ function handleDefaultNode(data, contextStack = new Map(), params = new Map(), d
 
             if (attr.name.startsWith('action-')) {
                 handleActionAttribute(cloned, attr, data, contextStack, params)
-            } else if (attr.name.startsWith('bind-')) {
+            } /*else if (attr.name.startsWith('bind-')) {
                 handleBindAttribute(cloned, attr, resolved, data, contextStack, params, dependencies)
-            } else if (attr.name.startsWith('attr-') || attr.name.startsWith('style-')) {
+            } */else if (attr.name.startsWith('attr-') || attr.name.startsWith('style-')) {
                 handleStyleOrAttrAttribute(cloned, attr, resolved)
             }
         }
@@ -284,11 +284,11 @@ export function handleDefaultNodeRefresh(data, refreshInfo) {
     try {
         const value = resolve(refreshInfo.fullKey, data)
         
-        if (refreshInfo.type === 'bind') {
+        /*if (refreshInfo.type === 'bind') {
             // update bound property (Data → UI)
             // synchronize all other UI elements bound to the same data key
             refreshInfo.node[refreshInfo.property] = value
-        } else if (refreshInfo.type === 'attribute') {
+        } else */if (refreshInfo.type === 'attribute') {
             applyAttribute(refreshInfo.node, refreshInfo.attributeName, value)
         }
     } catch (error) {

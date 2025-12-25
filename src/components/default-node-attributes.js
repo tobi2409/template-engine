@@ -36,7 +36,7 @@ export function handleActionAttribute(cloned, attr, data, contextStack, params) 
 
         // Wrap the method to pass event and context item (or data if no context)
         cloned.addEventListener(event, (e) => {
-            resolvedMethod.value(e, contextItem || data)
+            resolvedMethod.value(e, contextItem || data, contextStack)
         })
 
         cloned.removeAttribute(attr.name)
@@ -45,7 +45,7 @@ export function handleActionAttribute(cloned, attr, data, contextStack, params) 
     }
 }
 
-export function handleBindAttribute(cloned, attr, resolved, data, contextStack = new Map(), params = new Map(), dependencies = {}) {
+/*export function handleBindAttribute(cloned, attr, resolved, data, contextStack = new Map(), params = new Map(), dependencies = {}) {
     try {
         // two-way binding: bind-{event}-{property}="dataKey"
         const parts = attr.name.split('-')
@@ -61,9 +61,6 @@ export function handleBindAttribute(cloned, attr, resolved, data, contextStack =
         // elements like todos[0]) are not wrapped in Proxies, so setByPath won't trigger
         // the Proxy setter. Therefore, we manually refresh all affected NodeHolders.
         cloned.addEventListener(event, (e) => {
-            /*console.log(resolved.fullKey)
-            console.log(contextStack)
-            console.log(resolveEx(attr.value, data, contextStack, params))*/
             // Update data directly (no Proxy setter triggered for nested objects)
             setByPath(resolved.fullKey, data, e.target[property])
             
@@ -91,7 +88,7 @@ export function handleBindAttribute(cloned, attr, resolved, data, contextStack =
     } catch (error) {
         throw new Error(`[TemplateEngine] Error handling bind attribute "${attr.name}": ${error.message}`)
     }
-}
+}*/
 
 export function handleStyleOrAttrAttribute(cloned, attr, resolved) {
     try {

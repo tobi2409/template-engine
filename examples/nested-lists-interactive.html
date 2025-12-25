@@ -23,19 +23,19 @@
                     <button action-click="delete">🗑️ Delete</button>
                     
                     <if test="p.editing">
-                        <input type="text" attr-value="p.name" readonly>
+                        <input type="text" attr-value="p.name" action-input="updateName">
                     </if>
 
                     <ul>
                         <each of="p.childs" as="c">
                             <li attr-item-id="c.id" attr-parent-item-id="p.id">
+                                <b><get>watermark</get></b>
                                 <get>c.name</get> (<get>param1</get> team)
                                 <button action-click="toggleChildEdit">✏️ Edit</button>
                                 <button action-click="deleteChild">🗑️ Delete</button>
-                                <get>watermark</get>
                                 
                                 <if test="c.editing">
-                                    <input type="text" attr-value="c.name" readonly>
+                                    <input type="text" attr-value="c.name" action-input="updateChildName">
                                 </if>
                             </li>
                         </each>
@@ -89,21 +89,28 @@
                 const person = data.persons[dataElement.__item_index__]
                 person.editing = !person.editing
             },
+            updateName: (e, dataElement) => {
+                const person = data.persons[dataElement.__item_index__]
+                person.name = e.target.value
+            },
             delete: (e, dataElement) => {
                 const personIndex = data.persons[dataElement.__item_index__] ? dataElement.__item_index__ : -1
                 if (personIndex !== -1) {
                     data.persons.splice(personIndex, 1)
                 }
             },
-            toggleChildEdit: (e, dataElement) => {
-                const person = data.persons.find(p => p.id == e.target.parentElement.getAttribute('parent-item-id'))
-                console.log(person.name)
+            toggleChildEdit: (e, dataElement, contextStack) => {
+                const person = data.persons[contextStack.get('p').data.__item_index__]
                 const child = person.childs[dataElement.__item_index__]
-                console.log(child.name)
                 child.editing = !child.editing
             },
-            deleteChild: (e, dataElement) => {
-                const person = data.persons.find(p => p.id == e.target.parentElement.getAttribute('parent-item-id'))
+            updateChildName: (e, dataElement, contextStack) => {
+                const person = data.persons[contextStack.get('p').data.__item_index__]
+                const child = person.childs[dataElement.__item_index__]
+                child.name = e.target.value
+            },
+            deleteChild: (e, dataElement, contextStack) => {
+                const person = data.persons[contextStack.get('p').data.__item_index__]
                 const childIndex = dataElement.__item_index__
                 if (person && childIndex !== -1) {
                     person.childs.splice(childIndex, 1)
