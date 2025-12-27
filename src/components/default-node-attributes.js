@@ -45,50 +45,45 @@ export function handleActionAttribute(cloned, attr, data, contextStack, params) 
     }
 }
 
-/*export function handleBindAttribute(cloned, attr, resolved, data, contextStack = new Map(), params = new Map(), dependencies = {}) {
+export function handleBindAttribute(cloned, attr, resolved, data, contextStack, params, dependencies = {}) {
     try {
-        // two-way binding: bind-{event}-{property}="dataKey"
+        // Two-way binding: bind-{event}-{property}="dataKey"
         const parts = attr.name.split('-')
         const event = parts[1] // e.g., 'input'
         const property = parts[2] // e.g., 'value'
         
-        // set initial value
+        // Set initial value (Data → UI)
         cloned[property] = resolved.value
         
-        // Add event listener for data binding (UI → Data)
-        // Note: Manual refresh is required because 'data' in the closure is the original
-        // (non-proxied) data object from initial rendering. Nested objects (e.g., array
-        // elements like todos[0]) are not wrapped in Proxies, so setByPath won't trigger
-        // the Proxy setter. Therefore, we manually refresh all affected NodeHolders.
+        // Add event listener for UI → Data binding
         cloned.addEventListener(event, (e) => {
-            // Update data directly (no Proxy setter triggered for nested objects)
-            setByPath(resolved.fullKey, data, e.target[property])
+            // Resolve key dynamically using contextStack from closure
+            const currentResolved = resolveEx(attr.value, data, contextStack, params)
+            setByPath(currentResolved.fullKey, data, e.target[property])
             
-            // Manually trigger refresh for all NodeHolders of this key
-            // This ensures both <get> nodes and bound <input> elements update
-            // (e.g., updating todos.0.name refreshes both the display text and input value)
-            const linkedNodeHolders = nodeHoldersByKeys.getByKey(resolved.fullKey)
-            for (const nodeHolder of linkedNodeHolders.get('holders')) {
-                // Each NodeHolder has its own action (updateGet, updateDefault, etc.)
-                // No array-specific information needed since we're updating a property, not mutating an array
-                const change = { fullKey: resolved.fullKey, action: nodeHolder.action }
-                refresh(data, change)
+            // Manually trigger refresh for all NodeHolders
+            const linkedNodeHolders = nodeHoldersByKeys.getByKey(currentResolved.fullKey)
+            if (linkedNodeHolders) {
+                for (const nodeHolder of linkedNodeHolders.get('holders')) {
+                    const change = { fullKey: currentResolved.fullKey, action: nodeHolder.action }
+                    refresh(data, change)
+                }
             }
             
-            // Trigger refreshes for dependent keys (including nested paths)
-            const matchingDependents = findMatchingDependencies(resolved.fullKey, dependencies)
+            // Trigger dependent refreshes
+            const matchingDependents = findMatchingDependencies(currentResolved.fullKey, dependencies)
             notifyDependencies(data, matchingDependents)
         })
         
-        cloned.removeAttribute(attr.name)
-        
-        // refresh data -> UI
+        // Register NodeHolder for Data → UI refresh
         nodeHoldersByKeys.appendToKey(resolved.fullKey, 
             { action: 'updateDefault', type: 'bind', node: cloned, property: property })
+        
+        cloned.removeAttribute(attr.name)
     } catch (error) {
         throw new Error(`[TemplateEngine] Error handling bind attribute "${attr.name}": ${error.message}`)
     }
-}*/
+}
 
 export function handleStyleOrAttrAttribute(cloned, attr, resolved) {
     try {

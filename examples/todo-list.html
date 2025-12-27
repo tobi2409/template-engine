@@ -15,11 +15,11 @@
 
         <ul>
             <each of="todos" as="todo">
-                <li attr-item-id="todo.id">
+                <li>
                     <get>todo.name</get>
 
                     <if test="todo.showEdit">
-                        <input type="text" /*bind-input-value="todo.name"*/ attr-value="todo.name" placeholder="Edit task..." />
+                        <input type="text" bind-input-value="todo.name" placeholder="Edit task..." />
                     </if>
 
                     <button class="edit-button" action-click="edit">✏️ Edit</button>
@@ -40,9 +40,9 @@
 
         const data = TemplateEngine.reactive({
             todos: [
-                { id: 1, name: 'Review pull requests', showEdit: true },
-                { id: 2, name: 'Update documentation', showEdit: true },
-                { id: 3, name: 'Fix responsive layout', showEdit: true }
+                { id: 1, name: 'Review pull requests', showEdit: false },
+                { id: 2, name: 'Update documentation', showEdit: false },
+                { id: 3, name: 'Fix responsive layout', showEdit: false }
             ],
             newTodo: '',
             add: function() {
@@ -51,18 +51,17 @@
                     data.newTodo = ''
                 }
             },
-            edit: function(e) {
-                const todo = data.todos.find(t => t.id == e.target.parentElement.getAttribute('item-id'))
-                console.log(todo.name)
+            edit: function(e, dataElement) {
+                const todo = data.todos[dataElement.__item_index__]
+
                 if (todo) {
                     todo.showEdit = !todo.showEdit
                 }
             }
         }, document.getElementById('app-template-use'))
 
-        //data.todos.push({ id: 4, name: 'Plan team meeting', showEdit: true })
+        data.todos.push({ id: 4, name: 'Plan team meeting', showEdit: false })
         data.todos.splice(1, 1)
-        //data.todos[1].showEdit = false
 
     </script>
 

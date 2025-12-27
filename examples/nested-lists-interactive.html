@@ -17,25 +17,25 @@
         <h2>Team Structure</h2>
         <ul>
             <each of="persons" as="p">
-                <li attr-item-id="p.id">
+                <li>
                     <strong><get>p.name</get></strong> - <get>p.role</get>
                     <button action-click="toggleEdit">✏️ Edit</button>
                     <button action-click="delete">🗑️ Delete</button>
                     
                     <if test="p.editing">
-                        <input type="text" attr-value="p.name" action-input="updateName">
+                        <input type="text" bind-input-value="p.name">
                     </if>
 
                     <ul>
                         <each of="p.childs" as="c">
-                            <li attr-item-id="c.id" attr-parent-item-id="p.id">
+                            <li>
                                 <b><get>watermark</get></b>
                                 <get>c.name</get> (<get>param1</get> team)
                                 <button action-click="toggleChildEdit">✏️ Edit</button>
                                 <button action-click="deleteChild">🗑️ Delete</button>
                                 
                                 <if test="c.editing">
-                                    <input type="text" attr-value="c.name" action-input="updateChildName">
+                                    <input type="text" bind-input-value="c.name">
                                 </if>
                             </li>
                         </each>
@@ -84,14 +84,8 @@
                 }]
             }],
             toggleEdit: (e, dataElement) => {
-                //const person = data.persons.find(p => p.__item_index__ == dataElement.__item_index__)
-                //console.log(person)
                 const person = data.persons[dataElement.__item_index__]
                 person.editing = !person.editing
-            },
-            updateName: (e, dataElement) => {
-                const person = data.persons[dataElement.__item_index__]
-                person.name = e.target.value
             },
             delete: (e, dataElement) => {
                 const personIndex = data.persons[dataElement.__item_index__] ? dataElement.__item_index__ : -1
@@ -103,11 +97,6 @@
                 const person = data.persons[contextStack.get('p').data.__item_index__]
                 const child = person.childs[dataElement.__item_index__]
                 child.editing = !child.editing
-            },
-            updateChildName: (e, dataElement, contextStack) => {
-                const person = data.persons[contextStack.get('p').data.__item_index__]
-                const child = person.childs[dataElement.__item_index__]
-                child.name = e.target.value
             },
             deleteChild: (e, dataElement, contextStack) => {
                 const person = data.persons[contextStack.get('p').data.__item_index__]
