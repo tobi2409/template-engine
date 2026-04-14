@@ -15,6 +15,7 @@
         <p>Department: <get>param1</get></p>
 
         <h2>Team Structure</h2>
+
         <ul>
             <each of="persons" as="p">
                 <li>
@@ -113,10 +114,10 @@
         data.persons[0].childs.splice(1, 0, { id: 4, name: 'Jamie Torres - DevOps Engineer', editing: false, childs: [] })
         data.persons.splice(1, 0, { id: 2, name: 'Riley Cooper', role: 'QA Lead', editing: false,
                                 childs: [{ id: 1, name: 'Casey Morgan - QA Engineer', editing: false, childs: [] }] })
+        data.persons[0].childs.splice(0, 1)
         data.watermark = 'Top Secret'
 
         console.log('Organization data:', data)
-        //console.log(data.persons[0] === data.persons[0])
     </script>
 
 </body>

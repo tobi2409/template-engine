@@ -9,29 +9,11 @@ export function convertToFullKey(relativeKey, contextStack = new Map()) {
             return relativeKey
         }
 
-        // Build full key by iterating through contextStack (preserves insertion order)
-        let fullKey = ''
-        
-        // Iterate through all contexts up to and including the target
-        for (const [key, context] of contextStack.entries()) {
-            const index = context.data.__item_index__
-            fullKey += `${context.prop}.${index}`
-            
-            // Stop when we reach the target context
-            if (key === splitted[0]) {
-                break
-            }
-            
-            // Add dot separator for next context
-            fullKey += '.'
-        }
-        
-        // Add remaining relative path (properties after the context variable)
-        if (splitted.length > 1) {
-            fullKey += '.' + splitted.slice(1).join('.')
-        }
-        //console.log(fullKey)        
-        return fullKey
+        const context = contextStack.get(splitted[0])
+        const index = context.data.__item_index__
+
+        return convertToFullKey(`${context.fullKey}.${index}${splitted.length > 1 ? '.' : ''}${splitted.slice(1).join('.')}`,
+                                contextStack)
     } catch (error) {
         throw new Error(`[TemplateEngine] Error converting to full key for "${relativeKey}": ${error.message}`)
     }

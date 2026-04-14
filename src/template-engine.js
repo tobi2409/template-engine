@@ -16,6 +16,11 @@ const TemplateEngine = (function () {
 
             const topData = data
 
+            // TODO: Proxy caching (WeakMap or __proxy__ + Symbol) to prevent stale fullKey paths
+            // after splice/reorder operations. Currently, the same raw object can be wrapped by
+            // multiple proxy instances with different (frozen) fullKey closures, causing redundant
+            // set-trap calls (e.g., both "persons.0.childs.2.editing" and "persons.0.childs.3.editing").
+            // Functionally correct, but produces duplicate refresh calls for affected nodes.
             function innerReactive(data, fullKey = '') {
                 let isInArrayMethod = false
                 
@@ -77,7 +82,6 @@ const TemplateEngine = (function () {
                                 // Check if there are NodeHolders or dependencies for this array
                                 const linkedNodeHolders = nodeHoldersByKeys.getByKey(fullKey)
                                 const matchingDependents = findMatchingDependencies(fullKey, dependencies)
-                                //console.log(target[prop])
                                 // Only refresh if array is used in template or has dependencies
                                 if (linkedNodeHolders && linkedNodeHolders.get('holders')?.length > 0) {
                                     refresh(topData, change)
@@ -99,6 +103,7 @@ const TemplateEngine = (function () {
 
                         if (prop !== 'length' && !isInArrayMethod) {
                             const nextFullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
+                            console.log(nextFullKey)
                             // Determine action based on registered NodeHolders
                             // [0] is sufficient since typically all holders for the same key have the same action
                             // (e.g., all <get>data.name</get> have 'updateGet', all <if test="data.flag"> have 'updateIf')

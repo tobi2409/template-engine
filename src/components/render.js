@@ -45,6 +45,7 @@ export function handleGetNode(data, contextStack = new Map(), params = new Map()
 
 export function handleGetNodeRefresh(data, refreshInfo) {
     try {
+        //console.log(refreshInfo.fullKey)
         refreshInfo.existingNode.innerText = resolve(refreshInfo.fullKey, data)
     } catch (error) {
         throw new Error(`[TemplateEngine] Error in handleGetNodeRefresh: ${error.message}`)
@@ -90,13 +91,10 @@ export function handleEachNode(data, contextStack = new Map(), params = new Map(
             // Set hidden __item_index__ property on item for dynamic index tracking
             listElement.__item_index__ = index
             
-            // Extract only the last property name (e.g., "childs" from "p.childs")
-            const propName = ofAttribute.split('.').pop()
-            
             const childContextStack = new Map(contextStack)
             childContextStack.set(asAttribute, { 
                 data: listElement,  // Store item reference with __item_index__
-                prop: propName  // Only the immediate property name (e.g., "childs")
+                fullKey: resolvedOf.fullKey
             })
             // walk() appends nodes to fragment sequentially (no insertBeforeAnchor needed inside fragment)
             // when walk() recursively processes child nodes, each child becomes a new container
@@ -185,9 +183,9 @@ export function handleIfNode(data, contextStack = new Map(), params = new Map(),
     try {
         const test = ifNode.getAttribute('test')
         const resolvedTest = resolveEx(test, data, contextStack, params)
-
+        
         if (typeof resolvedTest.value !== 'boolean') {
-            throw new Error('[TemplateEngine] if-test must resolve to a boolean')
+            throw new Error(`[TemplateEngine] if-test must resolve to a boolean in ${test} (full-key: ${resolvedTest.fullKey}) but got ${typeof resolvedTest.value}`)
         }
 
         const wrapperTag = ifNode.getAttribute('wrapper') || 'div'
@@ -213,7 +211,6 @@ export function handleIfNode(data, contextStack = new Map(), params = new Map(),
 
 export function handleIfNodeRefresh(data, refreshInfo) {
     try {
-        console.log(refreshInfo.contextStack)
         const wrapper = refreshInfo.wrapper
 
         if (!wrapper) {
@@ -361,6 +358,4 @@ export function run(data, templateUseNode, dependencies = {}) {
     } catch (error) {
         throw new Error(`[TemplateEngine] Error during initial rendering: ${error.message}`)
     }
-
-    //console.log(nodeHoldersByKeys)
 }
