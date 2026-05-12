@@ -1,38 +1,39 @@
 // Mapped Array Utility: Create bidirectional array mappings for MVVM pattern
 
-export function createMappedArray(source, transform, writableProps = {}, reverseTransform = (x) => x, cachedProps = {}, options = {}) {
-    const { idProperty = 'id' } = options
-    
-    const arr = source.map((item, index) => {
-        const result = transform(item, index)
-        
-        // Add getter/setter for writable properties
-        for (const [prop, sourceProp] of Object.entries(writableProps)) {
-            delete result[prop]
+// Keep one mapped result object per source item (singleton per item).
+// This preserves object identity across repeated createMappedArray() calls,
+// which is required so context references/index tracking stay consistent
+// after array operations like splice/reindex.
+const mappedItemCache = new WeakMap()
 
-            Object.defineProperty(result, prop, {
-                get: () => {
-                    const targetItem = source.find(s => s[idProperty] === item[idProperty])
-                    return targetItem ? targetItem[sourceProp] : undefined
-                },
-                set: (v) => {
-                    const targetItem = source.find(s => s[idProperty] === item[idProperty])
-                    if (targetItem) targetItem[sourceProp] = v
-                }
-            })
+export function createMappedArray(source, transform, writableProps = {}, reverseTransform = (x) => x) {
+    // writableProps: Maps ViewModel properties to Model properties for bidirectional sync.
+    // When a writable property changes, reverseTransform is applied and the result
+    // is written back to the corresponding source property.
+
+    const arr = source.map((item, index) => {
+        // Reuse previously mapped result (singleton) or create it once.
+        let result = mappedItemCache.get(item)
+
+        if (!result) {
+            result = transform(item, index)
+            mappedItemCache.set(item, result)
+
+            // Add setter for writable properties to sync back to source
+            for (const [prop, sourceProp] of Object.entries(writableProps)) {
+                let internalValue = result[prop]
+                Object.defineProperty(result, prop, {
+                    get: () => internalValue,
+                    set: (v) => {
+                        internalValue = v
+                        const transformed = reverseTransform(result)
+                        item[sourceProp] = transformed[sourceProp]
+                    },
+                    configurable: true
+                })
+            }
         }
-        
-        // Add getter/setter for cached properties (UI state)
-        for (const [prop, cache] of Object.entries(cachedProps)) {
-            const itemId = item.id
-            const defaultValue = result[prop] !== undefined ? result[prop] : false
-            delete result[prop]
-            Object.defineProperty(result, prop, {
-                get: () => cache[itemId] !== undefined ? cache[itemId] : defaultValue,
-                set: (v) => { cache[itemId] = v },
-            })
-        }
-        
+
         return result
     })
     

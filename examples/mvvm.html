@@ -62,8 +62,6 @@
         }
 
         const viewModel = TemplateEngine.reactive({
-            _editStates: {},
-
             set firstName(value) {
                 model.firstName = value
             },
@@ -109,14 +107,12 @@
                         age: new Date().getFullYear() - p.birthyear,
                         showEdit: false
                     }),
-                    { name: 'name' },
+                    { name: 'name', age: 'birthyear' },
                     (item) => ({
                         id: item.id,
                         name: item.name,
                         birthyear: item.birthyear || (new Date().getFullYear() - item.age)
-                    }),
-                    { showEdit: this._editStates },
-                    { idProperty: 'id' }
+                    })
                 )
             },
 

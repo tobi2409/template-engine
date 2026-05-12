@@ -103,7 +103,7 @@ const TemplateEngine = (function () {
 
                         if (prop !== 'length' && !isInArrayMethod) {
                             const nextFullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
-                            console.log(nextFullKey)
+                            //console.log(nextFullKey)
                             // Determine action based on registered NodeHolders
                             // [0] is sufficient since typically all holders for the same key have the same action
                             // (e.g., all <get>data.name</get> have 'updateGet', all <if test="data.flag"> have 'updateIf')
