@@ -165,8 +165,6 @@ ModeProxy-based Reactivity**: Automatic change detection using JavaScript Proxie
 - **Node Holders**: Map data keys to DOM nodes for efficient updates
 - **Optimized Array Handlers**: Separate handlers for each array method (`push`, `pop`, etc.)
 
-MIT
-
 ## Contributing
 
 This is a personal project currently under development. Feedback welcome!
