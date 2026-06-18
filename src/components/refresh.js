@@ -85,6 +85,8 @@ export function refresh(data, change, app) {
 
                 break
             }
+            default:
+                throw new Error(`[TemplateEngine] Unsupported refresh action: "${change.action}"`)
         }
     } catch (error) {
         throw new Error(`[TemplateEngine] Error handling refresh for "${change.fullKey}" with action "${change.action}": ${error.message}`)
