@@ -2,7 +2,7 @@
 
 import { nodeHoldersByKeys } from './components/utils/node-holders.js'
 import { run } from './components/render.js'
-import { refresh } from './components/refresh.js'
+import { refresh } from './components/refresh-delegator.js'
 import { notifyDependencies, findMatchingDependencies } from './components/utils/notifier.js'
 
 const TemplateEngine = (function () {

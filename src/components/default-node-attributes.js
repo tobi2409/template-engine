@@ -2,7 +2,7 @@
 
 import { nodeHoldersByKeys } from './utils/node-holders.js'
 import { resolveEx, setByPath } from './utils/resolver.js'
-import { refresh } from './refresh.js'
+import { refresh } from './refresh-delegator.js'
 import { notifyDependencies, findMatchingDependencies } from './utils/notifier.js'
 
 // Helper function to apply attribute value to DOM element

@@ -1,6 +1,6 @@
 // Notify dependent nodes
 
-import { refresh } from '../refresh.js'
+import { refresh } from '../refresh-delegator.js'
 import { nodeHoldersByKeys } from './node-holders.js'
 
 // Find all dependency keys that match the changed fullKey

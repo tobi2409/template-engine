@@ -83,9 +83,10 @@
                 }
             ]
         }, document.getElementById('app-template-use'))
-
+        
+        data.folders[0].children.splice(1, 1)
         data.folders[1].children.splice(1, 0, { id: 23, name: 'summary.docx', hasChildren: false, expanded: false, expandIcon: ' ', children: [] })
-
+        
         function findFolder(folders, id) {
             for (const folder of folders) {
                 if (folder.id == id) return folder
@@ -108,6 +109,7 @@
             folder.expanded = !folder.expanded
             folder.expandIcon = folder.expanded ? '▼' : '▶'
         })
+
     </script>
 
 </body>

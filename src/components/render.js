@@ -26,12 +26,12 @@ function handleTextNode(textNode, mountNode, insertBeforeAnchor = undefined) {
 // getNode only contains key, nothing more -> no walk anymore
 export function handleGetNode(data, contextStack = new Map(), params = new Map(), getNode, mountNode, insertBeforeAnchor = undefined, dependencies = {}) {
     try {
-        const key = getNode.innerText
+        const key = getNode.textContent
         const resolved = resolveEx(key, data, contextStack, params)
 
         const resolvedTextSpan = document.createElement('span')
         resolvedTextSpan.classList.add('get-resolved')
-        resolvedTextSpan.innerText = resolved.value
+        resolvedTextSpan.textContent = resolved.value
 
         mount(resolvedTextSpan, mountNode, insertBeforeAnchor)
         
@@ -45,8 +45,7 @@ export function handleGetNode(data, contextStack = new Map(), params = new Map()
 
 export function handleGetNodeRefresh(data, refreshInfo) {
     try {
-        //console.log(refreshInfo.fullKey)
-        refreshInfo.existingNode.innerText = resolve(refreshInfo.fullKey, data)
+        refreshInfo.existingNode.textContent = resolve(refreshInfo.fullKey, data)
     } catch (error) {
         throw new Error(`[TemplateEngine] Error in handleGetNodeRefresh: ${error.message}`)
     }
@@ -252,7 +251,7 @@ function handleTemplateUse(data, contextStack = new Map(), params = new Map(), t
     }
 }
 
-function handleDefaultNode(data, contextStack = new Map(), params = new Map(), defaultNode, mountNode, insertBeforeAnchor = undefined, dependencies = {}) {
+export function handleDefaultNode(data, contextStack = new Map(), params = new Map(), defaultNode, mountNode, insertBeforeAnchor = undefined, dependencies = {}) {
     try {
         const cloned = defaultNode.cloneNode(false)
 
