@@ -1,174 +1,189 @@
 # TemplateEngine
 
-A lightweight, vanilla JavaScript template engine with declarative syntax and efficient reactive updates.
+A lightweight, vanilla JavaScript template engine with declarative HTML tags and reactive DOM updates.
 
 ## Features
 
-- **Declarative Templates**: Use custom HTML tags (`<GET>`, `<EACH>`) for data binding
-- **Reactive Updates**: Granular DOM updates without full re-rendering
-- **Context-Aware**: Nested scopes with context stacks for clean data access
-- **Smart Insertion**: Insert elements at specific positions (middle, end) during refresh
-- **Zero Dependencies**: Pure vanilla JavaScript, no external libraries
+- Declarative templates with custom tags: `<get>`, `<each>`, `<if>`, `<template-use>`
+- Reactive updates without full re-rendering
+- Dependency-based refresh chaining (`dependencies` map)
+- Efficient key-to-node tracking via internal node holders
+- Nested context support for scoped access inside loops
+- Array update support: `push`, `pop`, `shift`, `unshift`, `splice`
+- Optional view-model helper: `createMappedArray(...)`
 
 ## Installation
 
-```javascript
+```js
 import TemplateEngine from './template-engine.js'
 ```
 
 ## Quick Start
 
-### 1. Define Your Template
+### 1) Define a `<template>`
 
 ```html
 <template id="user-template">
   <div class="user">
-    <h2><GET>name</GET></h2>
-    <p>Email: <GET>email</GET></p>
-    
+    <h2><get>name</get></h2>
+    <p>Email: <get>email</get></p>
+
     <h3>Posts</h3>
-    <EACH of="posts" as="post">
+    <each of="posts" as="post">
       <div class="post">
-        <strong><GET>post.title</GET></strong>
-        <p><GET>post.content</GET></p>
+        <strong><get>post.title</get></strong>
+        <p><get>post.content</get></p>
       </div>
-    </EACH>
+    </each>
   </div>
 </template>
 
 <div id="mount-point"></div>
-
 <template-use template-id="user-template" mount-id="mount-point"></template-use>
 ```
 
-### 2. Initialize with Reactive Data
+### 2) Initialize reactivity
 
-```javascript
+```js
 const templateUse = document.querySelector('template-use')
 
-const data = TemplateEngine.reactive({
-  name: 'Alice',
-  email: 'alice@example.com',
-  posts: [
-    { title: 'First Post', content: 'Hello World!' },
-    { title: 'Second Post', content: 'Learning TemplateEngine' }
-  ]
-}, templateUse)
+const data = TemplateEngine.reactive(
+  {
+    name: 'Alice',
+    email: 'alice@example.com',
+    posts: [
+      { title: 'First Post', content: 'Hello World!' },
+      { title: 'Second Post', content: 'Learning TemplateEngine' }
+    ]
+  },
+  templateUse
+)
 ```
 
-### 3. Update Reactively
+### 3) Update data
 
-The template automatically updates when you modify the data:
-
-```javascript
-// Update a single value
+```js
 data.name = 'Alice Smith'
-
-// Add an item to a list
 data.posts.push({ title: 'Third Post', content: 'Advanced features!' })
-
-// Insert item at specific position
 data.posts.splice(1, 0, { title: 'Inserted Post', content: 'In the middle!' })
-
-// Remove last item
-data.posts.pop()
-
-// Remove first item
-data.posts.shift()
-
-// Add item at the beginning
-data.posts.unshift({ title: 'New First Post', content: 'At the top!' })
 ```
-
-## API Reference
-
-### `TemplateEngine.reactive(data, templateUseNode)`
-
-Creates a reactive proxy around your data that automatically updates the DOM when data changes.
-
-- **`data`**: Object containing the data to render
-- **`templateUseNode`**: The `<template-use>` element
-- **Returns**: Proxied data object
-
-**Supported Array Methods:**
-- `push()` - Add items to the end
-- `pop()` - Remove last item
-- `shift()` - Remove first item
-- `unshift()` - Add items to the beginning
-- `splice()` - Insert/remove items at any position
 
 ## Template Syntax
 
-### `<GET>key</GET>`
+### `<get>key</get>`
 
-Display a value from the data object.
-
-```html
-<GET>user.name</GET>
-```
-
-### `<EACH of="array" as="item">`
-
-Iterate over an array.
+Renders a value from data/context.
 
 ```html
-<EACH of="users" as="user">
-  <div><GET>user.name</GET></div>
-</EACH>
+<get>user.name</get>
 ```
 
-**Nested iteration:**
-```html
-<EACH of="categories" as="category">
-  <h2><GET>category.name</GET></h2>
-  <EACH of="category.items" as="item">
-    <span><GET>item.label</GET></span>
-  </EACH>
-</EACH>
-```
+### `<each of="array" as="item">...</each>`
 
-## Advanced Features
-
-### Negative Indices
-
-Use Automatic Reactivity
-
-All data mutations are automatically tracked:
-- Property updates (`data.name = 'Bob'`)
-- Array mutations (`push`, `pop`, `shift`, `unshift`, `splice`)
-- Nested object changes (`data.user.address.city = 'Berlin'`) Template Parameters
-
-Pass parameters via `data-*` attributes:
+Loops over an array.
 
 ```html
-<template-use 
-  template-id="card-template" 
-  mount-id="output"
-  data-theme="dark"
-  data-size="large">
-</template-use>
+<each of="users" as="user">
+  <div><get>user.name</get></div>
+</each>
 ```
 
-Access in template logic (currently internal).
+### `<if test="expr">...</if>`
 
-## Architecture
+Conditionally renders content.
 
-- **Context Stacks**: Track nested scopes during iteration
-- **Node Holders**: Map data keys to DOM nodes for efficient updates
-- **Insertion Anchors**: Enable mid-list DOM insertion without full re-render
-- **Recursive Walk**: Process template nodes depth-first
+```html
+<if test="isVisible">
+  <span>Visible content</span>
+</if>
+```
 
-## Browser Support
+### `<template-use ...></template-use>`
 
-ModeProxy-based Reactivity**: Automatic change detection using JavaScript Proxies
-- **Context Stacks**: Track nested scopes during iteration
-- **Node Holders**: Map data keys to DOM nodes for efficient updates
-- **Optimized Array Handlers**: Separate handlers for each array method (`push`, `pop`, etc.)
+Mounts a `<template>` by ID.
 
-## Contributing
+```html
+<template-use template-id="user-template" mount-id="mount-point"></template-use>
+```
 
-This is a personal project currently under development. Feedback welcome!
+## API
 
----
+### `TemplateEngine.reactive(data, templateUseNode, dependencies?)`
 
-**Status**: Active development — API may change
+Creates a reactive proxy around `data` and binds updates to DOM nodes generated from the referenced `<template>`.
+
+- `data`: source model object
+- `templateUseNode`: `<template-use>` element
+- `dependencies` (optional): dependency map for related refresh triggers
+
+Returns: reactive proxy object
+
+## Dependencies
+
+Use the optional `dependencies` map when one property affects other derived properties.
+
+```js
+const raw = { firstName: 'Alice', lastName: 'Smith' }
+
+const data = TemplateEngine.reactive(
+  {
+    get firstName() { return raw.firstName },
+    set firstName(v) { raw.firstName = v },
+    get fullName() { return `${raw.firstName} ${raw.lastName}` }
+  },
+  document.querySelector('template-use'),
+  {
+    firstName: ['fullName']
+  }
+)
+
+data.firstName = 'Bob' // triggers refresh for firstName and fullName
+```
+
+Why this matters:
+
+- Keeps derived values in sync without manual DOM handling.
+- Makes reactive chains explicit and maintainable.
+- Works well for computed/display-only fields.
+
+## Mapped Array
+
+`createMappedArray(...)` helps you build a mapped view-model array while keeping synchronization with the source array.
+
+```js
+import { createMappedArray } from './src/mapped-array.js'
+
+const source = [{ name: 'Alice', birthyear: 1995 }]
+
+const vm = createMappedArray(
+  source,
+  (item) => ({
+    label: item.name,
+    age: new Date().getFullYear() - item.birthyear
+  }),
+  { age: 'birthyear' },
+  (result) => ({
+    birthyear: new Date().getFullYear() - result.age,
+    name: result.label
+  })
+)
+
+vm[0].age = 25 // writes back to source[0].birthyear
+```
+
+Notes:
+
+- Keeps stable mapped object identity per source item (internal cache).
+- Supports `push`, `pop`, `shift`, `unshift`, `splice` via source synchronization.
+
+## Development
+
+Run tests:
+
+```bash
+npm test
+```
+
+## Status
+
+Active development — API may evolve.
