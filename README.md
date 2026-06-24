@@ -18,6 +18,17 @@ A lightweight, vanilla JavaScript template engine with declarative HTML tags and
 import TemplateEngine from './template-engine.js'
 ```
 
+## Examples (start here)
+
+Browse the live demo files in the [GitHub repository](https://github.com/tobi2409/template-engine/tree/main/examples).
+
+> The examples use local file paths and are intended to be run directly from the cloned repository. To try them out, clone the repo and open the HTML files in a browser:
+>
+> ```bash
+> git clone https://github.com/tobi2409/template-engine.git
+> cd template-engine
+> ```
+
 ## Quick Start
 
 ### 1) Define a `<template>`
