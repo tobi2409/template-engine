@@ -86,3 +86,5 @@ export function createMappedArray(source, transform, writableProps = {}, reverse
     
     return arr
 }
+
+export default createMappedArray

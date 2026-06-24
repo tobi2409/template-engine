@@ -1,6 +1,6 @@
 {
     "name": "@tobi2409/template-engine",
-    "version": "0.9.0",
+    "version": "0.9.1",
     "description": "Lightweight MVVM template engine with declarative HTML tags, reactive dependency mapping, and mapped-array support",
     "license": "MIT",
     "type": "module",
