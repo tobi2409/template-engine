@@ -1,6 +1,6 @@
 // Key Resolution: Conversion and dereferencing of keys
 
-import { getItemIndex } from './item-index.js'
+import { getItemByUuid, getUuidByItem } from "./uuid-item-map.js"
 
 export function convertToFullKey(relativeKey, contextStack = new Map()) {
     try {
@@ -12,7 +12,7 @@ export function convertToFullKey(relativeKey, contextStack = new Map()) {
         }
 
         const context = contextStack.get(splitted[0])
-        const index = getItemIndex(context.data)
+        const index = getUuidByItem(context.data)
 
         if (index === undefined) {
             throw new Error(`[TemplateEngine] Cannot resolve relative key "${relativeKey}": item index missing for context "${splitted[0]}"`)
@@ -50,12 +50,18 @@ export function resolve(key, data, params = new Map()) {
             }
 
             try {
+                if (segment.startsWith('__uuid__')) {
+                    value = getItemByUuid(segment)
+                    continue
+                }
+
                 value = value[segment]
             } catch (error) {
                 // console.warn because not all data needs to be rendered and present in NodeHolders
                 console.warn(`[TemplateEngine] Error resolving key segment "${segment}": ${error.message}`)
             }
         }
+        
 
         return value
     } catch (error) {

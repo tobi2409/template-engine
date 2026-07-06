@@ -84,9 +84,10 @@
                     childs: []
                 }]
             }],
-            toggleEdit: (e, dataElement) => {
-                const person = data.persons[dataElement.__item_index__]
-                person.editing = !person.editing
+            toggleEdit: (e, dataElement, dataElementUuid) => {
+                console.log(getItemByUuid(dataElementUuid))
+                /*const person = data.persons.find((p) => getUuidByItem(p) === dataElementUuid)*/
+                //dataElement.editing = !dataElement.editing
             },
             delete: (e, dataElement) => {
                 const personIndex = data.persons[dataElement.__item_index__] ? dataElement.__item_index__ : -1
@@ -116,6 +117,7 @@
                                 childs: [{ id: 1, name: 'Casey Morgan - QA Engineer', editing: false, childs: [] }] })
         data.persons[0].childs.splice(0, 1)
         data.watermark = 'Top Secret'
+        data.persons[0].childs[1].name = 'Jordan Kim (Updated) - Frontend Developer'
 
         console.log('Organization data:', data)
     </script>

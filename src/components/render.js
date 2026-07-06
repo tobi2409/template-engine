@@ -1,10 +1,10 @@
 // Render Component: Initial template rendering
 
 import { nodeHoldersByKeys } from './utils/node-holders.js'
-import { setItemIndex } from './utils/item-index.js'
 import { resolve, resolveEx } from './utils/resolver.js'
 import { mount } from './utils/dom.js'
 import { applyAttribute, handleActionAttribute, handleBindAttribute, handleStyleOrAttrAttribute } from './default-node-attributes.js'
+import { setItemByUuid, setUuidByItem } from './utils/uuid-item-map.js'
 
 // Error Handling Strategy:
 // All handler methods are wrapped in a single try-catch block from start to end.
@@ -87,9 +87,10 @@ export function handleEachNode(data, contextStack = new Map(), params = new Map(
 
         for (let index = _startIndex ; index <= _endIndex ; index++) {
             const listElement = list[index]
-            
-            // Track item index via WeakMap instead of mutating the item
-            setItemIndex(listElement, index)
+
+            const uuid = `__uuid__${crypto.randomUUID()}`
+            setItemByUuid(uuid, listElement)
+            setUuidByItem(listElement, uuid)
             
             const childContextStack = new Map(contextStack)
             childContextStack.set(asAttribute, { 
@@ -112,26 +113,6 @@ export function handleEachNode(data, contextStack = new Map(), params = new Map(
     }
 }
 
-function reindexArrayMap(arrayMap, startIndex, shift, maxIndex) {
-    // Shift indices by 'shift' positions
-    // shift > 0: backward (to avoid overwriting)
-    // shift < 0: forward
-    if (shift === 0) return
-    
-    const start = shift > 0 ? maxIndex : startIndex
-    const end = shift > 0 ? startIndex : maxIndex
-    const step = shift > 0 ? -1 : 1
-    
-    for (let i = start; shift > 0 ? i >= end : i <= end; i += step) {
-        const oldIndex = String(i)
-        const newIndex = String(i + shift)
-        if (arrayMap.has(oldIndex)) {
-            arrayMap.set(newIndex, arrayMap.get(oldIndex))
-            arrayMap.delete(oldIndex)
-        }
-    }
-}
-
 export function handleEachNodeRefresh(data, refreshInfo) {
     try {
         const linkedNodeHolders = nodeHoldersByKeys.getByKey(refreshInfo.fullKey)
@@ -140,22 +121,6 @@ export function handleEachNodeRefresh(data, refreshInfo) {
         // delete NodeHolder keys
         for (let i = 0; i < deleteCount; i++) {
             linkedNodeHolders.delete(String(deleteStartIndex + i))
-        }
-        
-        // shift NodeHolder keys
-        if (reindexShift !== 0) {
-            reindexArrayMap(linkedNodeHolders, reindexStartIndex, reindexShift, reindexMaxIndex)
-        }
-        
-        const array = resolve(refreshInfo.fullKey, data)
-        if (Array.isArray(array)) {
-            // Item indices are tracked in WeakMap (instead of mutating items with __item_index__).
-            // Re-index only from the affected mutation/reindex position, not from 0.
-            const startIndex = refreshInfo.reindexStartIndex ?? refreshInfo.insertStartIndex ?? 0
-
-            for (let i = startIndex; i < array.length; i++) {
-                setItemIndex(array[i], i)
-            }
         }
         
         for (const nodeHolder of linkedNodeHolders.get('holders')) {

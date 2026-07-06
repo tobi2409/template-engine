@@ -4,6 +4,7 @@ import { nodeHoldersByKeys } from './utils/node-holders.js'
 import { resolveEx, setByPath } from './utils/resolver.js'
 import { refresh } from './refresh-delegator.js'
 import { notifyDependencies, findMatchingDependencies } from './utils/notifier.js'
+import { getUuidByItem, getItemByUuid } from './utils/uuid-item-map.js'
 
 // Helper function to apply attribute value to DOM element
 export function applyAttribute(node, attrName, value) {
@@ -34,9 +35,11 @@ export function handleActionAttribute(cloned, attr, data, contextStack, params) 
             }
         }
 
+        const contextUuid = contextItem ? getUuidByItem(contextItem) : undefined
+
         // Wrap the method to pass event and context item (or data if no context)
         cloned.addEventListener(event, (e) => {
-            resolvedMethod.value(e, contextItem || data, contextStack)
+            resolvedMethod.value(e, contextItem || data, contextUuid, contextStack)
         })
 
         cloned.removeAttribute(attr.name)

@@ -4,6 +4,7 @@ import { nodeHoldersByKeys } from './components/utils/node-holders.js'
 import { run } from './components/render.js'
 import { refresh } from './components/refresh-delegator.js'
 import { notifyDependencies, findMatchingDependencies } from './components/utils/notifier.js'
+import { setItemByUuid, setUuidByItem, getUuidByItem } from './components/utils/uuid-item-map.js'
 
 const TemplateEngine = (function () {
     return {
@@ -33,13 +34,19 @@ const TemplateEngine = (function () {
                             !['push', 'pop', 'shift', 'unshift', 'splice'].includes(prop)) {
                                 
                             if (value && typeof value === 'object') {
-                                const nextFullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
+                                let nextProp = prop
+
+                                if (Array.isArray(target) && typeof prop !== 'symbol' && /^\d+$/.test(String(prop))) {
+                                    nextProp = getUuidByItem(target[prop])
+                                }
+
+                                const nextFullKey = fullKey ? `${fullKey}.${nextProp}` : String(nextProp)
                                 return innerReactive(value, nextFullKey) // deep wrapping
                             }
 
                             return value
                         }
-
+                        
                         // intercept array methods
                         return function(...args) {
                             isInArrayMethod = true
@@ -54,20 +61,6 @@ const TemplateEngine = (function () {
                                 isInArrayMethod = false
                             }
                             
-                            // Wrap newly inserted items in proxies
-                            /*if (prop === 'push' || prop === 'unshift' || prop === 'splice') {
-                                const startIdx = prop === 'push' ? target.length - args.length : 
-                                                prop === 'unshift' ? 0 : args[0]
-                                const itemCount = prop === 'splice' ? args.length - 2 : args.length
-                                
-                                for (let i = 0; i < itemCount; i++) {
-                                    const idx = startIdx + i
-                                    if (target[idx] && typeof target[idx] === 'object') {
-                                        target[idx] = innerReactive(target[idx], `${fullKey}.${idx}`)
-                                    }
-                                }
-                            }*/
-                            
                             const change = { fullKey, action: prop }
                             
                             if (prop === 'push' || prop === 'unshift') {
@@ -80,7 +73,10 @@ const TemplateEngine = (function () {
 
                             if (['push', 'unshift', 'splice'].includes(prop) && change.items) {
                                 for (let i = 0; i < change.items.length; i++) {
-                                    const uuid = crypto.randomUUID()
+                                    const uuid = `__uuid__${crypto.randomUUID()}`
+                                    setItemByUuid(uuid, change.items[i])
+                                    //console.log(innerReactive(change.items[i]))
+                                    setUuidByItem(change.items[i], uuid)
                                 }
                             }
                             
@@ -109,6 +105,7 @@ const TemplateEngine = (function () {
 
                         if (prop !== 'length' && !isInArrayMethod) {
                             const nextFullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
+                            //console.log(nextFullKey)
                             //console.log(nextFullKey)
                             // Determine action based on registered NodeHolders
                             // [0] is sufficient since typically all holders for the same key have the same action
