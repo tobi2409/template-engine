@@ -77,6 +77,12 @@ const TemplateEngine = (function () {
                                 change.deleteCount = args[1] || 0
                                 change.items = args.slice(2)
                             }
+
+                            if (['push', 'unshift', 'splice'].includes(prop) && change.items) {
+                                for (let i = 0; i < change.items.length; i++) {
+                                    const uuid = crypto.randomUUID()
+                                }
+                            }
                             
                             try {
                                 // Check if there are NodeHolders or dependencies for this array

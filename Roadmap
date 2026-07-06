@@ -1,1 +1,10 @@
+Also kann man so vorgehen?
+Reindexing für NodeHolders und Array entfernen.
+Der Entwickler fügt ein Item ins Array ein/hinzu. Der Proxy berechnet eine UUID und fügt diese als Key mit dem Index in eine HashMap hinzu. item-index und NodeHolders setzen auf UUID statt auf index.
+Beim Update eines Array-Items wird dieses Item von item-index gefetcht.
+
+In contextStack und Array-Element ebenfalls UUID aufnehmen, sodass auf die WeakMap komplett verzichtet werden kann und nur noch UUID - Element gemappt werden braucht.
+
+
+
 1. NodeHolder cleanup on data-element removal
