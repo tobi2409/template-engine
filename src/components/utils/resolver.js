@@ -1,5 +1,7 @@
 // Key Resolution: Conversion and dereferencing of keys
 
+import { getItemIndex } from './item-index.js'
+
 export function convertToFullKey(relativeKey, contextStack = new Map()) {
     try {
         const splitted = relativeKey.split('.')
@@ -10,7 +12,11 @@ export function convertToFullKey(relativeKey, contextStack = new Map()) {
         }
 
         const context = contextStack.get(splitted[0])
-        const index = context.data.__item_index__
+        const index = getItemIndex(context.data)
+
+        if (index === undefined) {
+            throw new Error(`[TemplateEngine] Cannot resolve relative key "${relativeKey}": item index missing for context "${splitted[0]}"`)
+        }
 
         return convertToFullKey(`${context.fullKey}.${index}${splitted.length > 1 ? '.' : ''}${splitted.slice(1).join('.')}`,
                                 contextStack)

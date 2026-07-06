@@ -1,6 +1,7 @@
 // Render Component: Initial template rendering
 
 import { nodeHoldersByKeys } from './utils/node-holders.js'
+import { setItemIndex } from './utils/item-index.js'
 import { resolve, resolveEx } from './utils/resolver.js'
 import { mount } from './utils/dom.js'
 import { applyAttribute, handleActionAttribute, handleBindAttribute, handleStyleOrAttrAttribute } from './default-node-attributes.js'
@@ -87,12 +88,12 @@ export function handleEachNode(data, contextStack = new Map(), params = new Map(
         for (let index = _startIndex ; index <= _endIndex ; index++) {
             const listElement = list[index]
             
-            // Set hidden __item_index__ property on item for dynamic index tracking
-            listElement.__item_index__ = index
+            // Track item index via WeakMap instead of mutating the item
+            setItemIndex(listElement, index)
             
             const childContextStack = new Map(contextStack)
             childContextStack.set(asAttribute, { 
-                data: listElement,  // Store item reference with __item_index__
+                data: listElement,  // Store item reference for index lookup via WeakMap
                 fullKey: resolvedOf.fullKey
             })
             // walk() appends nodes to fragment sequentially (no insertBeforeAnchor needed inside fragment)
@@ -146,15 +147,14 @@ export function handleEachNodeRefresh(data, refreshInfo) {
             reindexArrayMap(linkedNodeHolders, reindexStartIndex, reindexShift, reindexMaxIndex)
         }
         
-        // Update __item_index__ on all items after array mutation
-        // Array has already been mutated by Proxy, so we update based on current positions
-        //TODO: in case of push it's not necessary
         const array = resolve(refreshInfo.fullKey, data)
         if (Array.isArray(array)) {
-            for (let i = 0; i < array.length; i++) {
-                if (array[i] && typeof array[i] === 'object') {
-                    array[i].__item_index__ = i
-                }
+            // Item indices are tracked in WeakMap (instead of mutating items with __item_index__).
+            // Re-index only from the affected mutation/reindex position, not from 0.
+            const startIndex = refreshInfo.reindexStartIndex ?? refreshInfo.insertStartIndex ?? 0
+
+            for (let i = startIndex; i < array.length; i++) {
+                setItemIndex(array[i], i)
             }
         }
         
