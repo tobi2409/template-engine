@@ -9,12 +9,6 @@ import { setItemByUuid, setUuidByItem, getUuidByItem } from './components/utils/
 const TemplateEngine = (function () {
     return {
         reactive(data, node, dependencies = {}) {
-            try {
-                run(data, node, dependencies)
-            } catch (error) {
-                throw new Error(`[TemplateEngine] Error during initial render: ${error.message}`)
-            }
-
             const topData = data
 
             // TODO: Proxy caching (WeakMap or __proxy__ + Symbol) to prevent stale fullKey paths
@@ -104,6 +98,7 @@ const TemplateEngine = (function () {
                         target[prop] = value
 
                         if (prop !== 'length' && !isInArrayMethod) {
+                            console.log(target)
                             const nextFullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
                             //console.log(nextFullKey)
                             //console.log(nextFullKey)
@@ -140,11 +135,20 @@ const TemplateEngine = (function () {
                         return true
                     }
                 })
-                
+
                 return proxy
             }
 
-            return innerReactive(data)
+            const reactiveData = innerReactive(data)
+            //console.log(reactiveData)
+
+            try {
+                run(reactiveData, node, dependencies)
+            } catch (error) {
+                throw new Error(`[TemplateEngine] Error during initial render: ${error.message}`)
+            }
+
+            return reactiveData
         }
     }
 })()

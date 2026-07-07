@@ -24,34 +24,33 @@
 
         import TemplateEngine from '../src/template-engine.js'
 
-        const N = 200000
+        const N = 500000
         const items = Array.from({ length: N }, (_, i) => ({
             id: i + 1,
             name: "Item " + (i + 1),
             value: i + 1 //Math.floor(Math.random() * 1000)
         }))
 
-        console.time('Initial Render (200000 Items)')
+        console.time('Initial Render (500k Items)')
 
         const model = TemplateEngine.reactive({ items }, document.getElementById('app-template-use'));
 
-        console.timeEnd('Initial Render (200000 Items)')
-
+        console.timeEnd('Initial Render (500k Items)')
         setTimeout(() => {
-            console.time("Update 100000 Items")
+            console.time("Update 300k Items")
 
-            for (let i = 0; i < 100000; i++) {
+            for (let i = 0; i < 300000; i++) {
                 const idx = Math.floor(Math.random() * N)
                 model.items[idx].value = Math.floor(Math.random() * 1000)
             }
 
-            console.timeEnd("Update 100000 Items")
+            console.timeEnd("Update 300k Items")
         }, 2000)
 
         setTimeout(() => {
-            console.time("Add 100000 Items")
+            console.time("Add 300k Items")
 
-            const items = Array.from({ length: 100000 }, (_, i) => ({
+            const items = Array.from({ length: 300000 }, (_, i) => ({
                 id: model.items.length + i + 1,
                 name: "Item " + (model.items.length + i + 1),
                 value: Math.floor(Math.random() * 1000)
@@ -59,13 +58,13 @@
 
             model.items.push(...items)
 
-            console.timeEnd("Add 100000 Items")
+            console.timeEnd("Add 300k Items")
         }, 4000)
 
         setTimeout(() => {
-            console.time("Insert 100000 Items")
+            console.time("Insert 300k Items")
 
-            const items = Array.from({ length: 100000 }, (_, i) => ({
+            const items = Array.from({ length: 300000 }, (_, i) => ({
                 id: model.items.length + i + 1,
                 name: "Item " + (model.items.length + i + 1),
                 value: Math.floor(Math.random() * 1000)
@@ -73,7 +72,7 @@
 
             model.items.splice(1000, 0, ...items)
 
-            console.timeEnd("Insert 100000 Items")
+            console.timeEnd("Insert 300k Items")
         }, 6000)
     </script>
 </body>

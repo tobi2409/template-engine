@@ -29,6 +29,7 @@ export function handleActionAttribute(cloned, attr, data, contextStack, params) 
 
         // Get the last (innermost) each-context item from contextStack
         let contextItem = null
+        
         for (const context of contextStack.values()) {
             if (context.data) {
                 contextItem = context.data
