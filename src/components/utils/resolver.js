@@ -87,7 +87,14 @@ export function setByPath(key, data, newValue) {
 
         // Navigate to parent object
         for (let i = 0; i < splitted.length - 1; i++) {
-            target = target[splitted[i]]
+            const segment = splitted[i]
+
+            if (segment.startsWith('__uuid__')) {
+                target = getItemByUuid(segment)
+            } else {
+                target = target[segment]
+            }
+
             if (!target) {
                 throw new Error(`[TemplateEngine] Cannot set "${key}": path does not exist`)
             }

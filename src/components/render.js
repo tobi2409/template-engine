@@ -4,7 +4,7 @@ import { nodeHoldersByKeys } from './utils/node-holders.js'
 import { resolve, resolveEx } from './utils/resolver.js'
 import { mount } from './utils/dom.js'
 import { applyAttribute, handleActionAttribute, handleBindAttribute, handleStyleOrAttrAttribute } from './default-node-attributes.js'
-import { setItemByUuid, setUuidByItem } from './utils/uuid-item-map.js'
+import { getUuidByItem, setItemByUuid, setUuidByItem } from './utils/uuid-item-map.js'
 
 // Error Handling Strategy:
 // All handler methods are wrapped in a single try-catch block from start to end.
@@ -88,9 +88,10 @@ export function handleEachNode(data, contextStack = new Map(), params = new Map(
         for (let index = _startIndex ; index <= _endIndex ; index++) {
             const listElement = list[index]
 
-            const uuid = `__uuid__${crypto.randomUUID()}`
+            const uuid = getUuidByItem(listElement) || `__uuid__${crypto.randomUUID()}`
             setItemByUuid(uuid, listElement)
             setUuidByItem(listElement, uuid)
+            //console.log(listElement, uuid)
             
             const childContextStack = new Map(contextStack)
             childContextStack.set(asAttribute, { 

@@ -85,17 +85,17 @@
                 }]
             }],
             toggleEdit: (e, dataElement, dataElementUuid) => {
-                console.log(dataElement)
-                /*const person = data.persons.find((p) => getUuidByItem(p) === dataElementUuid)*/
                 dataElement.editing = !dataElement.editing
             },
             delete: (e, dataElement) => {
-                const personIndex = data.persons[dataElement.__item_index__] ? dataElement.__item_index__ : -1
+                const personIndex = data.persons.findIndex((p) => p === dataElement)
+
                 if (personIndex !== -1) {
                     data.persons.splice(personIndex, 1)
                 }
             },
-            toggleChildEdit: (e, dataElement, contextStack) => {
+            toggleChildEdit: (e, dataElement, dataElementUuid, contextStack) => {
+                console.log(contextStack)
                 const person = data.persons[contextStack.get('p').data.__item_index__]
                 const child = person.childs[dataElement.__item_index__]
                 child.editing = !child.editing
@@ -111,13 +111,13 @@
 
         // Demonstrate dynamic updates
         data.persons[0].name = 'Alex Chen (updated)'
-        /*data.persons[0].childs.push({ id: 3, name: 'Sam Lee - Junior Developer', editing: false, childs: [] })
+        data.persons[0].childs.push({ id: 3, name: 'Sam Lee - Junior Developer', editing: false, childs: [] })
         data.persons[0].childs.splice(1, 0, { id: 4, name: 'Jamie Torres - DevOps Engineer', editing: false, childs: [] })
         data.persons.splice(1, 0, { id: 2, name: 'Riley Cooper', role: 'QA Lead', editing: false,
                                 childs: [{ id: 1, name: 'Casey Morgan - QA Engineer', editing: false, childs: [] }] })
         data.persons[0].childs.splice(0, 1)
         data.watermark = 'Top Secret'
-        data.persons[0].childs[1].name = 'Jordan Kim (Updated) - Frontend Developer'*/
+        data.persons[0].childs[1].name = 'Jordan Kim (Updated) - Frontend Developer'
 
         console.log('Organization data:', data)
     </script>
