@@ -13,6 +13,13 @@
         <each of="*list" as="item">
             <li>📁 <get>item.name</get> (<get>item.size</get> items)
 
+                <if test="item.editing">
+                    <input type="text" bind-input-value="item.name">
+                </if>
+
+                <button action-click="toggleEdit">✏️ Edit</button>
+                <button action-click="delete">🗑️ Delete</button>
+
                 <ul>
                     <template-use template-id="folder-template" data-list="item.childs"></template-use>
                 </ul>
@@ -42,32 +49,51 @@
             folders: [{
                 name: 'projects',
                 size: 2,
+                editing: false,
                 childs: [{
                     name: 'website',
                     size: 0,
+                    editing: false,
                     childs: []
                 }, {
                     name: 'mobile-app',
                     size: 0,
+                    editing: false,
                     childs: []
                 }]
             }, {
                 name: 'documents',
                 size: 1,
+                editing: false,
                 childs: [{
                     name: 'reports',
                     size: 0,
+                    editing: false,
                     childs: []
                 }]
-            }]
+            }],
+            toggleEdit: (e, dataElement) => {
+                dataElement.editing = !dataElement.editing
+            },
+            delete: (e, dataElement, _, contextStack) => {
+                const parentData = contextStack.get('item')?.data
+console.log(e)
+                /*if (parentData?.childs) {
+                    const index = parentData.childs.findIndex((c) => c === dataElement)
+                    
+                    if (index !== -1) {
+                        parentData.childs.splice(index, 1)
+                    }
+                }*/
+            }
         }, document.getElementById('app-template-use'))
 
         // Demonstrate deep nesting and dynamic updates
         data.folders[0].name = 'projects (active)'
-        data.folders[0].childs.push({ name: 'data-analysis', size: 0, childs: [] })
-        data.folders[0].childs.push({ name: 'api-server', size: 1, childs: [ { name: 'controllers', size: 1, childs: [ { name: 'auth', size: 0, childs: [] } ] } ] })
-        data.folders[0].childs.splice(1, 0, { name: 'tools', size: 0, childs: [] })
-        data.folders.splice(1, 0, { name: 'downloads', size: 1, childs: [{ name: 'archives', size: 0, childs: [] }] })
+        data.folders[0].childs.push({ name: 'data-analysis', size: 0, editing: false, childs: [] })
+        data.folders[0].childs.push({ name: 'api-server', size: 1, editing: false, childs: [ { name: 'controllers', size: 1, editing: false, childs: [ { name: 'auth', size: 0, editing: false, childs: [] } ] } ] })
+        data.folders[0].childs.splice(1, 0, { name: 'tools', size: 0, editing: false, childs: [] })
+        data.folders.splice(1, 0, { name: 'downloads', size: 1, editing: false, childs: [{ name: 'archives', size: 0, editing: false, childs: [] }] })
         data.folders[1].name = 'downloads (recent)'
         data.folders[0].childs.splice(2, 1)
         data.folders.pop()

@@ -51,6 +51,7 @@
 
     <script type="module">
         import TemplateEngine from '../src/template-engine.js'
+        import { getItemByUuid, getUuidByItem } from '../src/components/utils/uuid-item-map.js'
 
         const data = TemplateEngine.reactive({
             name: 'Sarah Wilson',
@@ -84,7 +85,7 @@
                     childs: []
                 }]
             }],
-            toggleEdit: (e, dataElement, dataElementUuid) => {
+            toggleEdit: (e, dataElement) => {
                 dataElement.editing = !dataElement.editing
             },
             delete: (e, dataElement) => {
@@ -94,17 +95,18 @@
                     data.persons.splice(personIndex, 1)
                 }
             },
-            toggleChildEdit: (e, dataElement, dataElementUuid, contextStack) => {
-                console.log(contextStack)
-                const person = data.persons[contextStack.get('p').data.__item_index__]
-                const child = person.childs[dataElement.__item_index__]
-                child.editing = !child.editing
+            toggleChildEdit: (e, dataElement) => {
+                dataElement.editing = !dataElement.editing
             },
-            deleteChild: (e, dataElement, contextStack) => {
-                const person = data.persons[contextStack.get('p').data.__item_index__]
-                const childIndex = dataElement.__item_index__
-                if (person && childIndex !== -1) {
-                    person.childs.splice(childIndex, 1)
+            deleteChild: (e, dataElement, dataElementUuid, contextStack) => {
+                const parentData = contextStack.get('p')?.data
+                
+                if (parentData?.childs) {
+                    const index = parentData.childs.findIndex((c) => c === dataElement)
+                    
+                    if (index !== -1) {
+                        parentData.childs.splice(index, 1)
+                    }
                 }
             }
         }, document.getElementById('app-template-use'))
