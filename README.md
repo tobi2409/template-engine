@@ -99,6 +99,28 @@ Loops over an array.
 </each>
 ```
 
+> **Note:** Array items must be **objects**, not primitive values (strings, numbers, booleans).
+> The engine uses a `WeakMap` internally to track item identity, which requires object references.
+>
+> ❌ Primitives are not supported:
+> ```js
+> data.tags = ['news', 'tech', 'sports']
+> ```
+>
+> ✅ Wrap primitives in objects instead:
+> ```js
+> data.tags = [
+>   { value: 'news' },
+>   { value: 'tech' },
+>   { value: 'sports' }
+> ]
+> ```
+> ```html
+> <each of="tags" as="tag">
+>   <span><get>tag.value</get></span>
+> </each>
+> ```
+
 ### `<if test="expr">...</if>`
 
 Conditionally renders content.

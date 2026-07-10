@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Zwei unabhängige Listen</title>
+    <style>
+        body { font-family: sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+        h1 { font-size: 1.2rem; color: #333; }
+        section { border: 1px solid #ddd; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; }
+        h3 { margin: 0 0 .5rem; font-size: .95rem; }
+        .list { min-height: 2rem; margin-bottom: .6rem; }
+        .item { background: #eef3ff; padding: .25rem .7rem; border-radius: 4px; font-family: monospace; display: inline-block; margin: .15rem .1rem; }
+        button { margin: .2rem; font-size: .85rem; }
+    </style>
+</head>
+<body>
+
+<template id="tpl">
+
+    <h1>Zwei unabhängige Listen</h1>
+
+    <section>
+        <h3>🍎 Früchte</h3>
+        <div class="list">
+            <each of="fruits" as="fruit">
+                <span class="item"><get>fruit.name</get></span>
+            </each>
+        </div>
+        <button action-click="renameFruitFirst">Erste umbenennen</button>
+        <button action-click="renameFruitLast">Letzte umbenennen</button>
+        <button action-click="addFruit">Hinzufügen</button>
+        <button action-click="removeFruitFirst">Erste entfernen</button>
+    </section>
+
+    <section>
+        <h3>🎨 Farben</h3>
+        <div class="list">
+            <each of="colors" as="color">
+                <span class="item"><get>color.name</get></span>
+            </each>
+        </div>
+        <button action-click="renameColorFirst">Erste umbenennen</button>
+        <button action-click="renameColorLast">Letzte umbenennen</button>
+        <button action-click="addColor">Hinzufügen</button>
+        <button action-click="removeColorFirst">Erste entfernen</button>
+    </section>
+
+</template>
+
+<div id="app"></div>
+<template-use id="tpl-use" template-id="tpl" mount-id="app"></template-use>
+
+<script type="module">
+import TemplateEngine from '../src/template-engine.js'
+
+const data = TemplateEngine.reactive({
+    fruits: [
+        { name: 'Apfel' },
+        { name: 'Banane' },
+        { name: 'Kirsche' }
+    ],
+    colors: [
+        { name: 'Rot' },
+        { name: 'Grün' },
+        { name: 'Blau' }
+    ],
+
+    renameFruitFirst:  (e, d) => { d.fruits[0].name = 'Apfel ✎' },
+    renameFruitLast:   (e, d) => { d.fruits[d.fruits.length - 1].name = 'Letzte Frucht ✎' },
+    addFruit:          (e, d) => { d.fruits.push({ name: 'Traube' }) },
+    removeFruitFirst:  (e, d) => { d.fruits.shift() },
+
+    renameColorFirst:  (e, d) => { d.colors[0].name = 'Rot ✎' },
+    renameColorLast:   (e, d) => { d.colors[d.colors.length - 1].name = 'Letzte Farbe ✎' },
+    addColor:          (e, d) => { d.colors.push({ name: 'Gelb' }) },
+    removeColorFirst:  (e, d) => { d.colors.shift() },
+}, document.getElementById('tpl-use'))
+</script>
+
+</body>
+</html>

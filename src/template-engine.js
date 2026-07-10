@@ -23,6 +23,10 @@ const TemplateEngine = (function () {
             }
 
             function notifyKeyChange(fullKey) {
+                notifyChange(fullKey)
+            }
+
+            function notifyChange(fullKey, change = undefined) {
                 const linkedNodeHolders = nodeHoldersByKeys.getByKey(fullKey)
                 const matchingDependents = findMatchingDependencies(fullKey, dependencies)
 
@@ -32,12 +36,16 @@ const TemplateEngine = (function () {
                 }
 
                 if (linkedNodeHolders?.get('holders')?.length > 0) {
-                    for (const nodeHolder of linkedNodeHolders.get('holders')) {
-                        refresh(topData, { fullKey, action: nodeHolder.action })
+                    if (change) {
+                        refresh(topData, change)
+                    } else {
+                        for (const nodeHolder of linkedNodeHolders.get('holders')) {
+                            refresh(topData, { fullKey, action: nodeHolder.action })
+                        }
                     }
                 }
 
-                notifyDependencies(topData, matchingDependents)
+                notifyDependencies(topData, matchingDependents, change)
             }
 
             function makeArrayItemsReactive(obj, fullKey) {
@@ -85,14 +93,7 @@ const TemplateEngine = (function () {
                             const result = original.apply(this, args)
 
                             try {
-                                const linkedNodeHolders = nodeHoldersByKeys.getByKey(fullKey)
-
-                                if (linkedNodeHolders?.get('holders')?.length > 0) {
-                                    refresh(topData, change)
-                                }
-
-                                const matchingDependents = findMatchingDependencies(fullKey, dependencies)
-                                notifyDependencies(topData, matchingDependents, change)
+                                notifyChange(fullKey, change)
                             } catch (error) {
                                 throw new Error(`[TemplateEngine] Error during refresh of "${fullKey}" after "${method}": ${error.message}`)
                             }
@@ -112,6 +113,7 @@ const TemplateEngine = (function () {
                 if (_value && typeof _value === 'object') {
                     // Beispiel: data.person = { address: { city: 'Berlin' } } ->
                     // data.person.address.city = 'Hamburg' soll triggern.
+                    // wenn Objekt bereits verschachtelt vorhanden ist, dann muss es auch reaktiv gemacht werden.
                     makeReactive(_value, nextFullKey)
                 }
 
@@ -124,7 +126,8 @@ const TemplateEngine = (function () {
 
                         if (newValue && typeof newValue === 'object') {
                             // Beispiel: data.person.address = { city: 'Köln' } ->
-                            // danach data.person.address.city = 'Bonn' soll triggern.
+                            // danach data.person.address.city = 'Bonn' soll triggern. (multilevel reactivity)
+                            // wenn verschachteltes Objekt gesetzt wird, dann muss es auch reaktiv gemacht werden.
                             makeReactive(newValue, nextFullKey)
                         }
 
@@ -185,6 +188,13 @@ const TemplateEngine = (function () {
                     return obj
                 }
 
+                // WICHTIG:
+                // __reactive__ ist nur ein Marker gegen doppeltes Patchen.
+                // Die echte Reaktivität entsteht erst in:
+                // - patchArrayMethods(...)
+                // - defineReactiveDataProperty(...)
+                // - defineReactiveAccessorProperty(...)
+                // Bereits gepatcht? Dann nicht nochmal reaktiv machen.
                 if (Object.prototype.hasOwnProperty.call(obj, '__reactive__')) {
                     return obj
                 }
@@ -203,7 +213,9 @@ const TemplateEngine = (function () {
                     return obj
                 }
 
+                // next-level descriptors with its properties
                 const descriptors = Object.getOwnPropertyDescriptors(obj)
+                console.log('descriptors', descriptors)
 
                 for (const [prop, descriptor] of Object.entries(descriptors)) {
                     if (prop === '__reactive__' || descriptor.configurable === false) {
@@ -213,8 +225,10 @@ const TemplateEngine = (function () {
                     const nextFullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
 
                     if ('value' in descriptor) {
+                        // prop e.g. name -> create setters/getters for name
                         defineReactiveDataProperty(obj, prop, descriptor, nextFullKey)
                     } else {
+                        // objects with getters/setters and without value
                         defineReactiveAccessorProperty(obj, prop, descriptor, nextFullKey)
                     }
                 }

@@ -21,59 +21,68 @@
     <template-use id="app-template-use" template-id="app-template" mount-id="app"></template-use>
 
     <script type="module">
-
         import TemplateEngine from '../src/template-engine.js'
 
-        console.time('Initial Render (200k Items)')
-        
-        const N = 200000
-        const items = Array.from({ length: N }, (_, i) => ({
+        const N = 100000
+        const UPDATE_COUNT = Math.floor(N / 2)
+        const ADD_COUNT = Math.floor(N / 2)
+        const INSERT_COUNT = Math.floor(N / 4)
+
+        const mount = document.getElementById('app-template-use')
+        let model
+
+        function measureAfterCommit(label, mutate) {
+            const start = performance.now()
+            mutate()
+            queueMicrotask(() => {
+            requestAnimationFrame(() => {
+                const duration = performance.now() - start
+                console.log(`${label}: ${duration.toFixed(2)} ms (commit + paint)`)
+            })
+            })
+        }
+
+        measureAfterCommit(`Initial Render (${N} Items)`, () => {
+            const items = Array.from({ length: N }, (_, i) => ({
             id: i + 1,
-            name: "Item " + (i + 1),
-            value: i + 1 //Math.floor(Math.random() * 1000)
-        }))
+            name: 'Item ' + (i + 1),
+            value: i + 1
+            }))
 
-        const model = TemplateEngine.reactive({ items }, document.getElementById('app-template-use'));
-
-        console.timeEnd('Initial Render (200k Items)')
+            model = TemplateEngine.reactive({ items }, mount)
+        })
 
         setTimeout(() => {
-            console.time("Update 100k Items")
-
-            for (let i = 0; i < 100000; i++) {
+            measureAfterCommit(`Update ${UPDATE_COUNT} Items`, () => {
+            for (let i = 0; i < UPDATE_COUNT; i++) {
                 const idx = Math.floor(Math.random() * N)
                 model.items[idx].value = Math.floor(Math.random() * 1000)
             }
-
-            console.timeEnd("Update 100k Items")
+            })
         }, 2000)
 
         setTimeout(() => {
-            console.time("Add 100k Items")
-
-            const items = Array.from({ length: 100000 }, (_, i) => ({
+            measureAfterCommit(`Add ${ADD_COUNT} Items`, () => {
+            const items = Array.from({ length: ADD_COUNT }, (_, i) => ({
                 id: model.items.length + i + 1,
-                name: "Item " + (model.items.length + i + 1),
+                name: 'Item ' + (model.items.length + i + 1),
                 value: Math.floor(Math.random() * 1000)
             }))
 
             model.items.push(...items)
-
-            console.timeEnd("Add 100k Items")
+            })
         }, 4000)
 
         setTimeout(() => {
-            console.time("Insert 50k Items")
-
-            const items = Array.from({ length: 50000 }, (_, i) => ({
+            measureAfterCommit(`Insert ${INSERT_COUNT} Items`, () => {
+            const items = Array.from({ length: INSERT_COUNT }, (_, i) => ({
                 id: model.items.length + i + 1,
-                name: "Item " + (model.items.length + i + 1),
+                name: 'Item ' + (model.items.length + i + 1),
                 value: Math.floor(Math.random() * 1000)
             }))
 
             model.items.splice(1000, 0, ...items)
-
-            console.timeEnd("Insert 50k Items")
+            })
         }, 6000)
     </script>
 </body>

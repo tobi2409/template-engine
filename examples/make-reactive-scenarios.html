@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>makeReactive – alle Szenarien</title>
+    <style>
+        body { font-family: sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+        section { border: 1px solid #ddd; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; }
+        h3 { margin: 0 0 .4rem; font-size: .95rem; color: #333; }
+        p { margin: .3rem 0 .6rem; }
+        .val { background: #eef3ff; padding: .25rem .6rem; border-radius: 4px; font-weight: bold; font-family: monospace; }
+        .list-item { background: #eef3ff; padding: .25rem .6rem; border-radius: 4px; font-family: monospace; display: inline-block; margin: .15rem .1rem; }
+        button { margin: .2rem; font-size: .85rem; }
+        small { color: #888; display: block; margin-bottom: .4rem; }
+    </style>
+</head>
+<body>
+
+<template id="tpl">
+
+    <!-- ① Einstieg: makeReactive(data) macht alle Eigenschaften reaktiv -->
+    <section>
+        <h3>① Einstieg — makeReactive(data)</h3>
+        <small>data.person.name = 'Lisa' löst Refresh aus</small>
+        <p>person.name: <span class="val"><get>person.name</get></span></p>
+        <button action-click="s1">person.name = 'Lisa'</button>
+    </section>
+
+    <!-- ② Verschachtelte Objekte: defineReactiveDataProperty, initial & nach Setter -->
+    <section>
+        <h3>② Verschachtelte Objekte — defineReactiveDataProperty</h3>
+        <small>Tief verschachtelte Objekte werden sofort reaktiv. Auch ein neu zugewiesenes Objekt.
+            Hinweis: Beim Ersetzen eines Objekts werden Kind-Keys nicht automatisch benachrichtigt.
+            Eine explizite Zuweisung einer Child-Property ist nötig.</small>
+        <p>person.address.city: <span class="val"><get>person.address.city</get></span></p>
+        <button action-click="s2a">address.city = 'Hamburg'</button>
+        <button action-click="s2b">address = { city: 'Köln' } + city = 'Köln'</button>
+        <button action-click="s2c">(danach) city = 'Bonn'</button>
+    </section>
+
+    <!-- ③ Computed Accessor: defineReactiveAccessorProperty, get + set -->
+    <section>
+        <h3>③ Computed Accessor — defineReactiveAccessorProperty</h3>
+        <small>Das vom Getter zurückgegebene Objekt bleibt reaktiv. Auch nach Setter-Zuweisung.
+            Hinweis: Gleiches Muster wie ② — nach dem Ersetzen des Objekts ist eine
+            explizite Child-Property-Zuweisung nötig.</small>
+        <p>selectedPerson.name: <span class="val"><get>selectedPerson.name</get></span></p>
+        <button action-click="s3a">selectedPerson.name = 'Finn'</button>
+        <button action-click="s3b">selectedPerson = { name: 'Mia' } + name = 'Mia'</button>
+        <button action-click="s3c">(danach) selectedPerson.name = 'Luisa'</button>
+    </section>
+
+    <!-- ④ Array-Einträge: makeArrayItemsReactive + patchArrayMethods.push -->
+    <section>
+        <h3>④ Array-Einträge — makeArrayItemsReactive &amp; patchArrayMethods</h3>
+        <small>Bestehende Einträge reaktiv beim Start. Neue Einträge nach push() ebenfalls.</small>
+        <div>
+            <each of="persons" as="p">
+                <div class="list-item"><get>p.name</get></div>
+            </each>
+        </div>
+        <button action-click="s4a">persons[0].name = 'Clara'</button>
+        <button action-click="s4b">persons.push({ name: 'David' })</button>
+        <button action-click="s4c">(danach) persons[last].name = 'Daniel'</button>
+    </section>
+
+</template>
+
+<div id="app"></div>
+<template-use id="tpl-use" template-id="tpl" mount-id="app"></template-use>
+
+<script type="module">
+import TemplateEngine from '../src/template-engine.js'
+
+// Backing object für den Computed Accessor (nicht in data, damit makeReactive
+// beim ersten Getter-Aufruf korrekt den fullKey 'selectedPerson' vergeben kann)
+const _raw = { person: { name: 'Kai' } }
+
+const data = TemplateEngine.reactive({
+    // ① + ②
+    person: { name: 'Anna', address: { city: 'Berlin' } },
+
+    // ③
+    get selectedPerson() { return _raw.person },
+    set selectedPerson(v) { _raw.person = v },
+
+    // ④
+    persons: [{ name: 'Anna' }, { name: 'Ben' }],
+
+    // Actions
+    s1:  (e, d) => { d.person.name = 'Lisa' },
+    s2a: (e, d) => { d.person.address.city = 'Hamburg' },
+    s2b: (e, d) => { d.person.address = { city: 'Köln' }; /*d.person.address.city = 'Köln'*/ },
+    s2c: (e, d) => { d.person.address.city = 'Bonn' },
+    s3a: (e, d) => { d.selectedPerson.name = 'Finn' },
+    s3b: (e, d) => { d.selectedPerson = { name: 'Mia' }; /*d.selectedPerson.name = 'Mia'*/ },
+    s3c: (e, d) => { d.selectedPerson.name = 'Luisa' },
+    s4a: (e, d) => { d.persons[0].name = 'Clara' },
+    s4b: (e, d) => { d.persons.push({ name: 'David' }) },
+    s4c: (e, d) => { d.persons[d.persons.length - 1].name = 'Daniel' },
+}, document.getElementById('tpl-use'))
+</script>
+
+</body>
+</html>
