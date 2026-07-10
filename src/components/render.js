@@ -1,9 +1,10 @@
 // Render Component: Initial template rendering
 
 import { nodeHoldersByKeys } from './utils/node-holders.js'
-import { resolve, resolveEx } from './utils/resolver.js'
+import { resolve, resolveEx } from './utils/key-resolver.js'
 import { mount } from './utils/dom.js'
 import { applyAttribute, handleActionAttribute, handleBindAttribute, handleStyleOrAttrAttribute } from './default-node-attributes.js'
+import { resolveEachAlias } from './utils/alias-resolver.js'
 import { getUuidByItem, setItemByUuid, setUuidByItem } from './utils/uuid-item-map.js'
 
 // Error Handling Strategy:
@@ -58,6 +59,7 @@ export function handleEachNode(data, contextStack = new Map(), params = new Map(
         const resolvedOf = resolveEx(ofAttribute, data, contextStack, params)
 
         const asAttribute = eachNode.getAttribute('as')
+        const resolvedAsAttribute = resolveEachAlias(asAttribute, contextStack)
 
         if (!refreshInfo) {
             // complete NodeHolder structure: contextStack/params/eachNode are needed
@@ -91,13 +93,20 @@ export function handleEachNode(data, contextStack = new Map(), params = new Map(
             const uuid = getUuidByItem(listElement) || `__uuid__${crypto.randomUUID()}`
             setItemByUuid(uuid, listElement)
             setUuidByItem(listElement, uuid)
-            //console.log(listElement, uuid)
             
             const childContextStack = new Map(contextStack)
-            childContextStack.set(asAttribute, { 
+            childContextStack.set(asAttribute, {
                 data: listElement,  // Store item reference for index lookup via WeakMap
                 fullKey: resolvedOf.fullKey
             })
+            
+            // Add level-alias if as ends with #
+            if (asAttribute !== resolvedAsAttribute) {
+                childContextStack.set(resolvedAsAttribute, {
+                    data: listElement,
+                    fullKey: resolvedOf.fullKey
+                })
+            }
             // walk() appends nodes to fragment sequentially (no insertBeforeAnchor needed inside fragment)
             // when walk() recursively processes child nodes, each child becomes a new container
             // the insertion position only matters for the root element being inserted into mountNode

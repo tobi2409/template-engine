@@ -1,7 +1,7 @@
 // Default Node Attributes: Handlers for action-, bind-, attr-, and style- attributes
 
 import { nodeHoldersByKeys } from './utils/node-holders.js'
-import { resolveEx, setByPath } from './utils/resolver.js'
+import { resolveEx, setByPath } from './utils/key-resolver.js'
 import { refresh } from './refresh-delegator.js'
 import { notifyDependencies, findMatchingDependencies } from './utils/notifier.js'
 import { getUuidByItem } from './utils/uuid-item-map.js'

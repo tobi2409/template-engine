@@ -215,7 +215,6 @@ const TemplateEngine = (function () {
 
                 // next-level descriptors with its properties
                 const descriptors = Object.getOwnPropertyDescriptors(obj)
-                console.log('descriptors', descriptors)
 
                 for (const [prop, descriptor] of Object.entries(descriptors)) {
                     if (prop === '__reactive__' || descriptor.configurable === false) {

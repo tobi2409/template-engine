@@ -1,6 +1,6 @@
 // Key Resolution: Conversion and dereferencing of keys
 
-import { getItemByUuid, getUuidByItem } from "./uuid-item-map.js"
+import { getItemByUuid, getUuidByItem } from './uuid-item-map.js'
 
 export function convertToFullKey(relativeKey, contextStack = new Map()) {
     try {
@@ -61,7 +61,6 @@ export function resolve(key, data, params = new Map()) {
                 console.warn(`[TemplateEngine] Error resolving key segment "${segment}": ${error.message}`)
             }
         }
-        
 
         return value
     } catch (error) {

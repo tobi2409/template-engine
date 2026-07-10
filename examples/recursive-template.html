@@ -10,18 +10,18 @@
     <div id="app"></div>
 
     <template id="folder-template">
-        <each of="*list" as="item">
-            <li>📁 <get>item.name</get> (<get>item.size</get> items)
+        <each of="*list" as="item#">
+            <li>📁 <get>item#.name</get> (<get>item#.size</get> items)
 
-                <if test="item.editing">
-                    <input type="text" bind-input-value="item.name">
+                <if test="item#.editing">
+                    <input type="text" bind-input-value="item#.name">
                 </if>
 
                 <button action-click="toggleEdit">✏️ Edit</button>
                 <button action-click="delete">🗑️ Delete</button>
 
                 <ul>
-                    <template-use template-id="folder-template" data-list="item.childs"></template-use>
+                    <template-use template-id="folder-template" data-list="item#.childs"></template-use>
                 </ul>
 
             </li>
@@ -76,15 +76,15 @@
                 dataElement.editing = !dataElement.editing
             },
             delete: (e, dataElement, _, contextStack) => {
-                const parentData = contextStack.get('item')?.data
-console.log(e)
-                /*if (parentData?.childs) {
-                    const index = parentData.childs.findIndex((c) => c === dataElement)
-                    
+                const parent = contextStack.get(`item-level-${contextStack.size - 3}`)
+                
+                if (parent && parent.data?.childs) {
+                    const index = parent.data.childs.findIndex((c) => c === dataElement)
+
                     if (index !== -1) {
-                        parentData.childs.splice(index, 1)
+                        parent.data.childs.splice(index, 1)
                     }
-                }*/
+                }
             }
         }, document.getElementById('app-template-use'))
 

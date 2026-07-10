@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import { resolve, resolveEx, convertToFullKey, setByPath } from '../../../src/components/utils/resolver.js'
+import { resolve, resolveEx, convertToFullKey, setByPath } from '../../../src/components/utils/key-resolver.js'
 
 describe('resolve', () => {
     test('resolves a simple top-level key', () => {
