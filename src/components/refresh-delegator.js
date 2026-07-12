@@ -59,8 +59,10 @@ const RefreshDelegator = (function () {
                 }
                 case 'updateGet': {
                     const linkedNodeHolders = NodeHolders.nodeHoldersByKeys.getByKey(change.fullKey)
+                    const resolvedValue = KeyResolver.resolve(change.fullKey, data)
+
                     for (const nodeHolder of linkedNodeHolders.get('holders')) {
-                        RefreshRendering.handleGetNodeRefresh(data, { existingNode: nodeHolder.node, fullKey: change.fullKey })
+                        RefreshRendering.handleGetNodeRefresh(data, { existingNode: nodeHolder.node, fullKey: change.fullKey, resolvedValue })
                     }
 
                     break
@@ -76,11 +78,13 @@ const RefreshDelegator = (function () {
                 }
                 case 'updateDefault': {
                     const linkedNodeHolders = NodeHolders.nodeHoldersByKeys.getByKey(change.fullKey)
+                    const resolvedValue = KeyResolver.resolve(change.fullKey, data)
+
                     for (const nodeHolder of linkedNodeHolders.get('holders')) {
                         if (nodeHolder.type === 'bind') {
-                            RefreshRendering.handleDefaultNodeRefresh(data, { node: nodeHolder.node, type: nodeHolder.type, fullKey: change.fullKey, property: nodeHolder.property })
+                            RefreshRendering.handleDefaultNodeRefresh(data, { node: nodeHolder.node, type: nodeHolder.type, fullKey: change.fullKey, property: nodeHolder.property, resolvedValue })
                         } else if (nodeHolder.type === 'attribute') {
-                            RefreshRendering.handleDefaultNodeRefresh(data, { node: nodeHolder.node, type: nodeHolder.type, fullKey: change.fullKey, attributeName: nodeHolder.attributeName })
+                            RefreshRendering.handleDefaultNodeRefresh(data, { node: nodeHolder.node, type: nodeHolder.type, fullKey: change.fullKey, attributeName: nodeHolder.attributeName, resolvedValue })
                         }
                     }
 

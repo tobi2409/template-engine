@@ -8,7 +8,11 @@ import InitialRendering from './initial-rendering.js'
 const RefreshRendering = (function () {
     function handleGetNodeRefresh(data, refreshInfo) {
         try {
-            refreshInfo.existingNode.textContent = KeyResolver.resolve(refreshInfo.fullKey, data)
+            const value = refreshInfo.resolvedValue !== undefined
+                ? refreshInfo.resolvedValue
+                : KeyResolver.resolve(refreshInfo.fullKey, data)
+
+            refreshInfo.existingNode.textContent = value
         } catch (error) {
             throw new Error(`[TemplateEngine] Error in handleGetNodeRefresh: ${error.message}`)
         }
@@ -65,7 +69,9 @@ const RefreshRendering = (function () {
 
     function handleDefaultNodeRefresh(data, refreshInfo) {
         try {
-            const value = KeyResolver.resolve(refreshInfo.fullKey, data)
+            const value = refreshInfo.resolvedValue !== undefined
+                ? refreshInfo.resolvedValue
+                : KeyResolver.resolve(refreshInfo.fullKey, data)
 
             if (refreshInfo.type === 'bind') {
                 refreshInfo.node[refreshInfo.property] = value

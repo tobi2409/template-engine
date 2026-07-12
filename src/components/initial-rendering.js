@@ -147,13 +147,13 @@ const InitialRendering = (function () {
             const cloned = defaultNode.cloneNode(false)
 
             for (const attr of defaultNode.attributes) {
-                const resolved = KeyResolver.resolveEx(attr.value, data, contextStack, params)
-
                 if (attr.name.startsWith('action-')) {
                     DefaultNodeAttributes.handleActionAttribute(cloned, attr, data, contextStack, params)
                 } else if (attr.name.startsWith('bind-')) {
+                    const resolved = KeyResolver.resolveEx(attr.value, data, contextStack, params)
                     DefaultNodeAttributes.handleBindAttribute(cloned, attr, resolved, data, contextStack, params, dependencies)
                 } else if (attr.name.startsWith('attr-') || attr.name.startsWith('style-')) {
+                    const resolved = KeyResolver.resolveEx(attr.value, data, contextStack, params)
                     DefaultNodeAttributes.handleStyleOrAttrAttribute(cloned, attr, resolved)
                 }
             }
@@ -172,6 +172,10 @@ const InitialRendering = (function () {
             }
 
             if (node.nodeType === Node.TEXT_NODE) {
+                if (!node.textContent || node.textContent.trim() === '') {
+                    continue
+                }
+
                 try {
                     handleTextNode(node, mountNode, insertBeforeAnchor)
                 } catch (error) {
