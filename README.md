@@ -22,6 +22,81 @@ import TemplateEngine from './template-engine.js'
 
 Browse the live demo files in the [GitHub repository](https://github.com/tobi2409/template-engine/tree/main/examples).
 
+Featured demos:
+
+- [MVVM example](examples/mvvm.html)
+- [Recursive template example](examples/recursive-template.html)
+
+Interesting snippets from those demos:
+
+### MVVM: computed fields + dependency chaining
+
+```js
+const viewModel = TemplateEngine.reactive({
+  get fullName() {
+    return `${this.firstName} ${this.lastName}`
+  },
+  get showWage() {
+    return this.wage > 600
+  },
+  get fullInfo() {
+    return `${this.fullName} earns $${this.wage}`
+  },
+  getBeautifiedData() {
+    return createMappedArray(
+      model.rawPersonData,
+      (p) => ({
+        id: p.id,
+        name: p.name,
+        age: new Date().getFullYear() - p.birthyear,
+        showEdit: false
+      }),
+      { name: 'name', age: 'birthyear' },
+      (item) => ({
+        id: item.id,
+        name: item.name,
+        birthyear: item.birthyear || (new Date().getFullYear() - item.age)
+      })
+    )
+  }
+}, document.getElementById('app-template-use'), {
+  firstName: ['fullName'],
+  lastName: ['fullName'],
+  wage: ['showWage', 'fullInfo'],
+  fullName: ['fullInfo']
+})
+```
+
+Important: if you add/insert/remove items in `beautifiedData` (or `getBeautifiedData()`), those mutations should be forwarded to the underlying model array (for example `model.rawPersonData`) via `createMappedArray(..., reverseTransform)`.
+
+### Recursive template: self-referencing `<template-use>`
+
+```html
+<template id="folder-template">
+  <each of="*list" as="item#">
+    <li>
+      📁 <get>item#.name</get>
+      <ul>
+        <template-use template-id="folder-template" data-list="item#.childs"></template-use>
+      </ul>
+    </li>
+  </each>
+</template>
+```
+
+```js
+toggleEdit: (e, dataElement) => {
+  dataElement.editing = !dataElement.editing
+},
+delete: (e, dataElement, _, contextStack) => {
+  const parent = contextStack.get(`item-level-${contextStack.size - 3}`)
+  if (parent?.data?.childs) {
+    const index = parent.data.childs.findIndex((c) => c === dataElement)
+    if (index !== -1) parent.data.childs.splice(index, 1)
+  }
+}
+```
+
 > The examples use local file paths and are intended to be run directly from the cloned repository. To try them out, clone the repo and open the HTML files in a browser:
 >
 > ```bash
@@ -143,13 +218,32 @@ Mounts a `<template>` by ID.
 
 ### `TemplateEngine.reactive(data, templateUseNode, dependencies?)`
 
-Creates a reactive proxy around `data` and binds updates to DOM nodes generated from the referenced `<template>`.
+Creates a reactive view-model around `data` using `Object.defineProperties(...)` and binds updates to DOM nodes generated from the referenced `<template>`.
 
 - `data`: source model object
 - `templateUseNode`: `<template-use>` element
 - `dependencies` (optional): dependency map for related refresh triggers
 
-Returns: reactive proxy object
+Returns: reactive view-model object
+
+## Known limitation: object replacement notifications
+
+Replacing a nested object does not automatically notify all child keys. These patterns are currently not sufficient on their own:
+
+```js
+d.person.address = { city: 'Köln' }
+d.selectedPerson = { name: 'Mia' }
+```
+
+Use an explicit child assignment afterwards to trigger the child-key refresh:
+
+```js
+d.person.address = { city: 'Köln' }
+d.person.address.city = 'Köln'
+
+d.selectedPerson = { name: 'Mia' }
+d.selectedPerson.name = 'Mia'
+```
 
 ## Dependencies
 
@@ -208,6 +302,7 @@ Notes:
 
 - Keeps stable mapped object identity per source item (internal cache).
 - Supports `push`, `pop`, `shift`, `unshift`, `splice` via source synchronization.
+- Add/insert/remove operations on mapped arrays are propagated back to the source model when `reverseTransform` is provided.
 
 ## Development
 

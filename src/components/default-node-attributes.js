@@ -1,13 +1,13 @@
 // Default Node Attributes: Handlers for action-, bind-, attr-, and style- attributes
 
-import { nodeHoldersByKeys } from './utils/node-holders.js'
-import { resolveEx, setByPath } from './utils/key-resolver.js'
-import { refresh } from './refresh-delegator.js'
-import { notifyDependencies, findMatchingDependencies } from './utils/notifier.js'
-import { getUuidByItem } from './utils/uuid-item-map.js'
+import NodeHolders from './utils/node-holders.js'
+import KeyResolver from './utils/key-resolver.js'
+import RefreshDelegator from './refresh-delegator.js'
+import Notifier from './utils/notifier.js'
+import UuidItemMap from './utils/uuid-item-map.js'
 
 // Helper function to apply attribute value to DOM element
-export function applyAttribute(node, attrName, value) {
+function applyAttribute(node, attrName, value) {
     if (attrName.startsWith('style-')) {
         node.style[attrName.slice(6)] = value
     } else if (attrName.startsWith('attr-')) {
@@ -15,13 +15,13 @@ export function applyAttribute(node, attrName, value) {
     }
 }
 
-export function handleActionAttribute(cloned, attr, data, contextStack, params) {
+function handleActionAttribute(cloned, attr, data, contextStack, params) {
     try {
         // event binding: action-{event}="dataKey"
         const event = attr.name.slice(7) // e.g., 'click', 'input'
         const methodName = attr.value
         
-        const resolvedMethod = resolveEx(methodName, data, contextStack, params)
+        const resolvedMethod = KeyResolver.resolveEx(methodName, data, contextStack, params)
 
         if (typeof resolvedMethod.value !== 'function') {
             throw new Error(`[TemplateEngine] action "${methodName}" must be a function`)
@@ -36,7 +36,7 @@ export function handleActionAttribute(cloned, attr, data, contextStack, params) 
             }
         }
 
-        const contextUuid = contextItem ? getUuidByItem(contextItem) : undefined
+        const contextUuid = contextItem ? UuidItemMap.getUuidByItem(contextItem) : undefined
 
         // Wrap the method to pass event and context item (or data if no context)
         cloned.addEventListener(event, (e) => {
@@ -50,7 +50,7 @@ export function handleActionAttribute(cloned, attr, data, contextStack, params) 
     }
 }
 
-export function handleBindAttribute(cloned, attr, resolved, data, contextStack, params, dependencies = {}) {
+function handleBindAttribute(cloned, attr, resolved, data, contextStack, params, dependencies = {}) {
     try {
         // Two-way binding: bind-{event}-{property}="dataKey"
         const parts = attr.name.split('-')
@@ -63,25 +63,25 @@ export function handleBindAttribute(cloned, attr, resolved, data, contextStack, 
         // Add event listener for UI → Data binding
         cloned.addEventListener(event, (e) => {
             // Resolve key dynamically using contextStack from closure
-            const currentResolved = resolveEx(attr.value, data, contextStack, params)
-            setByPath(currentResolved.fullKey, data, e.target[property])
+            const currentResolved = KeyResolver.resolveEx(attr.value, data, contextStack, params)
+            KeyResolver.setByPath(currentResolved.fullKey, data, e.target[property])
             
             // Manually trigger refresh for all NodeHolders
-            const linkedNodeHolders = nodeHoldersByKeys.getByKey(currentResolved.fullKey)
+            const linkedNodeHolders = NodeHolders.nodeHoldersByKeys.getByKey(currentResolved.fullKey)
             if (linkedNodeHolders) {
                 for (const nodeHolder of linkedNodeHolders.get('holders')) {
                     const change = { fullKey: currentResolved.fullKey, action: nodeHolder.action }
-                    refresh(data, change)
+                    RefreshDelegator.refresh(data, change)
                 }
             }
             
             // Trigger dependent refreshes
-            const matchingDependents = findMatchingDependencies(currentResolved.fullKey, dependencies)
-            notifyDependencies(data, matchingDependents)
+            const matchingDependents = Notifier.findMatchingDependencies(currentResolved.fullKey, dependencies)
+            Notifier.notifyDependencies(data, matchingDependents)
         })
         
         // Register NodeHolder for Data → UI refresh
-        nodeHoldersByKeys.appendToKey(resolved.fullKey, 
+        NodeHolders.nodeHoldersByKeys.appendToKey(resolved.fullKey,
             { action: 'updateDefault', type: 'bind', node: cloned, property: property })
         
         cloned.removeAttribute(attr.name)
@@ -90,14 +90,25 @@ export function handleBindAttribute(cloned, attr, resolved, data, contextStack, 
     }
 }
 
-export function handleStyleOrAttrAttribute(cloned, attr, resolved) {
+function handleStyleOrAttrAttribute(cloned, attr, resolved) {
     try {
         applyAttribute(cloned, attr.name, resolved.value)
         cloned.removeAttribute(attr.name)
 
-        nodeHoldersByKeys.appendToKey(resolved.fullKey, 
+        NodeHolders.nodeHoldersByKeys.appendToKey(resolved.fullKey,
             { action: 'updateDefault', type: 'attribute', node: cloned, attributeName: attr.name })
     } catch (error) {
         throw new Error(`[TemplateEngine] Error handling attribute "${attr.name}": ${error.message}`)
     }
 }
+
+const DefaultNodeAttributes = (function () {
+    return {
+        applyAttribute,
+        handleActionAttribute,
+        handleBindAttribute,
+        handleStyleOrAttrAttribute
+    }
+})()
+
+export default DefaultNodeAttributes

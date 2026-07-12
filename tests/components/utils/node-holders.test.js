@@ -1,6 +1,8 @@
 import { test, describe, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { nodeHoldersByKeys } from '../../../src/components/utils/node-holders.js'
+import NodeHolders from '../../../src/components/utils/node-holders.js'
+
+const { nodeHoldersByKeys } = NodeHolders
 
 // Clear all entries before each test to avoid cross-test interference (module-level singleton)
 beforeEach(() => {

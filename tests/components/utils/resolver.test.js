@@ -1,6 +1,10 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import { resolve, resolveEx, convertToFullKey, setByPath } from '../../../src/components/utils/key-resolver.js'
+import KeyResolver from '../../../src/components/utils/key-resolver.js'
+import UuidItemMap from '../../../src/components/utils/uuid-item-map.js'
+
+const { resolve, resolveEx, convertToFullKey, setByPath } = KeyResolver
+const { ensureUuidForItem, getUuidByItem } = UuidItemMap
 
 describe('resolve', () => {
     test('resolves a simple top-level key', () => {
@@ -37,19 +41,27 @@ describe('convertToFullKey', () => {
     })
 
     test('converts relative key using context stack', () => {
+        const item = { name: 'Alice' }
+        ensureUuidForItem(item)
+        const uuid = getUuidByItem(item)
+
         const contextStack = new Map([
-            ['person', { fullKey: 'persons', data: { __item_index__: 2 } }]
+            ['person', { fullKey: 'persons', data: item }]
         ])
         const result = convertToFullKey('person.name', contextStack)
-        assert.equal(result, 'persons.2.name')
+        assert.equal(result, `persons.${uuid}.name`)
     })
 
     test('converts key with single-segment context (no sub-key)', () => {
+        const item = { name: 'Bob' }
+        ensureUuidForItem(item)
+        const uuid = getUuidByItem(item)
+
         const contextStack = new Map([
-            ['person', { fullKey: 'persons', data: { __item_index__: 0 } }]
+            ['person', { fullKey: 'persons', data: item }]
         ])
         const result = convertToFullKey('person', contextStack)
-        assert.equal(result, 'persons.0')
+        assert.equal(result, `persons.${uuid}`)
     })
 })
 
@@ -63,13 +75,17 @@ describe('resolveEx', () => {
     })
 
     test('resolves fullKey with context stack', () => {
-        const data = { persons: [{ name: 'Alice' }] }
+        const item = { name: 'Alice' }
+        const data = { persons: [item] }
+        ensureUuidForItem(item)
+        const uuid = getUuidByItem(item)
+
         const contextStack = new Map([
-            ['person', { fullKey: 'persons', data: { __item_index__: 0 } }]
+            ['person', { fullKey: 'persons', data: item }]
         ])
         const result = resolveEx('person.name', data, contextStack)
 
-        assert.equal(result.fullKey, 'persons.0.name')
+        assert.equal(result.fullKey, `persons.${uuid}.name`)
         assert.equal(result.value, 'Alice')
     })
 })

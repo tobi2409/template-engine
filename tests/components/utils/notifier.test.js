@@ -1,6 +1,8 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import { findMatchingDependencies } from '../../../src/components/utils/notifier.js'
+import Notifier from '../../../src/components/utils/notifier.js'
+
+const { findMatchingDependencies } = Notifier
 
 const deps = {
     'firstName': ['fullName'],

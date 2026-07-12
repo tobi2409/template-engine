@@ -2,7 +2,9 @@ import { test, describe, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { JSDOM } from 'jsdom'
 import TemplateEngine from '../src/template-engine.js'
-import { nodeHoldersByKeys } from '../src/components/utils/node-holders.js'
+import NodeHolders from '../src/components/utils/node-holders.js'
+
+const { nodeHoldersByKeys } = NodeHolders
 
 const { window } = new JSDOM('<!DOCTYPE html><body></body>')
 global.document = window.document

@@ -1,8 +1,11 @@
 import { test, describe, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { JSDOM } from 'jsdom'
-import { refresh } from '../../src/components/refresh-delegator.js'
-import { nodeHoldersByKeys } from '../../src/components/utils/node-holders.js'
+import RefreshDelegator from '../../src/components/refresh-delegator.js'
+import NodeHolders from '../../src/components/utils/node-holders.js'
+
+const { refresh } = RefreshDelegator
+const { nodeHoldersByKeys } = NodeHolders
 
 const { window } = new JSDOM('<!DOCTYPE html><body></body>')
 global.document = window.document
@@ -131,9 +134,6 @@ describe('refresh', () => {
         const mountNode = setupEachRender(data)
 
         assert.deepEqual(getRenderedIds(mountNode), ['1', '2', '3'])
-        assert.equal(data.items[0].__item_index__, 0)
-        assert.equal(data.items[1].__item_index__, 1)
-        assert.equal(data.items[2].__item_index__, 2)
     })
 
     test('push appends new rendered nodes and reindexes items', () => {
@@ -146,10 +146,6 @@ describe('refresh', () => {
         refresh(data, { fullKey: 'items', action: 'push', items: insertedItems })
 
         assert.deepEqual(getRenderedIds(mountNode), ['1', '2', '3', '4'])
-        assert.equal(data.items[0].__item_index__, 0)
-        assert.equal(data.items[1].__item_index__, 1)
-        assert.equal(data.items[2].__item_index__, 2)
-        assert.equal(data.items[3].__item_index__, 3)
     })
 
     test('pop removes last rendered node and keeps remaining content', () => {
@@ -160,8 +156,6 @@ describe('refresh', () => {
         refresh(data, { fullKey: 'items', action: 'pop' })
 
         assert.deepEqual(getRenderedIds(mountNode), ['1', '2'])
-        assert.equal(data.items[0].__item_index__, 0)
-        assert.equal(data.items[1].__item_index__, 1)
     })
 
     test('shift removes first rendered node and reindexes remaining items', () => {
@@ -174,8 +168,6 @@ describe('refresh', () => {
         assert.deepEqual(getRenderedIds(mountNode), ['2', '3'])
         assert.equal(data.items[0].id, 2)
         assert.equal(data.items[1].id, 3)
-        assert.equal(data.items[0].__item_index__, 0)
-        assert.equal(data.items[1].__item_index__, 1)
     })
 
     test('unshift inserts rendered node at start and reindexes items', () => {
@@ -191,9 +183,6 @@ describe('refresh', () => {
         assert.equal(data.items[0].id, 1)
         assert.equal(data.items[1].id, 2)
         assert.equal(data.items[2].id, 3)
-        assert.equal(data.items[0].__item_index__, 0)
-        assert.equal(data.items[1].__item_index__, 1)
-        assert.equal(data.items[2].__item_index__, 2)
     })
 
     test('splice updates rendered nodes and reindexes affected range', () => {
@@ -206,10 +195,5 @@ describe('refresh', () => {
         refresh(data, { fullKey: 'items', action: 'splice', startIndex: 1, deleteCount: 2, items: insertedItems })
 
         assert.deepEqual(getRenderedIds(mountNode), ['1', '10', '11', '12', '4'])
-        assert.equal(data.items[0].__item_index__, 0)
-        assert.equal(data.items[1].__item_index__, 1)
-        assert.equal(data.items[2].__item_index__, 2)
-        assert.equal(data.items[3].__item_index__, 3)
-        assert.equal(data.items[4].__item_index__, 4)
     })
 })

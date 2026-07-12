@@ -1,34 +1,23 @@
 // Reactive Component: Reactivity through Object.defineProperty-based data observation
 
-import { run } from './components/render.js'
-import { nodeHoldersByKeys } from './components/utils/node-holders.js'
-import { refresh } from './components/refresh-delegator.js'
-import { notifyDependencies, findMatchingDependencies } from './components/utils/notifier.js'
-import { setItemByUuid, setUuidByItem, getUuidByItem } from './components/utils/uuid-item-map.js'
+import InitialRendering from './components/initial-rendering.js'
+import NodeHolders from './components/utils/node-holders.js'
+import RefreshDelegator from './components/refresh-delegator.js'
+import Notifier from './components/utils/notifier.js'
+import UuidItemMap from './components/utils/uuid-item-map.js'
 
 const TemplateEngine = (function () {
     return {
         reactive(data, node, dependencies = {}) {
             const topData = data
 
-            function ensureUuid(item) {
-                if (!item || typeof item !== 'object') {
-                    return undefined
-                }
-
-                const uuid = getUuidByItem(item) || `__uuid__${crypto.randomUUID()}`
-                setItemByUuid(uuid, item)
-                setUuidByItem(item, uuid)
-                return uuid
-            }
-
             function notifyKeyChange(fullKey) {
                 notifyChange(fullKey)
             }
 
             function notifyChange(fullKey, change = undefined) {
-                const linkedNodeHolders = nodeHoldersByKeys.getByKey(fullKey)
-                const matchingDependents = findMatchingDependencies(fullKey, dependencies)
+                const linkedNodeHolders = NodeHolders.nodeHoldersByKeys.getByKey(fullKey)
+                const matchingDependents = Notifier.findMatchingDependencies(fullKey, dependencies)
 
                 if ((!linkedNodeHolders || linkedNodeHolders.get('holders')?.length === 0)
                     && matchingDependents.length === 0) {
@@ -37,15 +26,15 @@ const TemplateEngine = (function () {
 
                 if (linkedNodeHolders?.get('holders')?.length > 0) {
                     if (change) {
-                        refresh(topData, change)
+                        RefreshDelegator.refresh(topData, change)
                     } else {
                         for (const nodeHolder of linkedNodeHolders.get('holders')) {
-                            refresh(topData, { fullKey, action: nodeHolder.action })
+                            RefreshDelegator.refresh(topData, { fullKey, action: nodeHolder.action })
                         }
                     }
                 }
 
-                notifyDependencies(topData, matchingDependents, change)
+                Notifier.notifyDependencies(topData, matchingDependents, change)
             }
 
             function makeArrayItemsReactive(obj, fullKey) {
@@ -53,7 +42,7 @@ const TemplateEngine = (function () {
                     const item = obj[i]
 
                     if (item && typeof item === 'object') {
-                        const uuid = ensureUuid(item)
+                        const uuid = UuidItemMap.ensureUuidForItem(item)
                         const itemFullKey = fullKey ? `${fullKey}.${uuid}` : String(uuid)
                         // Beispiel: data.persons = [{ name: 'Anna' }, { name: 'Ben' }] ->
                         // data.persons[0].name = 'Clara' soll triggern.
@@ -81,7 +70,7 @@ const TemplateEngine = (function () {
                             if (change.items) {
                                 for (const item of change.items) {
                                     if (item && typeof item === 'object') {
-                                        const uuid = ensureUuid(item)
+                                        const uuid = UuidItemMap.ensureUuidForItem(item)
                                         const itemFullKey = fullKey ? `${fullKey}.${uuid}` : uuid
                                             // Beispiel: data.persons.push({ name: 'David' }) ->
                                             // danach muss data.persons[2].name = 'Daniel' triggern.
@@ -238,7 +227,7 @@ const TemplateEngine = (function () {
             // run() first: lets the template engine assign UUIDs to array items.
             // makeReactive() then reads those UUIDs to build the correct fullKey paths.
             try {
-                run(data, node, dependencies)
+                InitialRendering.run(data, node, dependencies)
             } catch (error) {
                 throw new Error(`[TemplateEngine] Error during initial render: ${error.message}`)
             }

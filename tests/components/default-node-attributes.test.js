@@ -1,9 +1,13 @@
 import { test, describe, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { JSDOM } from 'jsdom'
-import { handleGetNode } from '../../src/components/render.js'
-import { applyAttribute, handleActionAttribute, handleBindAttribute, handleStyleOrAttrAttribute } from '../../src/components/default-node-attributes.js'
-import { nodeHoldersByKeys } from '../../src/components/utils/node-holders.js'
+import InitialRendering from '../../src/components/initial-rendering.js'
+import DefaultNodeAttributes from '../../src/components/default-node-attributes.js'
+import NodeHolders from '../../src/components/utils/node-holders.js'
+
+const { handleGetNode } = InitialRendering
+const { applyAttribute, handleActionAttribute, handleBindAttribute, handleStyleOrAttrAttribute } = DefaultNodeAttributes
+const { nodeHoldersByKeys } = NodeHolders
 
 const { window } = new JSDOM('<!DOCTYPE html><body></body>')
 global.document = window.document
@@ -16,25 +20,25 @@ beforeEach(() => {
 describe('applyAttribute', () => {
     test('sets style property for style- prefix', () => {
         const node = document.createElement('div')
-        applyAttribute(node, 'style-color', 'red')
+        DefaultNodeAttributes.applyAttribute(node, 'style-color', 'red')
         assert.equal(node.style.color, 'red')
     })
 
     test('sets style property for style- prefix with camelCase', () => {
         const node = document.createElement('div')
-        applyAttribute(node, 'style-backgroundColor', 'blue')
+        DefaultNodeAttributes.applyAttribute(node, 'style-backgroundColor', 'blue')
         assert.equal(node.style.backgroundColor, 'blue')
     })
 
     test('sets HTML attribute for attr- prefix', () => {
         const node = document.createElement('div')
-        applyAttribute(node, 'attr-data-id', '42')
+        DefaultNodeAttributes.applyAttribute(node, 'attr-data-id', '42')
         assert.equal(node.getAttribute('data-id'), '42')
     })
 
     test('sets HTML attribute for attr- prefix with arbitrary name', () => {
         const node = document.createElement('div')
-        applyAttribute(node, 'attr-aria-label', 'Close')
+        DefaultNodeAttributes.applyAttribute(node, 'attr-aria-label', 'Close')
         assert.equal(node.getAttribute('aria-label'), 'Close')
     })
 })

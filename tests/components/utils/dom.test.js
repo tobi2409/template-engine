@@ -1,7 +1,9 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { JSDOM } from 'jsdom'
-import { mount } from '../../../src/components/utils/dom.js'
+import DomUtils from '../../../src/components/utils/dom.js'
+
+const { mount } = DomUtils
 
 function createDOM() {
     const dom = new JSDOM('<!DOCTYPE html><body></body>')
