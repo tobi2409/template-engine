@@ -53,7 +53,11 @@ const TemplateEngine = (function () {
 
             function patchArrayMethods(obj, fullKey) {
                 for (const method of ['push', 'pop', 'shift', 'unshift', 'splice']) {
-                    const original = Array.prototype[method]
+                    // If the array already has a custom method push, pop, ... (e.g. from createMappedArray),
+                    // wrap it instead of Array.prototype so the source sync is preserved.
+                    const original = (obj[method] !== Array.prototype[method])
+                        ? obj[method]
+                        : Array.prototype[method]
 
                     Object.defineProperty(obj, method, {
                         value: function(...args) {

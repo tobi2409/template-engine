@@ -101,4 +101,47 @@ describe('nodeHoldersByKeys.appendToKey', () => {
         assert.strictEqual(ref.get('holders')[0].node, node)
     })
 
+    test('segments nested map entries for uuid-like key path', () => {
+        const node = {}
+        const uuidSegment = '__uuid__abc123'
+        const fullKey = `persons.${uuidSegment}.name`
+
+        nodeHoldersByKeys.appendToKey(fullKey, { action: 'updateGet', node })
+
+        // top-level segment exists
+        assert.ok(nodeHoldersByKeys.has('persons'))
+
+        const personsMap = nodeHoldersByKeys.get('persons')
+        assert.ok(personsMap instanceof Map)
+
+        // uuid segment exists under persons
+        assert.ok(personsMap.has(uuidSegment))
+        const uuidMap = personsMap.get(uuidSegment)
+        assert.ok(uuidMap instanceof Map)
+
+        // leaf segment exists and contains holders
+        assert.ok(uuidMap.has('name'))
+        const nameMap = uuidMap.get('name')
+        assert.ok(nameMap instanceof Map)
+        assert.ok(nameMap.has('holders'))
+        assert.equal(nameMap.get('holders').length, 1)
+        assert.equal(nameMap.get('holders')[0].action, 'updateGet')
+        assert.strictEqual(nameMap.get('holders')[0].node, node)
+    })
+
+    test('creates holders only on leaf segment, not on parent segments', () => {
+        const node = {}
+        const fullKey = 'persons.__uuid__leafcheck.name'
+
+        nodeHoldersByKeys.appendToKey(fullKey, { action: 'updateGet', node })
+
+        const personsMap = nodeHoldersByKeys.get('persons')
+        const uuidMap = personsMap.get('__uuid__leafcheck')
+        const nameMap = uuidMap.get('name')
+
+        assert.equal(personsMap.has('holders'), false)
+        assert.equal(uuidMap.has('holders'), false)
+        assert.equal(nameMap.has('holders'), true)
+    })
+
 })

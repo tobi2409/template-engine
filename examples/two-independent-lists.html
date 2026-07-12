@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Zwei unabhängige Listen</title>
+    <title>Two Independent Lists</title>
     <style>
         body { font-family: sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
         h1 { font-size: 1.2rem; color: #333; }
@@ -17,32 +17,32 @@
 
 <template id="tpl">
 
-    <h1>Zwei unabhängige Listen</h1>
+    <h1>Two Independent Lists</h1>
 
     <section>
-        <h3>🍎 Früchte</h3>
+        <h3>🍎 Fruits</h3>
         <div class="list">
             <each of="fruits" as="fruit">
                 <span class="item"><get>fruit.name</get></span>
             </each>
         </div>
-        <button action-click="renameFruitFirst">Erste umbenennen</button>
-        <button action-click="renameFruitLast">Letzte umbenennen</button>
-        <button action-click="addFruit">Hinzufügen</button>
-        <button action-click="removeFruitFirst">Erste entfernen</button>
+        <button action-click="renameFruitFirst">Rename first</button>
+        <button action-click="renameFruitLast">Rename last</button>
+        <button action-click="addFruit">Add</button>
+        <button action-click="removeFruitFirst">Remove first</button>
     </section>
 
     <section>
-        <h3>🎨 Farben</h3>
+        <h3>🎨 Colors</h3>
         <div class="list">
             <each of="colors" as="color">
                 <span class="item"><get>color.name</get></span>
             </each>
         </div>
-        <button action-click="renameColorFirst">Erste umbenennen</button>
-        <button action-click="renameColorLast">Letzte umbenennen</button>
-        <button action-click="addColor">Hinzufügen</button>
-        <button action-click="removeColorFirst">Erste entfernen</button>
+        <button action-click="renameColorFirst">Rename first</button>
+        <button action-click="renameColorLast">Rename last</button>
+        <button action-click="addColor">Add</button>
+        <button action-click="removeColorFirst">Remove first</button>
     </section>
 
 </template>
@@ -55,24 +55,24 @@ import TemplateEngine from '../src/template-engine.js'
 
 const data = TemplateEngine.reactive({
     fruits: [
-        { name: 'Apfel' },
-        { name: 'Banane' },
-        { name: 'Kirsche' }
+        { name: 'Apple' },
+        { name: 'Banana' },
+        { name: 'Cherry' }
     ],
     colors: [
-        { name: 'Rot' },
-        { name: 'Grün' },
-        { name: 'Blau' }
+        { name: 'Red' },
+        { name: 'Green' },
+        { name: 'Blue' }
     ],
 
-    renameFruitFirst:  (e, d) => { d.fruits[0].name = 'Apfel ✎' },
-    renameFruitLast:   (e, d) => { d.fruits[d.fruits.length - 1].name = 'Letzte Frucht ✎' },
-    addFruit:          (e, d) => { d.fruits.push({ name: 'Traube' }) },
+    renameFruitFirst:  (e, d) => { d.fruits[0].name = 'Apple ✎' },
+    renameFruitLast:   (e, d) => { d.fruits[d.fruits.length - 1].name = 'Last fruit ✎' },
+    addFruit:          (e, d) => { d.fruits.push({ name: 'Grape' }) },
     removeFruitFirst:  (e, d) => { d.fruits.shift() },
 
-    renameColorFirst:  (e, d) => { d.colors[0].name = 'Rot ✎' },
-    renameColorLast:   (e, d) => { d.colors[d.colors.length - 1].name = 'Letzte Farbe ✎' },
-    addColor:          (e, d) => { d.colors.push({ name: 'Gelb' }) },
+    renameColorFirst:  (e, d) => { d.colors[0].name = 'Red ✎' },
+    renameColorLast:   (e, d) => { d.colors[d.colors.length - 1].name = 'Last color ✎' },
+    addColor:          (e, d) => { d.colors.push({ name: 'Yellow' }) },
     removeColorFirst:  (e, d) => { d.colors.shift() },
 }, document.getElementById('tpl-use'))
 </script>

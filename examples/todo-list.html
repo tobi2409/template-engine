@@ -23,6 +23,7 @@
                     </if>
 
                     <button class="edit-button" action-click="edit">✏️ Edit</button>
+                    <button class="delete-button" action-click="deleteTodo">🗑️ Delete</button>
                 </li>
             </each>
         </ul>
@@ -37,6 +38,7 @@
     <script type="module">
 
         import TemplateEngine from '../src/template-engine.js'
+        import { removeByReference } from '../src/array-helpers.js'
 
         const data = TemplateEngine.reactive({
             todos: [
@@ -52,11 +54,10 @@
                 }
             },
             edit: function(e, dataElement) {
-                const todo = data.todos[dataElement.__item_index__]
-
-                if (todo) {
-                    todo.showEdit = !todo.showEdit
-                }
+                dataElement.showEdit = !dataElement.showEdit
+            },
+            deleteTodo: function(e, dataElement) {
+                removeByReference(data.todos, dataElement)
             }
         }, document.getElementById('app-template-use'))
 

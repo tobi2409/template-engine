@@ -43,6 +43,7 @@
 
     <script type="module">
         import TemplateEngine from '../src/template-engine.js'
+        import { removeByReference, getParentContext } from '../src/array-helpers.js'
 
         const data = TemplateEngine.reactive({
             name: 'Alex Johnson',
@@ -76,15 +77,8 @@
                 dataElement.editing = !dataElement.editing
             },
             delete: (e, dataElement, _, contextStack) => {
-                const parent = contextStack.get(`item-level-${contextStack.size - 3}`)
-                
-                if (parent && parent.data?.childs) {
-                    const index = parent.data.childs.findIndex((c) => c === dataElement)
-
-                    if (index !== -1) {
-                        parent.data.childs.splice(index, 1)
-                    }
-                }
+                const parentChilds = getParentContext(contextStack)?.data?.childs ?? data.folders
+                removeByReference(parentChilds, dataElement)
             }
         }, document.getElementById('app-template-use'))
 

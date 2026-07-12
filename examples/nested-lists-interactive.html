@@ -51,6 +51,7 @@
 
     <script type="module">
         import TemplateEngine from '../src/template-engine.js'
+        import { removeByReference } from '../src/array-helpers.js'
 
         const data = TemplateEngine.reactive({
             name: 'Sarah Wilson',
@@ -88,11 +89,7 @@
                 dataElement.editing = !dataElement.editing
             },
             delete: (e, dataElement) => {
-                const personIndex = data.persons.findIndex((p) => p === dataElement)
-
-                if (personIndex !== -1) {
-                    data.persons.splice(personIndex, 1)
-                }
+                removeByReference(data.persons, dataElement)
             },
             toggleChildEdit: (e, dataElement) => {
                 dataElement.editing = !dataElement.editing
@@ -101,11 +98,7 @@
                 const parentData = contextStack.get('p')?.data
                 
                 if (parentData?.childs) {
-                    const index = parentData.childs.findIndex((c) => c === dataElement)
-                    
-                    if (index !== -1) {
-                        parentData.childs.splice(index, 1)
-                    }
+                    removeByReference(parentData.childs, dataElement)
                 }
             }
         }, document.getElementById('app-template-use'))

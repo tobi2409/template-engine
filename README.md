@@ -67,8 +67,6 @@ const viewModel = TemplateEngine.reactive({
 })
 ```
 
-Important: if you add/insert/remove items in `beautifiedData` (or `getBeautifiedData()`), those mutations should be forwarded to the underlying model array (for example `model.rawPersonData`) via `createMappedArray(..., reverseTransform)`.
-
 ### Recursive template: self-referencing `<template-use>`
 
 ```html

@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>makeReactive – alle Szenarien</title>
+    <title>makeReactive – all scenarios</title>
     <style>
         body { font-family: sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
         section { border: 1px solid #ddd; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; }
@@ -18,42 +18,42 @@
 
 <template id="tpl">
 
-    <!-- ① Einstieg: makeReactive(data) macht alle Eigenschaften reaktiv -->
+    <!-- ① Entry point: makeReactive(data) makes all properties reactive -->
     <section>
-        <h3>① Einstieg — makeReactive(data)</h3>
-        <small>data.person.name = 'Lisa' löst Refresh aus</small>
+        <h3>① Entry point — makeReactive(data)</h3>
+        <small>data.person.name = 'Lisa' triggers refresh</small>
         <p>person.name: <span class="val"><get>person.name</get></span></p>
         <button action-click="s1">person.name = 'Lisa'</button>
     </section>
 
-    <!-- ② Verschachtelte Objekte: defineReactiveDataProperty, initial & nach Setter -->
+    <!-- ② Nested objects: defineReactiveDataProperty, initial & after setter -->
     <section>
-        <h3>② Verschachtelte Objekte — defineReactiveDataProperty</h3>
-        <small>Tief verschachtelte Objekte werden sofort reaktiv. Auch ein neu zugewiesenes Objekt.
-            Hinweis: Beim Ersetzen eines Objekts werden Kind-Keys nicht automatisch benachrichtigt.
-            Eine explizite Zuweisung einer Child-Property ist nötig.</small>
+        <h3>② Nested objects — defineReactiveDataProperty</h3>
+        <small>Deeply nested objects become reactive immediately, including newly assigned objects.
+            Note: replacing an object does not automatically notify child keys.
+            An explicit child-property assignment is required.</small>
         <p>person.address.city: <span class="val"><get>person.address.city</get></span></p>
         <button action-click="s2a">address.city = 'Hamburg'</button>
         <button action-click="s2b">address = { city: 'Köln' } + city = 'Köln'</button>
-        <button action-click="s2c">(danach) city = 'Bonn'</button>
+        <button action-click="s2c">(afterwards) city = 'Bonn'</button>
     </section>
 
     <!-- ③ Computed Accessor: defineReactiveAccessorProperty, get + set -->
     <section>
         <h3>③ Computed Accessor — defineReactiveAccessorProperty</h3>
-        <small>Das vom Getter zurückgegebene Objekt bleibt reaktiv. Auch nach Setter-Zuweisung.
-            Hinweis: Gleiches Muster wie ② — nach dem Ersetzen des Objekts ist eine
-            explizite Child-Property-Zuweisung nötig.</small>
+        <small>The object returned by the getter stays reactive, also after setter assignment.
+            Note: same pattern as ② — after replacing the object,
+            an explicit child-property assignment is required.</small>
         <p>selectedPerson.name: <span class="val"><get>selectedPerson.name</get></span></p>
         <button action-click="s3a">selectedPerson.name = 'Finn'</button>
         <button action-click="s3b">selectedPerson = { name: 'Mia' } + name = 'Mia'</button>
-        <button action-click="s3c">(danach) selectedPerson.name = 'Luisa'</button>
+        <button action-click="s3c">(afterwards) selectedPerson.name = 'Luisa'</button>
     </section>
 
-    <!-- ④ Array-Einträge: makeArrayItemsReactive + patchArrayMethods.push -->
+    <!-- ④ Array entries: makeArrayItemsReactive + patchArrayMethods.push -->
     <section>
-        <h3>④ Array-Einträge — makeArrayItemsReactive &amp; patchArrayMethods</h3>
-        <small>Bestehende Einträge reaktiv beim Start. Neue Einträge nach push() ebenfalls.</small>
+        <h3>④ Array entries — makeArrayItemsReactive &amp; patchArrayMethods</h3>
+        <small>Existing entries are reactive at startup. New entries after push() are reactive too.</small>
         <div>
             <each of="persons" as="p">
                 <div class="list-item"><get>p.name</get></div>
@@ -61,7 +61,7 @@
         </div>
         <button action-click="s4a">persons[0].name = 'Clara'</button>
         <button action-click="s4b">persons.push({ name: 'David' })</button>
-        <button action-click="s4c">(danach) persons[last].name = 'Daniel'</button>
+        <button action-click="s4c">(afterwards) persons[last].name = 'Daniel'</button>
     </section>
 
 </template>
@@ -72,8 +72,8 @@
 <script type="module">
 import TemplateEngine from '../src/template-engine.js'
 
-// Backing object für den Computed Accessor (nicht in data, damit makeReactive
-// beim ersten Getter-Aufruf korrekt den fullKey 'selectedPerson' vergeben kann)
+// Backing object for the computed accessor (kept outside data so makeReactive
+// can assign the correct fullKey 'selectedPerson' on first getter access)
 const _raw = { person: { name: 'Kai' } }
 
 const data = TemplateEngine.reactive({

@@ -32,6 +32,8 @@
 
         <h2>Person Data</h2>
 
+        <button action-click="addPersonInfo">➕ Add Person</button>
+
         <ul>
             <each of="beautifiedPersonData" as="personInfo">
                 <li attr-item-index="personInfo.id">
@@ -120,6 +122,16 @@
                 const index = parseInt(event.target.parentElement.getAttribute('item-index'))
                 const person = viewModel.beautifiedPersonData.find(p => p.id === index)
                 person.showEdit = !person.showEdit
+            },
+
+            addPersonInfo: function() {
+                const nextId = (model.rawPersonData.reduce((max, p) => Math.max(max, p.id), 0) || 0) + 1
+                viewModel.beautifiedPersonData.push({
+                    id: nextId,
+                    name: `Person ${nextId}`,
+                    age: 30,
+                    showEdit: false
+                })
             }
         }, document.getElementById('app-template-use'), {
             'firstName': ['fullName'],
