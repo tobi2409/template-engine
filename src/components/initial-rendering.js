@@ -106,6 +106,8 @@ const InitialRendering = (function () {
             const wrapperTag = ifNode.getAttribute('wrapper') || 'div'
             const wrapper = document.createElement(wrapperTag)
             wrapper.style.display = 'none'
+            // mark wrapper so callers can target it (e.g. make it layout-neutral)
+            wrapper.dataset.ifWrapper = 'true'
 
             DomUtils.mount(wrapper, mountNode, insertBeforeAnchor)
 

@@ -67,6 +67,12 @@ const viewModel = TemplateEngine.reactive({
 })
 ```
 
+Notes:
+
+- Keeps stable mapped object identity per source item (internal cache).
+- Supports `push`, `pop`, `shift`, `unshift`, `splice` via source synchronization.
+- Add/insert/remove operations on mapped arrays are propagated back to the source model when `reverseTransform` is provided.
+
 ### Recursive template: self-referencing `<template-use>`
 
 ```html
@@ -273,34 +279,22 @@ Why this matters:
 
 ## Mapped Array
 
-`createMappedArray(...)` helps you build a mapped view-model array while keeping synchronization with the source array.
+see top of README
 
-```js
-import { createMappedArray } from './src/mapped-array.js'
+## Technical background: NodeHolders and UUID identity
 
-const source = [{ name: 'Alice', birthyear: 1995 }]
+- **NodeHolders:** The engine tracks which DOM nodes depend on a particular "full key" using a segmented Map managed by the node-holders utility ([src/components/utils/node-holders.js](src/components/utils/node-holders.js)). Full keys (for example `users.3.name` or `item#.childs.2.title`) are split into segments and stored in nested Maps; the leaf entries contain arrays of node-holders that reference that full key. When a property changes the engine builds the full key and looks up any matching holders to refresh — this enables targeted updates without scanning the entire DOM.
 
-const vm = createMappedArray(
-  source,
-  (item) => ({
-    label: item.name,
-    age: new Date().getFullYear() - item.birthyear
-  }),
-  { age: 'birthyear' },
-  (result) => ({
-    birthyear: new Date().getFullYear() - result.age,
-    name: result.label
-  })
-)
+- **UUID / item identity:** For arrays the engine keeps stable per-item identities using a WeakMap-backed id cache (see [src/mapped-array.js](src/mapped-array.js)). When rendering `<each>` the engine assigns each object a stable id so that moving, inserting, or deleting items preserves existing DOM nodes for unchanged items. That reduces DOM churn and keeps per-item state (inputs, event handlers) stable across array mutations.
 
-vm[0].age = 25 // writes back to source[0].birthyear
-```
+- **Benefits:** targeted refreshes for changed keys, minimal DOM re-creation, efficient nested/context lookups, and stable per-item state during array operations.
 
-Notes:
+- **Caveats:** identity tracking requires array items to be objects (not primitives). Also, replacing a nested object does not automatically notify child keys — use explicit child-key assignments when needed (see "Known limitation: object replacement notifications").
 
-- Keeps stable mapped object identity per source item (internal cache).
-- Supports `push`, `pop`, `shift`, `unshift`, `splice` via source synchronization.
-- Add/insert/remove operations on mapped arrays are propagated back to the source model when `reverseTransform` is provided.
+References:
+- Node holder implementation: [src/components/utils/node-holders.js](src/components/utils/node-holders.js)
+- Mapped array and item identity: [src/mapped-array.js](src/mapped-array.js)
+- Initial rendering and refresh dispatch: [src/components/initial-rendering.js](src/components/initial-rendering.js) and [src/components/refresh-delegator.js](src/components/refresh-delegator.js)
 
 ## Development
 
