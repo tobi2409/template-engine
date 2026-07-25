@@ -55,6 +55,30 @@ describe('createMappedArray', () => {
         assert.equal(arr[0].value, 42)
     })
 
+    test('passes viewModelItem and modelItem to reverseTransform on writable updates', () => {
+        const sourceItem = { id: 1, name: 'Alice', birthyear: 2000 }
+        const source = [sourceItem]
+
+        let receivedViewModelItem = null
+        let receivedModelItem = null
+
+        const arr = createMappedArray(
+            source,
+            (item) => ({ name: item.name, age: new Date().getFullYear() - item.birthyear }),
+            { age: 'birthyear' },
+            (viewModelItem, modelItem) => {
+                receivedViewModelItem = viewModelItem
+                receivedModelItem = modelItem
+                return { birthyear: new Date().getFullYear() - viewModelItem.age }
+            }
+        )
+
+        arr[0].age = 31
+
+        assert.strictEqual(receivedViewModelItem, arr[0])
+        assert.strictEqual(receivedModelItem, sourceItem)
+    })
+
     test('push delegates to source via reverseTransform', () => {
         const source = [{ id: 1, name: 'Alice' }]
         const arr = createMappedArray(

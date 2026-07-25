@@ -6,12 +6,13 @@
 // after array operations like splice/reindex.
 const mappedItemCache = new WeakMap()
 
-export function createMappedArray(source, transform, writableProps = {}, reverseTransform = (x) => x) {
+export function createMappedArray(source, transform, writableProps = {}, reverseTransform = (viewModelItem) => viewModelItem) {
     let arr = []
     
     try {
         // writableProps: Maps ViewModel properties to Model properties for bidirectional sync.
-        // When a writable property changes, reverseTransform is applied and the result
+        // When a writable property changes, reverseTransform(viewModelItem, modelItem)
+        // is applied and the result
         // is written back to the corresponding source property.
 
         arr = source.map((item, index) => {
@@ -29,7 +30,7 @@ export function createMappedArray(source, transform, writableProps = {}, reverse
                         get: () => internalValue,
                         set: (v) => {
                             internalValue = v
-                            const transformed = reverseTransform(result)
+                            const transformed = reverseTransform(result, item)
                             item[sourceProp] = transformed[sourceProp]
                         },
                         configurable: true
