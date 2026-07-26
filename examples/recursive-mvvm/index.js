@@ -69,6 +69,10 @@ const viewModel = TemplateEngine.reactive({
                 layerDecoration: '»'.repeat(layer),
             }),
             { name: 'name', wage: 'wage', age: 'birthyear' },
+            // childs ist hier (vorerst) nicht notwendig,
+            // weil in mapped-array für Veränderungen in einem bestehenden Objekt ein set mit reverseTransform aufgerufen wird
+            // und auch hinzufügen funktioniert, weil push sowohl ins Model (reverseTransform) als auch ViewModel hinzufügt
+            // somit wird für jedes childs-Array die push-Funktion überschrieben
             (personViewModelItem, personItem) => ({
                 id: personViewModelItem.id,
                 name: personViewModelItem.name,
@@ -85,6 +89,7 @@ const viewModel = TemplateEngine.reactive({
     newDemoChild_MaxJr() {
         const maxJr = viewModel.beautifiedPersons[0].childs[0]
 
+        // wahrscheinlich fehlt hier ein set mit reverseTransform
         maxJr.childs.push({
             id: 10,
             name: `Max III - New`,

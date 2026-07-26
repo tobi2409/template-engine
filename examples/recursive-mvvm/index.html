@@ -11,6 +11,8 @@
         <div id="app"></div>
         
         <template id="persons-template">
+
+            <div> <!-- div ist wichtig, damit nicht in DocumentFragment beim HInzufügen geschrieben wird -->
             <each of="*list" as="p">
                 <div class="table-row">
                     <div class="table-cell">
@@ -31,6 +33,7 @@
                     template-id="persons-template"
                     data-list="p.childs"></template-use>
             </each>
+            </div>
         </template>
         
         <template id="app-template">
