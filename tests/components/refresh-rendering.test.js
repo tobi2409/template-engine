@@ -201,6 +201,54 @@ describe('handleIfNodeRefresh', () => {
             /wrapper element missing/
         )
     })
+
+    test('justHideChildren saves and restores children without cloning', () => {
+        const data = { visible: true }
+        const wrapper = document.createElement('div')
+        const child = document.createElement('span')
+        child.textContent = 'preserve'
+        wrapper.appendChild(child)
+
+        const ifNode = document.createElement('if')
+        ifNode.setAttribute('justHideChildren', 'true')
+
+        // collapse
+        data.visible = false
+        handleIfNodeRefresh(data, { wrapper, fullKey: 'visible', contextStack: new Map(), params: new Map(), ifNode })
+
+        // children moved into fragment and wrapper empty
+        assert.equal(wrapper.children.length, 0)
+        assert.ok(wrapper._savedFragment)
+        assert.equal(wrapper._savedFragment.childNodes.length, 1)
+        assert.equal(wrapper._savedFragment.firstChild, child)
+
+        // expand again -> reattach same node
+        data.visible = true
+        handleIfNodeRefresh(data, { wrapper, fullKey: 'visible', contextStack: new Map(), params: new Map(), ifNode })
+
+        assert.equal(wrapper.children.length, 1)
+        assert.equal(wrapper.children[0], child)
+        assert.equal(wrapper._savedFragment, undefined)
+    })
+
+    test('justHideChildren falls back to initial rendering when no saved fragment', () => {
+        const data = { visible: false }
+        const wrapper = document.createElement('div')
+
+        const ifNode = document.createElement('if')
+        // create a template child to be rendered
+        const newChild = document.createElement('span')
+        newChild.textContent = 'from-walk'
+        ifNode.appendChild(newChild)
+        ifNode.setAttribute('justHideChildren', 'true')
+
+        // show -> no saved fragment exists, so InitialRendering.walk should create children
+        data.visible = true
+        handleIfNodeRefresh(data, { wrapper, fullKey: 'visible', contextStack: new Map(), params: new Map(), ifNode })
+
+        assert.equal(wrapper.children.length, 1)
+        assert.equal(wrapper.children[0].textContent, 'from-walk')
+    })
 })
 
 describe('handleEachNodeRefresh', () => {

@@ -10,6 +10,7 @@ const RefreshDelegator = (function () {
             switch (change.action) {
                 case 'push': {
                     const list = KeyResolver.resolve(change.fullKey, data)
+                    
                     RefreshRendering.handleEachNodeRefresh(data,
                         { fullKey: change.fullKey, insertStartIndex: list.length - change.items.length, insertCount: change.items.length })
 
@@ -17,6 +18,7 @@ const RefreshDelegator = (function () {
                 }
                 case 'pop': {
                     const list = KeyResolver.resolve(change.fullKey, data)
+
                     RefreshRendering.handleEachNodeRefresh(data,
                         { fullKey: change.fullKey, deleteStartIndex: list.length, deleteCount: 1 })
 
@@ -24,6 +26,7 @@ const RefreshDelegator = (function () {
                 }
                 case 'shift': {
                     const list = KeyResolver.resolve(change.fullKey, data)
+
                     RefreshRendering.handleEachNodeRefresh(data,
                         { fullKey: change.fullKey, deleteStartIndex: 0, deleteCount: 1, reindexStartIndex: 1, reindexShift: -1, reindexMaxIndex: list.length })
 
@@ -31,6 +34,7 @@ const RefreshDelegator = (function () {
                 }
                 case 'unshift': {
                     const list = KeyResolver.resolve(change.fullKey, data)
+
                     RefreshRendering.handleEachNodeRefresh(data,
                         { fullKey: change.fullKey, insertStartIndex: 0, insertCount: change.items.length,
                             reindexStartIndex: 0, reindexShift: change.items.length, reindexMaxIndex: list.length - change.items.length - 1 })
@@ -51,6 +55,7 @@ const RefreshDelegator = (function () {
                 }
                 case 'updateEach': {
                     const list = KeyResolver.resolve(change.fullKey, data)
+
                     RefreshRendering.handleEachNodeRefresh(data,
                         { fullKey: change.fullKey, deleteStartIndex: 0, deleteCount: list.length,
                             insertStartIndex: 0, insertCount: list.length })
@@ -69,6 +74,7 @@ const RefreshDelegator = (function () {
                 }
                 case 'updateIf': {
                     const linkedNodeHolders = NodeHolders.nodeHoldersByKeys.getByKey(change.fullKey)
+
                     for (const nodeHolder of linkedNodeHolders.get('holders')) {
                         RefreshRendering.handleIfNodeRefresh(data, { wrapper: nodeHolder.wrapper, fullKey: change.fullKey,
                             contextStack: nodeHolder.contextStack, params: nodeHolder.params, ifNode: nodeHolder.ifNode })

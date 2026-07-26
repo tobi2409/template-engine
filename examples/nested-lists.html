@@ -28,6 +28,7 @@
                 </li>
             </each>
         </ul>
+        <button action-click="checkRendered">Verify Rendered Updates</button>
     </template>
 
     <template-use id="app-template-use" template-id="app-template" mount-id="app" data-param1="Engineering"></template-use>
@@ -65,6 +66,18 @@
         data.persons.splice(1, 0, { name: 'Riley Cooper', role: 'QA Lead', childs: [{ name: 'Casey Morgan - QA Engineer', childs: [] }] })
 
         console.log('Organization data:', data)
+
+        data.checkRendered = function() {
+            const msgs = []
+            msgs.push(document.body.textContent.includes('Alex Chen (updated)') ? 'Name updated OK' : 'Name update missing')
+            msgs.push(document.body.textContent.includes('Sam Lee - Junior Developer') ? 'Sam Lee present' : 'Sam Lee missing')
+            msgs.push(document.body.textContent.includes('Jamie Torres - DevOps Engineer') ? 'Jamie Torres present' : 'Jamie Torres missing')
+            msgs.push(document.body.textContent.includes('Riley Cooper') ? 'Riley Cooper present' : 'Riley Cooper missing')
+            const ok = msgs.every(m => /present|OK/.test(m))
+            const msg = (ok ? 'All checks passed:\n' : 'Some checks failed:\n') + msgs.join('\n')
+            console.log(msg)
+            alert(msg)
+        }
     </script>
 
 </body>

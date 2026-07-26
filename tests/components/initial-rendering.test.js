@@ -274,7 +274,7 @@ describe('handleEachNode', () => {
 
         assert.throws(
             () => handleEachNode(data, new Map(), new Map(), eachNode, mountNode),
-            /each-of must be an Array/
+            /each-of expected an Array/
         )
     })
 

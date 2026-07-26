@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Document</title>
+
+        <link rel="stylesheet" href="index.css" />
+    </head>
+    <body>
+        <div id="app"></div>
+        
+        <template id="persons-template">
+            <each of="*list" as="p">
+                <div class="table-row">
+                    <div class="table-cell">
+                        <get>p.layerDecoration</get>
+                    </div>
+                    <div class="table-cell">
+                        <input type="text" bind-input-value="p.name" />
+                    </div>
+                    <div class="table-cell">
+                        <input type="text" bind-input-value="p.wage" />
+                    </div>
+                    <div class="table-cell">
+                        <input type="number" bind-input-value="p.age" />
+                    </div>
+                </div>
+
+                <template-use
+                    template-id="persons-template"
+                    data-list="p.childs"></template-use>
+            </each>
+        </template>
+        
+        <template id="app-template">
+            <h1>👋 Hello, <get>user</get></h1>
+
+            <div class="table">
+                <div class="table-row">
+                    <div class="table-cell"></div>
+                    <div class="table-cell">Name:</div>
+                    <div class="table-cell">Wage</div>
+                    <div class="table-cell">Age</div>
+                </div>
+
+                <template-use
+                    template-id="persons-template"
+                    data-list="beautifiedPersons"></template-use>
+
+            </div>
+
+            <br />
+            <button action-click="newDemoChild_MaxJr">Add Demo Child to Max Jr.</button>
+            <br />
+            <button action-click="logModels">Log Models</button>
+        </template>
+
+        <template-use
+            id="app-template-use"
+            template-id="app-template"
+            mount-id="app"
+        >
+        </template-use>
+
+        <script type="module" src="index.js"></script>
+    </body>
+</html>

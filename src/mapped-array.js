@@ -47,6 +47,7 @@ export function createMappedArray(source, transform, writableProps = {}, reverse
     // Override array methods
     arr.push = (...items) => {
         try {
+            Array.prototype.push.apply(arr, items)
             return source.push(...items.map(reverseTransform))
         } catch (error) {
             throw new Error(`[TemplateEngine] Error in mapped array push: ${error.message}`)
@@ -55,6 +56,7 @@ export function createMappedArray(source, transform, writableProps = {}, reverse
 
     arr.splice = (start, deleteCount, ...items) => {
         try {
+            Array.prototype.splice.apply(arr, [start, deleteCount, ...items])
             return source.splice(start, deleteCount, ...items.map(reverseTransform))
         } catch (error) {
             throw new Error(`[TemplateEngine] Error in mapped array splice: ${error.message}`)
@@ -63,6 +65,7 @@ export function createMappedArray(source, transform, writableProps = {}, reverse
 
     arr.unshift = (...items) => {
         try {
+            Array.prototype.unshift.apply(arr, ...items)
             return source.unshift(...items.map(reverseTransform))
         } catch (error) {
             throw new Error(`[TemplateEngine] Error in mapped array unshift: ${error.message}`)
@@ -71,6 +74,7 @@ export function createMappedArray(source, transform, writableProps = {}, reverse
 
     arr.pop = () => {
         try {
+            Array.prototype.pop.apply(arr)
             return source.pop()
         } catch (error) {
             throw new Error(`[TemplateEngine] Error in mapped array pop: ${error.message}`)
@@ -79,6 +83,7 @@ export function createMappedArray(source, transform, writableProps = {}, reverse
 
     arr.shift = () => {
         try {
+            Array.prototype.shift.apply(arr)
             return source.shift()
         } catch (error) {
             throw new Error(`[TemplateEngine] Error in mapped array shift: ${error.message}`)

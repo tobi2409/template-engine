@@ -34,6 +34,8 @@
                 </li>
             </each>
         </ul>
+
+        <button action-click="checkRendered">Verify In-Code Updates</button>
     </template>
 
     <template-use id="app-template-use" template-id="app-template" mount-id="app" data-param1="Online"></template-use>
@@ -67,7 +69,37 @@
                     name: 'JavaScript Essentials',
                     stockStatus: 'low-stock'
                 }]
-            }]
+            }],
+
+            // Verification helper: checks whether dynamic updates were applied to the DOM
+            checkRendered: function() {
+                const messages = []
+
+                const catStrong = document.querySelector('li[category-id="1"] strong')
+                if (catStrong && catStrong.textContent.trim() === 'Electronics & Accessories') {
+                    messages.push('Category name OK')
+                } else {
+                    messages.push('Category name incorrect or missing: ' + (catStrong ? catStrong.textContent.trim() : '<missing>'))
+                }
+
+                const prod103 = document.querySelector('li[product-id="103"]')
+                messages.push(prod103 ? 'Product 103 present' : 'Product 103 missing')
+
+                const prod104 = document.querySelector('li[product-id="104"]')
+                messages.push(prod104 ? 'Product 104 present' : 'Product 104 missing')
+
+                const prod103Node = prod103
+                const stock = prod103Node ? prod103Node.getAttribute('stock-status') : null
+                messages.push(stock === 'out-of-stock' ? 'Stock status updated OK' : `Stock status not updated: ${stock}`)
+
+                const colorDiv = Array.from(document.querySelectorAll('div')).find(d => d.getAttribute('style') && d.getAttribute('style').includes('#dc2626'))
+                messages.push(colorDiv ? 'Theme color OK' : 'Theme color not applied')
+
+                const ok = messages.every(m => m.includes('OK') || m.includes('present'))
+                const msg = (ok ? 'All checks passed:\n' : 'Some checks failed:\n') + messages.join('\n')
+                console.log(msg)
+                alert(msg)
+            }
         }, document.getElementById('app-template-use'))
 
         // Demonstrate dynamic attribute updates

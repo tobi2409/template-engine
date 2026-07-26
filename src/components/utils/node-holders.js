@@ -10,7 +10,10 @@ const NodeHolders = (function () {
 
             for (const segment of segments) {
                 if (!ref.has(segment)) {
-                    if (!create) return undefined
+                    if (!create) {
+                        return undefined
+                    }
+
                     ref.set(segment, new Map())
                 }
                 ref = ref.get(segment)
@@ -26,8 +29,13 @@ const NodeHolders = (function () {
         try {
             const ref = this.getByKey(fullKey, true)
 
-            if (!ref.has('holders')) ref.set('holders', [])
+            
+            if (!ref.has('holders')) {
+                ref.set('holders', [])
+            }
+
             const holders = ref.get('holders')
+
             if (!holders.some(e => e.node === nodeHolder.node)) {
                 holders.push(nodeHolder)
             }

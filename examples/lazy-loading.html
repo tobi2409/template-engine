@@ -25,11 +25,11 @@
         <each of="*list" as="folder">
             <li>
                 <div class="folder" attr-folder-id="folder.id">
-                    <span class="expand-btn"><get>folder.expandIcon</get></span>
+                    <span class="expand-btn" action-click="expand"><get>folder.expandIcon</get></span>
                     📁 <get>folder.name</get>
                 </div>
 
-                <if test="folder.expanded" wrapper="li">
+                <if test="folder.expanded" wrapper="li" justHideChildren="true">
                     <ul>
                         <template-use template-id="folder-template" data-list="folder.children"></template-use>
                     </ul>
@@ -46,6 +46,7 @@
         <ul>
             <template-use template-id="folder-template" data-list="folders"></template-use>
         </ul>
+        <button action-click="checkRendered">Verify Rendered Updates</button>
     </template>
 
     <template-use id="app-template-use" template-id="app-template" mount-id="app"></template-use>
@@ -53,7 +54,7 @@
     <script type="module">
         import TemplateEngine from '../src/template-engine.js'
 
-        const data = TemplateEngine.reactive({
+        let data = TemplateEngine.reactive({
             userName: 'Sarah Miller',
             folders: [
                 { 
@@ -81,35 +82,26 @@
                         { id: 22, name: 'notes.txt', hasChildren: false, expanded: false, expandIcon: ' ', children: [] }
                     ]
                 }
-            ]
+            ],
+            expand(e, dataElement) {
+                dataElement.expanded = !dataElement.expanded
+            }
         }, document.getElementById('app-template-use'))
-        
+
         data.folders[0].children.splice(1, 1)
         data.folders[1].children.splice(1, 0, { id: 23, name: 'summary.docx', hasChildren: false, expanded: false, expandIcon: ' ', children: [] })
         
-        function findFolder(folders, id) {
-            for (const folder of folders) {
-                if (folder.id == id) return folder
-                if (folder.children.length > 0) {
-                    const found = findFolder(folder.children, id)
-                    if (found) return found
-                }
-            }
-            return null
+        data.checkRendered = function() {
+            const msgs = []
+            const el23 = document.querySelector('[folder-id="23"]')
+            msgs.push(el23 ? 'Folder 23 present' : 'Folder 23 missing')
+            msgs.push(document.body.textContent.includes('summary.docx') ? 'summary.docx present' : 'summary.docx missing')
+            const ok = msgs.every(m => /present/.test(m))
+            const msg = (ok ? 'All checks passed:\n' : 'Some checks failed:\n') + msgs.join('\n')
+            console.log(msg)
+            alert(msg)
         }
-
-        document.getElementById('app').addEventListener('click', (event) => {
-            const folderElement = event.target.closest('.folder')
-            if (!folderElement) return
-
-            const folderId = folderElement.getAttribute('folder-id')
-            const folder = findFolder(data.folders, folderId)
-            if (!folder || !folder.hasChildren) return
-
-            folder.expanded = !folder.expanded
-            folder.expandIcon = folder.expanded ? '▼' : '▶'
-        })
-
+        
     </script>
 
 </body>

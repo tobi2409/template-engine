@@ -30,6 +30,7 @@
         <button action-click="renameFruitLast">Rename last</button>
         <button action-click="addFruit">Add</button>
         <button action-click="removeFruitFirst">Remove first</button>
+        <button action-click="checkRendered">Verify Rendered Updates</button>
     </section>
 
     <section>
@@ -75,6 +76,16 @@ const data = TemplateEngine.reactive({
     addColor:          (e, d) => { d.colors.push({ name: 'Yellow' }) },
     removeColorFirst:  (e, d) => { d.colors.shift() },
 }, document.getElementById('tpl-use'))
+
+data.checkRendered = function() {
+    const msgs = []
+    msgs.push(document.body.textContent.includes('Grape') ? 'Grape present' : 'Grape missing')
+    msgs.push(document.body.textContent.includes('Yellow') ? 'Yellow present' : 'Yellow missing')
+    const ok = msgs.every(m => /present/.test(m))
+    const msg = (ok ? 'All checks passed:\n' : 'Some checks failed:\n') + msgs.join('\n')
+    console.log(msg)
+    alert(msg)
+}
 </script>
 
 </body>

@@ -11,6 +11,7 @@
 <body>
 
     <div id="app"></div>
+    <button id="verify-rendered" style="position:fixed;top:8px;right:8px;">Verify Rendered</button>
 
     <template id="app-template">
         <each of="items" as="item">
@@ -51,6 +52,14 @@
 
             model = TemplateEngine.reactive({ items }, mount)
         })
+
+            document.getElementById('verify-rendered').addEventListener('click', () => {
+                const domCount = document.querySelectorAll('.item').length
+                const modelCount = model.items.length
+                const msg = `DOM items: ${domCount} / model.items: ${modelCount}`
+                console.log(msg)
+                alert(msg)
+            })
 
         setTimeout(() => {
             measureAfterCommit(`Update ${UPDATE_COUNT} Items`, () => {

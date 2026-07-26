@@ -53,14 +53,43 @@ const RefreshRendering = (function () {
                 throw new Error('[TemplateEngine] wrapper element missing in IfNodeRefresh')
             }
 
-            wrapper.replaceChildren()
-            wrapper.style.display = 'none'
+            // Support optimized hiding: if justHideChildren is set we keep a saved
+            // DocumentFragment to reattach instead of full re-render.
+            const justHide = Boolean(refreshInfo.ifNode && refreshInfo.ifNode.attributes && refreshInfo.ifNode.attributes['justHideChildren'])
 
             const testValue = KeyResolver.resolve(refreshInfo.fullKey, data)
 
-            if (testValue) {
-                wrapper.style.display = ''
-                InitialRendering.walk(data, refreshInfo.contextStack, refreshInfo.params, refreshInfo.ifNode.childNodes, wrapper)
+            if (justHide) {
+                if (!testValue) {
+                    if (!wrapper._savedFragment) {
+                        const frag = document.createDocumentFragment()
+                        // Move (don't clone because DOM Element can only have one parent)
+                        // all children to a DocumentFragment to save them for later reattachment
+                        while (wrapper.firstChild) {
+                            frag.appendChild(wrapper.firstChild)
+                        }
+                        
+                        wrapper._savedFragment = frag
+                    }
+                } else {
+                    if (wrapper._savedFragment) {
+                        wrapper.appendChild(wrapper._savedFragment)
+                        delete wrapper._savedFragment
+                    } else {
+                        InitialRendering.walk(data, refreshInfo.contextStack, refreshInfo.params, refreshInfo.ifNode.childNodes, wrapper)
+                    }
+                }
+
+                wrapper.style.display = testValue ? '' : 'none'
+            } else {
+                // default behavior: replace children and rebuild when true
+                wrapper.replaceChildren()
+                wrapper.style.display = 'none'
+
+                if (testValue) {
+                    wrapper.style.display = ''
+                    InitialRendering.walk(data, refreshInfo.contextStack, refreshInfo.params, refreshInfo.ifNode.childNodes, wrapper)
+                }
             }
         } catch (error) {
             throw new Error(`[TemplateEngine] Error in handleIfNodeRefresh: ${error.message}`)

@@ -8,6 +8,27 @@ import AliasResolver from './utils/alias-resolver.js'
 import UuidItemMap from './utils/uuid-item-map.js'
 
 const InitialRendering = (function () {
+    function _previewValue(v) {
+        try {
+            
+            if (v === null) {
+                return 'null'
+            }
+
+            if (v === undefined) {
+                return 'undefined'
+            }
+
+            if (typeof v === 'object') {
+                return JSON.stringify(v)
+            }
+
+            return String(v)
+        } catch (e) {
+            return Object.prototype.toString.call(v)
+        }
+    }
+    
     function handleTextNode(textNode, mountNode, insertBeforeAnchor = undefined) {
         try {
             const cloned = textNode.cloneNode(false)
@@ -50,8 +71,9 @@ const InitialRendering = (function () {
 
             const list = resolvedOf.value
 
-            if (list.constructor.name !== 'Array') {
-                throw new Error('[TemplateEngine] each-of must be an Array')
+            if (!Array.isArray(list)) {
+                const preview = _previewValue(list)
+                throw new Error(`[TemplateEngine] each-of expected an Array for "${ofAttribute}" (full-key: ${resolvedOf.fullKey}) but got ${typeof list}: ${preview}`)
             }
 
             const startIndex = refreshInfo?.startIndex ?? 0
@@ -100,7 +122,8 @@ const InitialRendering = (function () {
             const resolvedTest = KeyResolver.resolveEx(test, data, contextStack, params)
 
             if (typeof resolvedTest.value !== 'boolean') {
-                throw new Error(`[TemplateEngine] if-test must resolve to a boolean in ${test} (full-key: ${resolvedTest.fullKey}) but got ${typeof resolvedTest.value}`)
+                const preview = _previewValue(resolvedTest.value)
+                throw new Error(`[TemplateEngine] if-test must resolve to a boolean for "${test}" (full-key: ${resolvedTest.fullKey}) but got ${typeof resolvedTest.value}: ${preview}`)
             }
 
             const wrapperTag = ifNode.getAttribute('wrapper') || 'div'

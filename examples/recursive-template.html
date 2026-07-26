@@ -37,6 +37,7 @@
         <ul>
             <template-use template-id="folder-template" data-list="folders"></template-use>
         </ul>
+        <button action-click="checkRendered">Verify Rendered Updates</button>
     </template>
 
     <template-use id="app-template-use" template-id="app-template" mount-id="app" data-param1="/home"></template-use>
@@ -95,6 +96,19 @@
         data.folders[0].childs[2].name = 'data-science'
 
         console.log('File system data:', data)
+
+        data.checkRendered = function() {
+            const msgs = []
+            msgs.push(document.body.textContent.includes('projects (active)') ? 'Projects name OK' : 'Projects name missing')
+            msgs.push(document.body.textContent.includes('data-analysis') ? 'data-analysis present' : 'data-analysis missing')
+            msgs.push(document.body.textContent.includes('tools') ? 'tools present' : 'tools missing')
+            msgs.push(document.body.textContent.includes('downloads') ? 'downloads present' : 'downloads missing')
+            msgs.push(document.body.textContent.includes('scripts') ? 'scripts present' : 'scripts missing')
+            const ok = msgs.every(m => /present|OK/.test(m))
+            const msg = (ok ? 'All checks passed:\n' : 'Some checks failed:\n') + msgs.join('\n')
+            console.log(msg)
+            alert(msg)
+        }
     </script>
 
 </body>

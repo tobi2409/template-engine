@@ -31,6 +31,7 @@
         <label for="new-todo-input">New task:</label>
         <input id="new-todo-input" type="text" bind-input-value="newTodo" placeholder="What needs to be done?" />
         <button id="add-todo-btn" action-click="add">➕ Add Task</button>
+        <button action-click="checkRendered">Verify Rendered Updates</button>
     </template>
 
     <template-use id="app-template-use" template-id="app-template" mount-id="app"></template-use>
@@ -63,6 +64,17 @@
 
         data.todos.push({ id: 4, name: 'Plan team meeting', showEdit: false })
         data.todos.splice(1, 1)
+
+        data.checkRendered = function() {
+            const msgs = []
+            msgs.push(document.body.textContent.includes('Plan team meeting') ? 'Plan team meeting present' : 'Plan team meeting missing')
+            const liCount = document.querySelectorAll('ul > li').length
+            msgs.push(`DOM todo count: ${liCount}, data.todos.length: ${data.todos.length}`)
+            const ok = msgs[0].includes('present')
+            const msg = (ok ? 'Check passed:\n' : 'Check failed:\n') + msgs.join('\n')
+            console.log(msg)
+            alert(msg)
+        }
 
     </script>
 

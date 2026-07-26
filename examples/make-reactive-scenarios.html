@@ -62,6 +62,7 @@
         <button action-click="s4a">persons[0].name = 'Clara'</button>
         <button action-click="s4b">persons.push({ name: 'David' })</button>
         <button action-click="s4c">(afterwards) persons[last].name = 'Daniel'</button>
+        <button action-click="checkRendered">Verify Rendered Updates</button>
     </section>
 
 </template>
@@ -99,6 +100,16 @@ const data = TemplateEngine.reactive({
     s4b: (e, d) => { d.persons.push({ name: 'David' }) },
     s4c: (e, d) => { d.persons[d.persons.length - 1].name = 'Daniel' },
 }, document.getElementById('tpl-use'))
+
+data.checkRendered = function() {
+    const msgs = []
+    msgs.push(document.body.textContent.includes('David') ? 'David present' : 'David missing')
+    msgs.push(document.body.textContent.includes('Clara') ? 'Clara present' : 'Clara missing')
+    const ok = msgs.some(m => /present/.test(m))
+    const msg = (ok ? 'Some checks passed:\n' : 'Checks failed:\n') + msgs.join('\n')
+    console.log(msg)
+    alert(msg)
+}
 </script>
 
 </body>

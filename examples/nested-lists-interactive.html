@@ -45,6 +45,7 @@
                 </li>
             </each>
         </ul>
+        <button action-click="checkRendered">Verify Rendered Updates</button>
     </template>
 
     <template-use id="app-template-use" template-id="app-template" mount-id="app" data-param1="Engineering"></template-use>
@@ -114,6 +115,18 @@
         data.persons[0].childs[1].name = 'Jordan Kim (Updated) - Frontend Developer'
 
         console.log('Organization data:', data)
+
+        data.checkRendered = function() {
+            const msgs = []
+            msgs.push(document.body.textContent.includes('Alex Chen (updated)') ? 'Name updated OK' : 'Name update missing')
+            msgs.push(document.body.textContent.includes('Sam Lee - Junior Developer') ? 'Sam Lee present' : 'Sam Lee missing')
+            msgs.push(document.body.textContent.includes('Top Secret') ? 'Watermark OK' : 'Watermark missing')
+            msgs.push(document.body.textContent.includes('Jordan Kim (Updated)') ? 'Jordan updated OK' : 'Jordan update missing')
+            const ok = msgs.every(m => /present|OK/.test(m))
+            const msg = (ok ? 'All checks passed:\n' : 'Some checks failed:\n') + msgs.join('\n')
+            console.log(msg)
+            alert(msg)
+        }
     </script>
 
 </body>
