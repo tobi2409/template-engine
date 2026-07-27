@@ -45,10 +45,17 @@ export function createMappedArray(source, transform, writableProps = {}, reverse
     }
     
     // Override array methods
-    arr.push = (...items) => {
+    arr.push = (...viewModelItems) => {
         try {
-            Array.prototype.push.apply(arr, items)
-            return source.push(...items.map(reverseTransform))
+            const modelItems = viewModelItems.map(reverseTransform)
+            const mappedViewModelItems = createMappedArray(modelItems, transform, writableProps, reverseTransform)
+            Array.prototype.push.apply(arr, mappedViewModelItems)
+            return source.push(...modelItems)
+
+            /*const modelItems = viewModelItems.map(reverseTransform)
+            const mappedViewModelItems = createMappedArray(modelItems, transform, writableProps, reverseTransform)*/
+            Array.prototype.push.apply(arr, viewModelItems)// mappedViewModelItems)
+            return source.push(...viewModelItems.map(reverseTransform)) //modelItems)
         } catch (error) {
             throw new Error(`[TemplateEngine] Error in mapped array push: ${error.message}`)
         }

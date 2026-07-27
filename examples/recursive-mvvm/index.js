@@ -57,6 +57,16 @@ const viewModel = TemplateEngine.reactive({
         model.user = value
     },
 
+    a(personViewModelItem) {
+        return {
+            id: personViewModelItem.id,
+            name: personViewModelItem.name,
+            wage: personViewModelItem.wage.slice(0, -4),
+            birthyear: new Date().getFullYear() - personViewModelItem.age,
+            childs: personViewModelItem.childs.map(viewModelChild => this.a(viewModelChild))
+        }
+    },
+
     recursiveBeautifiedPersons(persons, layer = 1) {
         return createMappedArray(
             persons,
@@ -73,12 +83,7 @@ const viewModel = TemplateEngine.reactive({
             // weil in mapped-array für Veränderungen in einem bestehenden Objekt ein set mit reverseTransform aufgerufen wird
             // und auch hinzufügen funktioniert, weil push sowohl ins Model (reverseTransform) als auch ViewModel hinzufügt
             // somit wird für jedes childs-Array die push-Funktion überschrieben
-            (personViewModelItem, personItem) => ({
-                id: personViewModelItem.id,
-                name: personViewModelItem.name,
-                wage: personViewModelItem.wage.slice(0, -4),
-                birthyear: new Date().getFullYear() - personViewModelItem.age
-            })
+            (personViewModelItem) => (this.a(personViewModelItem))
         )
     },
 
@@ -90,13 +95,22 @@ const viewModel = TemplateEngine.reactive({
         const maxJr = viewModel.beautifiedPersons[0].childs[0]
 
         // wahrscheinlich fehlt hier ein set mit reverseTransform
-        maxJr.childs.push({
-            id: 10,
+
+        const newChild = {
+            id: 9,
             name: `Max III - New`,
             wage: '10 USD',
             age: 2,
-            childs: []
-        })
+            childs: [{
+                id: 10,
+                name: `Max IV - New`,
+                wage: '5 USD',
+                age: 1,
+                childs: []
+            }]
+        }
+
+        maxJr.childs.push(newChild)
 
         console.log(maxJr.childs)
     },
