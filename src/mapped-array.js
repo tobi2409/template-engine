@@ -48,14 +48,10 @@ export function createMappedArray(source, transform, writableProps = {}, reverse
     arr.push = (...viewModelItems) => {
         try {
             const modelItems = viewModelItems.map(reverseTransform)
+            // should be mapped to provide the Proxy for setting and list operations
             const mappedViewModelItems = createMappedArray(modelItems, transform, writableProps, reverseTransform)
             Array.prototype.push.apply(arr, mappedViewModelItems)
             return source.push(...modelItems)
-
-            /*const modelItems = viewModelItems.map(reverseTransform)
-            const mappedViewModelItems = createMappedArray(modelItems, transform, writableProps, reverseTransform)*/
-            Array.prototype.push.apply(arr, viewModelItems)// mappedViewModelItems)
-            return source.push(...viewModelItems.map(reverseTransform)) //modelItems)
         } catch (error) {
             throw new Error(`[TemplateEngine] Error in mapped array push: ${error.message}`)
         }

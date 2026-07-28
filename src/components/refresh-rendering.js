@@ -28,6 +28,9 @@ const RefreshRendering = (function () {
             }
 
             for (const nodeHolder of linkedNodeHolders.get('holders')) {
+                //sollte nodeHolder.mountNode ein DocumentFragment sein, dann wird nodeHolder.realParent verwendet
+                //const mountNode = nodeHolder.mountNode instanceof DocumentFragment ? nodeHolder.realParent : nodeHolder.mountNode
+                
                 for (let i = 0; i < deleteCount; i++) {
                     const childToRemove = nodeHolder.mountNode.children[deleteStartIndex]
                     if (childToRemove) {

@@ -10,35 +10,23 @@
     <body>
         <div id="app"></div>
         
-        <template id="persons-template">
+        <template id="table-structured-data-content">
 
-            <div> <!-- div ist wichtig, damit nicht in DocumentFragment beim HInzufügen geschrieben wird -->
             <each of="*list" as="p">
                 <div class="table-row">
-                    <div class="table-cell">
-                        <get>p.layerDecoration</get>
-                    </div>
-                    <div class="table-cell">
-                        <input type="text" bind-input-value="p.name" />
-                    </div>
-                    <div class="table-cell">
-                        <input type="text" bind-input-value="p.wage" />
-                    </div>
-                    <div class="table-cell">
-                        <input type="number" bind-input-value="p.age" />
-                    </div>
+                    <div class="table-cell"><get>p.layerDecoration</get></div>
+                    <div class="table-cell"><input type="text" bind-input-value="p.name" /></div>
+                    <div class="table-cell"><input type="text" bind-input-value="p.wage" /></div>
+                    <div class="table-cell"><input type="number" bind-input-value="p.age" /></div>
                 </div>
 
                 <template-use
-                    template-id="persons-template"
+                    template-id="table-structured-data-content"
                     data-list="p.childs"></template-use>
             </each>
-            </div>
         </template>
         
-        <template id="app-template">
-            <h1>👋 Hello, <get>user</get></h1>
-
+        <template id="table-structured-data">
             <div class="table">
                 <div class="table-row">
                     <div class="table-cell"></div>
@@ -48,10 +36,39 @@
                 </div>
 
                 <template-use
-                    template-id="persons-template"
+                    template-id="table-structured-data-content"
                     data-list="beautifiedPersons"></template-use>
 
             </div>
+        </template>
+
+        <template id="ul-structured-data">
+            <ul>
+                <each of="*list" as="p">
+                    <li>
+                        <get>p.layerDecoration</get>
+                        <input type="text" bind-input-value="p.name" />
+                        <input type="text" bind-input-value="p.wage" />
+                        <input type="number" bind-input-value="p.age" />
+
+                        <template-use
+                            template-id="ul-structured-data"
+                            data-list="p.childs"></template-use>
+                    </li>
+                </each>
+            </ul>
+        </template>
+
+        <template id="app-template">
+            <h1>👋 Hello, <get>user</get></h1>
+
+            <template-use
+                template-id="ul-structured-data"
+                data-list="beautifiedPersons"></template-use>
+
+            <template-use
+                template-id="table-structured-data"
+                data-list="persons"></template-use>
 
             <br />
             <button action-click="newDemoChild_MaxJr">Add Demo Child to Max Jr.</button>
