@@ -1,0 +1,5 @@
+.table { display: table; width: 100%; border-collapse: collapse; }
+.table-row { display: table-row; }
+.table-row.header { font-weight: bold; background: #f3f4f6; }
+.table-cell { display: table-cell; padding: 8px 12px; border: 1px solid #e5e7eb; }
+.table-body { display: table-row-group; }

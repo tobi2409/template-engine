@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recursive Templates Demo - Template Engine</title>
+    <link rel="stylesheet" href="recursive-template.css" />
+</head>
+<body>
+
+    <div id="app"></div>
+
+    <template id="folder-template">
+        <each of="*list" as="item#">
+            <li>📁 <get>item#.name</get> (<get>item#.size</get> items)
+
+                <if test="item#.editing">
+                    <input type="text" bind-input-value="item#.name">
+                </if>
+
+                <button action-click="toggleEdit">✏️ Edit</button>
+                <button action-click="delete">🗑️ Delete</button>
+
+                <ul>
+                    <template-use template-id="folder-template" data-list="item#.childs"></template-use>
+                </ul>
+
+            </li>
+        </each>
+    </template>
+
+    <template id="app-template">
+        <h1>📂 File System Browser</h1>
+        <p>Current user: <strong><get>name</get></strong></p>
+        <p>Browsing: <get>param1</get> drive</p>
+
+        <h2>Directory Structure</h2>
+        <ul>
+            <template-use template-id="folder-template" data-list="folders"></template-use>
+        </ul>
+        <button action-click="checkRendered">Verify Rendered Updates</button>
+    </template>
+
+    <template-use id="app-template-use" template-id="app-template" mount-id="app" data-param1="/home"></template-use>
+
+    <script type="module" src="./recursive-template.js"></script>
+
+</body>
+
+</html>

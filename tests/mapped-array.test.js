@@ -88,9 +88,14 @@ describe('createMappedArray', () => {
             (result) => ({ name: result.label })
         )
 
-        arr.push({ label: 'Bob' })
+        const pushed = { label: 'Bob' }
+        arr.push(pushed)
         assert.equal(source.length, 2)
         assert.equal(source[1].name, 'Bob')
+        // view-array should contain a mapped view object for the pushed item
+        assert.equal(arr[1].label, 'Bob')
+        // the view entry must not be the same object that was pushed (it must be created by createMappedArray)
+        assert.notStrictEqual(arr[1], pushed)
     })
 
     test('pop removes last item from source', () => {
@@ -99,6 +104,7 @@ describe('createMappedArray', () => {
 
         arr.pop()
         assert.equal(source.length, 1)
+        assert.equal(arr.length, 1)
     })
 
     test('shift removes first item from source', () => {
@@ -108,6 +114,8 @@ describe('createMappedArray', () => {
         arr.shift()
         assert.equal(source.length, 1)
         assert.equal(source[0].id, 2)
+        assert.equal(arr.length, 1)
+        assert.equal(arr[0].id, 2)
     })
 
     test('unshift adds item at beginning of source via reverseTransform', () => {
@@ -119,9 +127,12 @@ describe('createMappedArray', () => {
             (result) => ({ name: result.label })
         )
 
-        arr.unshift({ label: 'Alice' })
+        const unshifted = { label: 'Alice' }
+        arr.unshift(unshifted)
         assert.equal(source.length, 2)
         assert.equal(source[0].name, 'Alice')
+        assert.equal(arr[0].label, 'Alice')
+        assert.notStrictEqual(arr[0], unshifted)
     })
 
     test('splice removes and inserts items in source via reverseTransform', () => {
@@ -133,8 +144,11 @@ describe('createMappedArray', () => {
             (result) => ({ name: result.label })
         )
 
-        arr.splice(1, 1, { label: 'Dave' })
+        const inserted = { label: 'Dave' }
+        arr.splice(1, 1, inserted)
         assert.equal(source.length, 3)
         assert.equal(source[1].name, 'Dave')
+        assert.equal(arr[1].label, 'Dave')
+        assert.notStrictEqual(arr[1], inserted)
     })
 })

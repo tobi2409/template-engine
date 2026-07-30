@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nested Lists Interactive - Template Engine</title>
+    <link rel="stylesheet" href="nested-lists-interactive.css" />
+</head>
+<body>
+
+    <div id="app"></div>
+
+    <template id="app-template">
+        <h1>🏢 Company Organization Chart</h1>
+        <p>User: <strong><get>name</get></strong> (<get>age</get> years old)</p>
+        <p>Department: <get>param1</get></p>
+
+        <h2>Team Structure</h2>
+
+        <ul>
+            <each of="persons" as="p">
+                <li>
+                    <strong><get>p.name</get></strong> - <get>p.role</get>
+                    <button action-click="toggleEdit">✏️ Edit</button>
+                    <button action-click="delete">🗑️ Delete</button>
+                    
+                    <if test="p.editing">
+                        <input type="text" bind-input-value="p.name">
+                    </if>
+
+                    <ul>
+                        <each of="p.childs" as="c">
+                            <li>
+                                <b><get>watermark</get></b>
+                                <get>c.name</get> (<get>param1</get> team)
+                                <button action-click="toggleChildEdit">✏️ Edit</button>
+                                <button action-click="deleteChild">🗑️ Delete</button>
+                                
+                                <if test="c.editing">
+                                    <input type="text" bind-input-value="c.name">
+                                </if>
+                            </li>
+                        </each>
+                    </ul>
+
+                </li>
+            </each>
+        </ul>
+        <button action-click="checkRendered">Verify Rendered Updates</button>
+    </template>
+
+    <template-use id="app-template-use" template-id="app-template" mount-id="app" data-param1="Engineering"></template-use>
+
+    <script type="module" src="./nested-lists-interactive.js"></script>
+
+</body>
+
+</html>

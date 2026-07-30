@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Simple List (table-styled)</title>
+    <link rel="stylesheet" href="index.css" />
+</head>
+<body>
+
+    <div id="app"></div>
+
+    <template id="rows">
+        <each of="*list" as="r">
+            <div class="table-row">
+                <div class="table-cell"><get>r.name</get></div>
+                <div class="table-cell"><get>r.value</get></div>
+            </div>
+        </each>
+    </template>
+
+    <template id="page">
+        <h1>Simple Table-Styled List</h1>
+        
+        <div class="table">
+            <div class="table-row header">
+                <div class="table-cell">Name</div>
+                <div class="table-cell">Value</div>
+            </div>
+
+            <div id="simple-list-body" class="table-body">
+                <template-use template-id="rows" data-list="items"></template-use>
+            </div>
+        </div>
+
+        <button action-click="addItem">Add Item</button>
+        <button action-click="insertItem">Insert Item</button>
+    </template>
+
+    <template-use id="page-use" template-id="page" mount-id="app"></template-use>
+
+    <script type="module" src="index.js"></script>
+
+</body>
+</html>

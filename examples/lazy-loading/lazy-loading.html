@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lazy Loading Demo - Template Engine</title>
+    <link rel="stylesheet" href="lazy-loading.css" />
+</head>
+<body>
+
+    <div id="app"></div>
+
+    <template id="folder-template">
+        <each of="*list" as="folder">
+            <li>
+                <div class="folder" attr-folder-id="folder.id">
+                    <span class="expand-btn" action-click="expand"><get>folder.expandIcon</get></span>
+                    📁 <get>folder.name</get>
+                </div>
+
+                <if test="folder.expanded" wrapper="li" justHideChildren="true">
+                    <ul>
+                        <template-use template-id="folder-template" data-list="folder.children"></template-use>
+                    </ul>
+                </if>
+            </li>
+        </each>
+    </template>
+
+    <template id="app-template">
+        <h1>📂 Lazy-Loading File System</h1>
+        <p>Click on folders to expand and load their contents</p>
+        <p>Current user: <strong><get>userName</get></strong></p>
+
+        <ul>
+            <template-use template-id="folder-template" data-list="folders"></template-use>
+        </ul>
+        <button action-click="checkRendered">Verify Rendered Updates</button>
+    </template>
+
+    <template-use id="app-template-use" template-id="app-template" mount-id="app"></template-use>
+
+    <script type="module" src="./lazy-loading.js"></script>
+
+</body>
+</html>

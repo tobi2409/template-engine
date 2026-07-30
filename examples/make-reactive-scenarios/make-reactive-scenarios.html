@@ -3,16 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>makeReactive – all scenarios</title>
-    <style>
-        body { font-family: sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
-        section { border: 1px solid #ddd; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; }
-        h3 { margin: 0 0 .4rem; font-size: .95rem; color: #333; }
-        p { margin: .3rem 0 .6rem; }
-        .val { background: #eef3ff; padding: .25rem .6rem; border-radius: 4px; font-weight: bold; font-family: monospace; }
-        .list-item { background: #eef3ff; padding: .25rem .6rem; border-radius: 4px; font-family: monospace; display: inline-block; margin: .15rem .1rem; }
-        button { margin: .2rem; font-size: .85rem; }
-        small { color: #888; display: block; margin-bottom: .4rem; }
-    </style>
+    <link rel="stylesheet" href="make-reactive-scenarios.css" />
 </head>
 <body>
 
@@ -50,7 +41,7 @@
         <button action-click="s3c">(afterwards) selectedPerson.name = 'Luisa'</button>
     </section>
 
-    <!-- ④ Array entries: makeArrayItemsReactive + patchArrayMethods.push -->
+    <!-- ④ Array entries: makeArrayItemsReactive &amp; patchArrayMethods.push -->
     <section>
         <h3>④ Array entries — makeArrayItemsReactive &amp; patchArrayMethods</h3>
         <small>Existing entries are reactive at startup. New entries after push() are reactive too.</small>
@@ -70,47 +61,7 @@
 <div id="app"></div>
 <template-use id="tpl-use" template-id="tpl" mount-id="app"></template-use>
 
-<script type="module">
-import TemplateEngine from '../src/template-engine.js'
-
-// Backing object for the computed accessor (kept outside data so makeReactive
-// can assign the correct fullKey 'selectedPerson' on first getter access)
-const _raw = { person: { name: 'Kai' } }
-
-const data = TemplateEngine.reactive({
-    // ① + ②
-    person: { name: 'Anna', address: { city: 'Berlin' } },
-
-    // ③
-    get selectedPerson() { return _raw.person },
-    set selectedPerson(v) { _raw.person = v },
-
-    // ④
-    persons: [{ name: 'Anna' }, { name: 'Ben' }],
-
-    // Actions
-    s1:  (e, d) => { d.person.name = 'Lisa' },
-    s2a: (e, d) => { d.person.address.city = 'Hamburg' },
-    s2b: (e, d) => { d.person.address = { city: 'Köln' }; /*d.person.address.city = 'Köln'*/ },
-    s2c: (e, d) => { d.person.address.city = 'Bonn' },
-    s3a: (e, d) => { d.selectedPerson.name = 'Finn' },
-    s3b: (e, d) => { d.selectedPerson = { name: 'Mia' }; /*d.selectedPerson.name = 'Mia'*/ },
-    s3c: (e, d) => { d.selectedPerson.name = 'Luisa' },
-    s4a: (e, d) => { d.persons[0].name = 'Clara' },
-    s4b: (e, d) => { d.persons.push({ name: 'David' }) },
-    s4c: (e, d) => { d.persons[d.persons.length - 1].name = 'Daniel' },
-}, document.getElementById('tpl-use'))
-
-data.checkRendered = function() {
-    const msgs = []
-    msgs.push(document.body.textContent.includes('David') ? 'David present' : 'David missing')
-    msgs.push(document.body.textContent.includes('Clara') ? 'Clara present' : 'Clara missing')
-    const ok = msgs.some(m => /present/.test(m))
-    const msg = (ok ? 'Some checks passed:\n' : 'Checks failed:\n') + msgs.join('\n')
-    console.log(msg)
-    alert(msg)
-}
-</script>
+<script type="module" src="./make-reactive-scenarios.js"></script>
 
 </body>
 </html>

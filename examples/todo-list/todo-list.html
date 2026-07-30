@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ToDo List - Template Engine</title>
+    <link rel="stylesheet" href="todo-list.css" />
+</head>
+<body>
+    
+    <div id="app"></div>
+
+    <template id="app-template">
+        <h1>📝 Project Tasks</h1>
+        <p>Two-way data binding with inline editing</p>
+
+        <ul>
+            <each of="todos" as="todo">
+                <li>
+                    <get>todo.name</get>
+
+                    <if test="todo.showEdit">
+                        <input type="text" bind-input-value="todo.name" placeholder="Edit task..." />
+                    </if>
+
+                    <button class="edit-button" action-click="edit">✏️ Edit</button>
+                    <button class="delete-button" action-click="deleteTodo">🗑️ Delete</button>
+                </li>
+            </each>
+        </ul>
+
+        <label for="new-todo-input">New task:</label>
+        <input id="new-todo-input" type="text" bind-input-value="newTodo" placeholder="What needs to be done?" />
+        <button id="add-todo-btn" action-click="add">➕ Add Task</button>
+        <button action-click="checkRendered">Verify Rendered Updates</button>
+    </template>
+
+    <template-use id="app-template-use" template-id="app-template" mount-id="app"></template-use>
+
+    <script type="module" src="./todo-list.js"></script>
+
+</body>
+</html>

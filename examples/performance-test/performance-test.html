@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Template Engine Performance Test</title>
+<link rel="stylesheet" href="performance-test.css" />
+</head>
+<body>
+
+    <div id="app"></div>
+    <button id="verify-rendered" style="position:fixed;top:8px;right:8px;">Verify Rendered</button>
+
+    <template id="app-template">
+        <each of="items" as="item">
+            <div class="item"><get>item.name</get> - <get>item.value</get></div>
+        </each>
+    </template>
+
+    <template-use id="app-template-use" template-id="app-template" mount-id="app"></template-use>
+
+    <script type="module" src="./performance-test.js"></script>
+</body>
+</html>

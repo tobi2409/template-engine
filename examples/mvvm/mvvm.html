@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MVVM Demo - Template Engine</title>
+    <link rel="stylesheet" href="mvvm.css" />
+</head>
+<body>
+
+    <div id="app"></div>
+
+    <template id="app-template">
+        <h1>👋 Hello World</h1>
+
+        <p>First Name: <get>firstName</get></p>
+        <p>Last Name: <get>lastName</get></p>
+        <p><b>Full Name: <get>fullName</get></b></p>
+
+        <input type="text" bind-input-value="firstName" placeholder="First Name ..."/>
+        <input type="text" bind-input-value="lastName" placeholder="Last Name ..."/>
+
+        <br/><br/>
+
+        <div>
+            <if test="showWage">
+                <p>💵 Wage: $<get>wage</get></p>
+                <p><b><get>fullInfo</get></b></p>
+            </if>
+
+            <input type="number" bind-input-value="wage" placeholder="Wage ..."/>
+        </div>
+
+        <h2>Person Data</h2>
+
+        <button action-click="addPersonInfo">➕ Add Person</button>
+
+        <ul>
+            <each of="beautifiedPersonData" as="personInfo">
+                <li attr-item-index="personInfo.id">
+                    <get>personInfo.name</get> (<get>personInfo.age</get> years old)
+
+                    <if test="personInfo.showEdit">
+                        <input type="text" bind-input-value="personInfo.name" placeholder="Name ..." />
+                        <input type="number" bind-input-value="personInfo.age" placeholder="Age ..." />
+                    </if>
+
+                    <button action-click="editPersonInfo">✏️ Edit</button>
+                </li>
+            </each>
+        </ul>
+        <button action-click="checkRendered">Verify Rendered Updates</button>
+    </template>
+
+    <template-use id="app-template-use" template-id="app-template" mount-id="app"></template-use>
+
+    <script type="module" src="./mvvm.js"></script>
+
+</body>
+</html>

@@ -2,6 +2,10 @@
     display: table;
 }
 
+.table-row-outer {
+    display: contents;
+}
+
 .table-row {
     display: table-row;
 }
@@ -10,9 +14,4 @@
     display: table-cell;
     padding: 0.5rem;
     border: 1px solid #ccc;
-}
-
-/* Make <if> wrappers layout-neutral so table structure isn't broken */
-[data-if-wrapper="true"] {
-    display: contents;
 }

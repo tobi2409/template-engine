@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Attributes Demo - Template Engine</title>
+    <link rel="stylesheet" href="attributes.css" />
+    </head>
+<body>
+
+    <div id="app"></div>
+
+    <template id="app-template">
+        <h1>🛍️ Product Catalog</h1>
+        <p>Welcome, <strong><get>name</get></strong></p>
+
+        <div style-color="themeColor" style-font-weight="emphasisWeight">
+            You are browsing as <get>name</get> from <get>param1</get>
+        </div>
+
+        <h2>Categories</h2>
+        <ul>
+            <each of="categories" as="cat">
+                <li attr-category-id="cat.id">
+                    <strong><get>cat.name</get></strong> (<get>cat.itemCount</get> items)
+
+                    <ul>
+                        <each of="cat.products" as="prod">
+                            <li attr-product-id="prod.id" attr-stock-status="prod.stockStatus">
+                                <get>prod.name</get> - <get>param1</get> store
+                            </li>
+                        </each>
+                    </ul>
+
+                </li>
+            </each>
+        </ul>
+
+        <button action-click="checkRendered">Verify In-Code Updates</button>
+    </template>
+
+    <template-use id="app-template-use" template-id="app-template" mount-id="app" data-param1="Online"></template-use>
+
+    <script type="module" src="attributes.js"></script>
+
+    </body>
+
+</html>

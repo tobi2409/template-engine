@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conditional Rendering Demo - Template Engine</title>
+    <link rel="stylesheet" href="conditional-rendering.css" />
+</head>
+<body>
+
+    <div id="app"></div>
+
+    <template id="team-template">
+        <each of="*list" as="member">
+            <if test="member.active" wrapper="li">
+                <get>member.name</get> - <get>member.role</get>
+
+                <ul>
+                    <template-use template-id="team-template" data-list="member.reports"></template-use>
+                </ul>
+            </if>
+        </each>
+    </template>
+
+    <template id="app-template">
+        <h1>👤 User Dashboard</h1>
+        <p>Welcome back, <strong><get>name</get></strong></p>
+        <p>Environment: <get>param1</get></p>
+
+        <if test="showSalary">
+            <p>💰 Annual Salary: $<get>salary</get></p>
+        </if>
+
+        <h2>Active Team Members</h2>
+        <ul>
+            <template-use template-id="team-template" data-list="team"></template-use>
+        </ul>
+        <button action-click="checkRendered">Verify Rendered Updates</button>
+    </template>
+
+    <template-use id="app-template-use" template-id="app-template" mount-id="app" data-param1="Production"></template-use>
+
+    <script type="module" src="./conditional-rendering.js"></script>
+
+</body>
+
+</html>

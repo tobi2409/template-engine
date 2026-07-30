@@ -28,7 +28,13 @@ const RefreshRendering = (function () {
             }
 
             for (const nodeHolder of linkedNodeHolders.get('holders')) {
-                //sollte nodeHolder.mountNode ein DocumentFragment sein, dann wird nodeHolder.realParent verwendet
+                // die einzelnen each-Elemente (außer im Top-Level) bekommen DocumentFragment als mountNode
+                // beim initialen Rendering ist in der rekursiv durchgegangenen Baumstruktur des Top-Level-each-Elements kein DocumentFragment, sondern ein reales Element
+                // -> somit werden die Einträge jeder Ebene in einen realen Parent geschrieben
+                // beim Hinzufügen von Elementen wird aus den NodeHolders das jeweilige each geholt und dessen mountNode ist ein DocumentFragment,
+                // sollte es sich nicht um das Root-each handeln
+                // -> daher gibt es kein echtes Parent und die Elemente landen im Nirvana
+                // DAHER: sollte nodeHolder.mountNode ein DocumentFragment sein, dann wird nodeHolder.realParent verwendet
                 //const mountNode = nodeHolder.mountNode instanceof DocumentFragment ? nodeHolder.realParent : nodeHolder.mountNode
                 
                 for (let i = 0; i < deleteCount; i++) {
