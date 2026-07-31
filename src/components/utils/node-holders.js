@@ -4,42 +4,56 @@ const NodeHolders = (function () {
     const nodeHoldersByKeys = new Map()
 
     nodeHoldersByKeys.getByKey = function(fullKey, create = false) {
-        try {
-            const segments = fullKey.split('.')
-            let ref = nodeHoldersByKeys
-
-            for (const segment of segments) {
-                if (!ref.has(segment)) {
-                    if (!create) {
-                        return undefined
-                    }
-
-                    ref.set(segment, new Map())
-                }
-                ref = ref.get(segment)
+        if (typeof fullKey !== 'string' || fullKey.length === 0) {
+            if (create) {
+                throw new TypeError('nodeHoldersByKeys.getByKey requires a non-empty string key when create=true')
             }
 
-            return ref
-        } catch (error) {
-            throw new Error(`[TemplateEngine] Error in getByKey for "${fullKey}": ${error.message}`)
+            return undefined
         }
+
+        const segments = fullKey.split('.')
+        let ref = nodeHoldersByKeys
+
+        for (const segment of segments) {
+            if (!ref.has(segment)) {
+                if (!create) {
+                    return undefined
+                }
+                
+                ref.set(segment, new Map())
+            }
+            ref = ref.get(segment)
+        }
+
+        return ref
     }
 
     nodeHoldersByKeys.appendToKey = function(fullKey, nodeHolder) {
-        try {
-            const ref = this.getByKey(fullKey, true)
+        if (!nodeHolder || typeof nodeHolder !== 'object') {
+            throw new TypeError('nodeHoldersByKeys.appendToKey requires nodeHolder to be an object')
+        }
 
-            if (!ref.has('holders')) {
-                ref.set('holders', [])
+        const ref = this.getByKey(fullKey, true)
+
+        if (!ref.has('holders')) {
+            ref.set('holders', [])
+        }
+
+        const holders = ref.get('holders')
+
+        const holderIdentity = nodeHolder.controlNode ?? nodeHolder.node
+
+        if (!holders.some((e) => {
+            const existingIdentity = e.controlNode ?? e.node
+
+            if (holderIdentity !== undefined && existingIdentity !== undefined) {
+                return existingIdentity === holderIdentity
             }
 
-            const holders = ref.get('holders')
-
-            if (!holders.some(e => e.controlNode === nodeHolder.controlNode && e.node === nodeHolder.node)) {
-                holders.push(nodeHolder)
-            }
-        } catch (error) {
-            throw new Error(`[TemplateEngine] Error appending NodeHolder for "${fullKey}": ${error.message}`)
+            return e.controlNode === nodeHolder.controlNode && e.node === nodeHolder.node
+        })) {
+            holders.push(nodeHolder)
         }
     }
 

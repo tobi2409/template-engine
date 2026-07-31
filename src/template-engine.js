@@ -9,6 +9,14 @@ import UuidItemMap from './components/utils/uuid-item-map.js'
 const TemplateEngine = (function () {
     return {
         reactive(data, node, dependencies = {}) {
+            if (!data || typeof data !== 'object') {
+                throw new TypeError(`TemplateEngine.reactive expected "data" to be an object, got ${data === null ? 'null' : typeof data}`)
+            }
+
+            if (!node || typeof node !== 'object' || node.nodeType !== Node.ELEMENT_NODE || node.tagName !== 'TEMPLATE-USE') {
+                throw new TypeError('TemplateEngine.reactive expected "node" to be a <template-use> element')
+            }
+
             const topData = data
 
             function notifyKeyChange(fullKey) {
@@ -88,7 +96,7 @@ const TemplateEngine = (function () {
                             try {
                                 notifyChange(fullKey, change)
                             } catch (error) {
-                                throw new Error(`[TemplateEngine] Error during refresh of "${fullKey}" after "${method}": ${error.message}`)
+                                throw new Error(`[TemplateEngine] Error during refresh of "${fullKey}" after "${method}"`, { cause: error })
                             }
 
                             return result
@@ -127,7 +135,7 @@ const TemplateEngine = (function () {
                         try {
                             notifyKeyChange(nextFullKey)
                         } catch (error) {
-                            throw new Error(`[TemplateEngine] Error during refresh of "${nextFullKey}": ${error.message}`)
+                            throw new Error(`[TemplateEngine] Error during refresh of "${nextFullKey}"`, { cause: error })
                         }
                     },
                     enumerable: descriptor.enumerable,
@@ -168,7 +176,7 @@ const TemplateEngine = (function () {
                         try {
                             notifyKeyChange(nextFullKey)
                         } catch (error) {
-                            throw new Error(`[TemplateEngine] Error during refresh of "${nextFullKey}": ${error.message}`)
+                            throw new Error(`[TemplateEngine] Error during refresh of "${nextFullKey}"`, { cause: error })
                         }
                     },
                     enumerable: descriptor.enumerable,
@@ -233,7 +241,7 @@ const TemplateEngine = (function () {
             try {
                 RenderEngine.run(data, node, dependencies)
             } catch (error) {
-                throw new Error(`[TemplateEngine] Error during initial render: ${error.message}`)
+                throw new Error(`[TemplateEngine] Error during initial render: ${error.message}`, { cause: error })
             }
 
             // Patch data in-place. The returned object IS the original data,

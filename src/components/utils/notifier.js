@@ -40,33 +40,29 @@ const Notifier = (function () {
     }
 
     function notifyDependencies(data, dependencyValues, sourceChange = null) {
-        try {
-            for (const dependencyValue of dependencyValues || []) {
-                const action = sourceChange?.action || NodeHolders.nodeHoldersByKeys.getByKey(dependencyValue)?.get('holders')?.[0]?.action || 'update'
+        for (const dependencyValue of dependencyValues || []) {
+            const action = sourceChange?.action || NodeHolders.nodeHoldersByKeys.getByKey(dependencyValue)?.get('holders')?.[0]?.action || 'update'
 
-                const dependencyChange = {
-                    fullKey: dependencyValue,
-                    action: action
-                }
-
-                if (sourceChange) {
-                    if (sourceChange.items) {
-                        dependencyChange.items = sourceChange.items
-                    }
-
-                    if (sourceChange.startIndex !== undefined) {
-                        dependencyChange.startIndex = sourceChange.startIndex
-                    }
-
-                    if (sourceChange.deleteCount !== undefined) {
-                        dependencyChange.deleteCount = sourceChange.deleteCount
-                    }
-                }
-
-                RefreshDelegator.refresh(data, dependencyChange)
+            const dependencyChange = {
+                fullKey: dependencyValue,
+                action: action
             }
-        } catch (error) {
-            throw new Error(`[TemplateEngine] Error notifying dependencies: ${error.message}`)
+
+            if (sourceChange) {
+                if (sourceChange.items) {
+                    dependencyChange.items = sourceChange.items
+                }
+
+                if (sourceChange.startIndex !== undefined) {
+                    dependencyChange.startIndex = sourceChange.startIndex
+                }
+
+                if (sourceChange.deleteCount !== undefined) {
+                    dependencyChange.deleteCount = sourceChange.deleteCount
+                }
+            }
+
+            RefreshDelegator.refresh(data, dependencyChange)
         }
     }
 

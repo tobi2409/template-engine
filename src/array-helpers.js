@@ -2,7 +2,7 @@
 
 export function removeByReference(array, item) {
     if (!Array.isArray(array)) {
-        return -1
+        throw new TypeError(`removeByReference expects an array as the first argument, got ${typeof array}`)
     }
 
     const index = array.findIndex((entry) => entry === item)

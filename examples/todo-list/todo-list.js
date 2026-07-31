@@ -8,15 +8,18 @@ const data = TemplateEngine.reactive({
         { id: 3, name: 'Fix responsive layout', showEdit: false }
     ],
     newTodo: '',
+    
     add: function() {
         if (data.newTodo.trim()) {
             data.todos.push({ id: data.todos.length + 1, name: data.newTodo, showEdit: false })
             data.newTodo = ''
         }
     },
+
     edit: function(e, dataElement) {
         dataElement.showEdit = !dataElement.showEdit
     },
+
     deleteTodo: function(e, dataElement) {
         removeByReference(data.todos, dataElement)
     }

@@ -3,50 +3,30 @@ const UuidItemMap = (function () {
     const itemToUuidMap = new WeakMap()
 
     function setItemByUuid(uuid, item) {
-        try {
-            uuidToItemMap.set(uuid, item)
-        } catch (error) {
-            throw new Error(`[TemplateEngine] Error setting item by UUID "${uuid}": ${error.message}`)
-        }
+        uuidToItemMap.set(uuid, item)
     }
 
     function getItemByUuid(uuid) {
-        try {
-            return uuidToItemMap.get(uuid)
-        } catch (error) {
-            throw new Error(`[TemplateEngine] Error getting item by UUID "${uuid}": ${error.message}`)
-        }
+        return uuidToItemMap.get(uuid)
     }
 
     function setUuidByItem(item, uuid) {
-        try {
-            itemToUuidMap.set(item, uuid)
-        } catch (error) {
-            throw new Error(`[TemplateEngine] Error setting UUID by item: ${error.message}`)
-        }
+        itemToUuidMap.set(item, uuid)
     }
 
     function getUuidByItem(item) {
-        try {
-            return itemToUuidMap.get(item)
-        } catch (error) {
-            throw new Error(`[TemplateEngine] Error getting UUID by item: ${error.message}`)
-        }
+        return itemToUuidMap.get(item)
     }
 
     function ensureUuidForItem(item) {
-        try {
-            if (!item || typeof item !== 'object') {
-                return undefined
-            }
-
-            const uuid = getUuidByItem(item) || `__uuid__${crypto.randomUUID()}`
-            setItemByUuid(uuid, item)
-            setUuidByItem(item, uuid)
-            return uuid
-        } catch (error) {
-            throw new Error(`[TemplateEngine] Error ensuring UUID for item: ${error.message}`)
+        if (!item || typeof item !== 'object') {
+            return undefined
         }
+
+        const uuid = getUuidByItem(item) || `__uuid__${crypto.randomUUID()}`
+        setItemByUuid(uuid, item)
+        setUuidByItem(item, uuid)
+        return uuid
     }
 
     return {

@@ -7,94 +7,88 @@
 const mappedItemCache = new WeakMap()
 
 export function createMappedArray(source, transform, writableProps = {}, reverseTransform = (viewModelItem) => viewModelItem) {
-    let arr = []
-    
-    try {
-        // writableProps: Maps ViewModel properties to Model properties for bidirectional sync.
-        // When a writable property changes, reverseTransform(viewModelItem, modelItem)
-        // is applied and the result
-        // is written back to the corresponding source property.
-
-        arr = source.map((item, index) => {
-            // Reuse previously mapped result (singleton) or create it once.
-            let result = mappedItemCache.get(item)
-
-            if (!result) {
-                result = transform(item, index)
-                mappedItemCache.set(item, result)
-
-                // Add setter for writable properties to sync back to source
-                for (const [prop, sourceProp] of Object.entries(writableProps)) {
-                    let internalValue = result[prop]
-                    Object.defineProperty(result, prop, {
-                        get: () => internalValue,
-                        set: (v) => {
-                            internalValue = v
-                            const transformed = reverseTransform(result, item)
-                            item[sourceProp] = transformed[sourceProp]
-                        },
-                        configurable: true
-                    })
-                }
-            }
-
-            return result
-        })
-    } catch (error) {
-        throw new Error(`[TemplateEngine] Error in createMappedArray: ${error.message}`)
+    if (!Array.isArray(source)) {
+        throw new TypeError(`createMappedArray expected "source" to be an array, got ${source === null ? 'null' : typeof source}`)
     }
+
+    if (typeof transform !== 'function') {
+        throw new TypeError(`createMappedArray expected "transform" to be a function, got ${typeof transform}`)
+    }
+
+    if (typeof reverseTransform !== 'function') {
+        throw new TypeError(`createMappedArray expected "reverseTransform" to be a function, got ${typeof reverseTransform}`)
+    }
+
+    let arr = []
+
+    // writableProps: Maps ViewModel properties to Model properties for bidirectional sync.
+    // When a writable property changes, reverseTransform(viewModelItem, modelItem)
+    // is applied and the result
+    // is written back to the corresponding source property.
+
+    arr = source.map((item, index) => {
+        // Reuse previously mapped result (singleton) or create it once.
+        let result = mappedItemCache.get(item)
+
+        if (!result) {
+            result = transform(item, index)
+            mappedItemCache.set(item, result)
+
+            // Add setter for writable properties to sync back to source
+            for (const [prop, sourceProp] of Object.entries(writableProps)) {
+                let internalValue = result[prop]
+                
+                Object.defineProperty(result, prop, {
+                    get: () => internalValue,
+                    set: (v) => {
+                        internalValue = v
+                        const transformed = reverseTransform(result, item)
+
+                        if (!transformed || typeof transformed !== 'object') {
+                            throw new TypeError(`reverseTransform for writable prop "${prop}" must return an object`)
+                        }
+
+                        item[sourceProp] = transformed[sourceProp]
+                    },
+                    configurable: true
+                })
+            }
+        }
+
+        return result
+    })
     
     // Override array methods
     arr.push = (...viewModelItems) => {
-        try {
-            const modelItems = viewModelItems.map(reverseTransform)
-            // should be mapped to provide the Proxy for setting and list operations
-            const mappedViewModelItems = createMappedArray(modelItems, transform, writableProps, reverseTransform)
-            Array.prototype.push.apply(arr, mappedViewModelItems)
-            return source.push(...modelItems)
-        } catch (error) {
-            throw new Error(`[TemplateEngine] Error in mapped array push: ${error.message}`)
-        }
+        const modelItems = viewModelItems.map(reverseTransform)
+        // should be mapped to provide the Proxy for setting and list operations
+        const mappedViewModelItems = createMappedArray(modelItems, transform, writableProps, reverseTransform)
+        Array.prototype.push.apply(arr, mappedViewModelItems)
+        return source.push(...modelItems)
     }
 
     arr.splice = (start, deleteCount, ...items) => {
-        try {
-            const modelItems = items.map(reverseTransform)
-            const mappedViewModelItems = createMappedArray(modelItems, transform, writableProps, reverseTransform)
-            Array.prototype.splice.apply(arr, [start, deleteCount, ...mappedViewModelItems])
-            return source.splice(start, deleteCount, ...modelItems)
-        } catch (error) {
-            throw new Error(`[TemplateEngine] Error in mapped array splice: ${error.message}`)
-        }
+        const modelItems = items.map(reverseTransform)
+        const mappedViewModelItems = createMappedArray(modelItems, transform, writableProps, reverseTransform)
+        Array.prototype.splice.apply(arr, [start, deleteCount, ...mappedViewModelItems])
+        return source.splice(start, deleteCount, ...modelItems)
     }
 
     arr.unshift = (...items) => {
-        try {
-            const modelItems = items.map(reverseTransform)
-            const mappedViewModelItems = createMappedArray(modelItems, transform, writableProps, reverseTransform)
-            Array.prototype.unshift.apply(arr, mappedViewModelItems)
-            return source.unshift(...modelItems)
-        } catch (error) {
-            throw new Error(`[TemplateEngine] Error in mapped array unshift: ${error.message}`)
-        }
+        const modelItems = items.map(reverseTransform)
+        const mappedViewModelItems = createMappedArray(modelItems, transform, writableProps, reverseTransform)
+        Array.prototype.unshift.apply(arr, mappedViewModelItems)
+        return source.unshift(...modelItems)
     }
 
     arr.pop = () => {
-        try {
-            Array.prototype.pop.apply(arr)
-            return source.pop()
-        } catch (error) {
-            throw new Error(`[TemplateEngine] Error in mapped array pop: ${error.message}`)
-        }
+        Array.prototype.pop.apply(arr)
+        return source.pop()
     }
 
     arr.shift = () => {
-        try {
-            Array.prototype.shift.apply(arr)
-            return source.shift()
-        } catch (error) {
-            throw new Error(`[TemplateEngine] Error in mapped array shift: ${error.message}`)
-        }
+        Array.prototype.shift.apply(arr)
+        return source.shift()
     }
     
     return arr
