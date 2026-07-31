@@ -70,7 +70,7 @@ describe('refresh', () => {
             wrapper,
             contextStack: new Map(),
             params: new Map(),
-            ifNode
+            controlNode: ifNode
         })
 
         refresh(data, { fullKey: 'visible', action: 'updateIf' })
@@ -96,7 +96,7 @@ describe('refresh', () => {
             wrapper,
             contextStack: new Map(),
             params: new Map(),
-            ifNode
+            controlNode: ifNode
         })
 
         refresh(data, { fullKey: 'visible', action: 'updateIf' })
@@ -117,7 +117,7 @@ describe('refresh', () => {
 
         nodeHoldersByKeys.appendToKey('items', {
             action: 'updateEach',
-            eachNode,
+            controlNode: eachNode,
             mountNode,
             contextStack: new Map(),
             params: new Map()

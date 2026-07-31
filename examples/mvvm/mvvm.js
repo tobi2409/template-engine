@@ -79,14 +79,9 @@ const viewModel = TemplateEngine.reactive({
         })
     },
 
-    checkRendered: function() {
-        const msgs = []
-        msgs.push(document.body.textContent.includes('Sample') ? 'Sample present' : 'Sample missing')
-        msgs.push(document.body.textContent.includes('Test Updated') ? 'Test Updated present' : 'Test Updated missing')
-        const ok = msgs.every(m => /present/.test(m))
-        const msg = (ok ? 'All checks passed:\n' : 'Some checks failed:\n') + msgs.join('\n')
-        console.log(msg)
-        alert(msg)
+    logModels: function() {
+        console.log('Model:', model)
+        console.log('ViewModel:', viewModel)
     }
 }, document.getElementById('app-template-use'), {
     'firstName': ['fullName'],
@@ -100,6 +95,3 @@ viewModel.wage = 200
 viewModel.beautifiedPersonData.push({ id: 3, name: 'Sample', birthyear: 1985 })
 viewModel.beautifiedPersonData[0].name = 'Test Updated'
 viewModel.beautifiedPersonData.splice(1, 1)
-        
-console.log(viewModel.beautifiedPersonData)
-console.log(model.rawPersonData)

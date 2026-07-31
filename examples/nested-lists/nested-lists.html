@@ -21,7 +21,7 @@
                 <li><strong><get>p.name</get></strong> - <get>p.role</get>
 
                     <ul>
-                        <each of="p.childs" as="c">
+                        <each of="p.children" as="c">
                             <li><get>c.name</get> (<get>param1</get> team)</li>
                         </each>
                     </ul>
@@ -29,7 +29,6 @@
                 </li>
             </each>
         </ul>
-        <button action-click="checkRendered">Verify Rendered Updates</button>
     </template>
 
     <template-use id="app-template-use" template-id="app-template" mount-id="app" data-param1="Engineering"></template-use>

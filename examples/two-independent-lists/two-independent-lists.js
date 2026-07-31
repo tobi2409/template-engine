@@ -23,12 +23,5 @@ const data = TemplateEngine.reactive({
     removeColorFirst:  (e, d) => { d.colors.shift() },
 }, document.getElementById('tpl-use'))
 
-data.checkRendered = function() {
-    const msgs = []
-    msgs.push(document.body.textContent.includes('Grape') ? 'Grape present' : 'Grape missing')
-    msgs.push(document.body.textContent.includes('Yellow') ? 'Yellow present' : 'Yellow missing')
-    const ok = msgs.every(m => /present/.test(m))
-    const msg = (ok ? 'All checks passed:\n' : 'Some checks failed:\n') + msgs.join('\n')
-    console.log(msg)
-    alert(msg)
-}
+
+

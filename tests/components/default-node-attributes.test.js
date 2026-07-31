@@ -1,11 +1,11 @@
 import { test, describe, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { JSDOM } from 'jsdom'
-import InitialRendering from '../../src/components/initial-rendering.js'
+import RenderEngine from '../../src/components/render-engine.js'
 import DefaultNodeAttributes from '../../src/components/default-node-attributes.js'
 import NodeHolders from '../../src/components/utils/node-holders.js'
 
-const { handleGetNode } = InitialRendering
+const { handleGetNode } = RenderEngine
 const { applyAttribute, handleActionAttribute, handleBindAttribute, handleStyleOrAttrAttribute } = DefaultNodeAttributes
 const { nodeHoldersByKeys } = NodeHolders
 

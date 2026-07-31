@@ -7,7 +7,7 @@ import DefaultNodeAttributes from './default-node-attributes.js'
 import AliasResolver from './utils/alias-resolver.js'
 import UuidItemMap from './utils/uuid-item-map.js'
 
-const InitialRendering = (function () {
+const RenderEngine = (function () {
     function _previewValue(v) {
         try {
             
@@ -50,7 +50,7 @@ const InitialRendering = (function () {
             DomUtils.mount(resolvedTextSpan, mountNode, insertBeforeAnchor)
 
             NodeHolders.nodeHoldersByKeys.appendToKey(resolved.fullKey,
-                { action: 'updateGet', getNode: getNode, node: resolvedTextSpan })
+                { action: 'updateGet', controlNode: getNode, node: resolvedTextSpan })
         } catch (error) {
             throw new Error(`[TemplateEngine] Error in handleGetNode: ${error.message}`)
         }
@@ -66,7 +66,7 @@ const InitialRendering = (function () {
 
             if (!refreshInfo) {
                 NodeHolders.nodeHoldersByKeys.appendToKey(resolvedOf.fullKey,
-                    { action: 'updateEach', contextStack: new Map(contextStack), params: params, eachNode: eachNode, mountNode: mountNode })
+                    { action: 'updateEach', contextStack: new Map(contextStack), params: params, controlNode: eachNode, mountNode: mountNode })
             }
 
             const list = resolvedOf.value
@@ -140,7 +140,7 @@ const InitialRendering = (function () {
             }
 
             NodeHolders.nodeHoldersByKeys.appendToKey(resolvedTest.fullKey,
-                { action: 'updateIf', contextStack: contextStack, params: params, ifNode: ifNode, wrapper: wrapper })
+                { action: 'updateIf', contextStack: contextStack, params: params, controlNode: ifNode, wrapper: wrapper })
         } catch (error) {
             throw new Error(`[TemplateEngine] Error in handleIfNode: ${error.message}`)
         }
@@ -269,4 +269,4 @@ const InitialRendering = (function () {
     }
 })()
 
-export default InitialRendering
+export default RenderEngine

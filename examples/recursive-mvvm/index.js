@@ -8,23 +8,23 @@ const model = {
         name: 'Max Mustermann',
         wage: 10,
         birthyear: 1990,
-        childs: [{
+        children: [{
             id: 2,
             name: 'Max Jr.',
             wage: 5,
             birthyear: 2010,
-            childs: [{
+            children: [{
                 id: 3,
                 name: 'Max III',
                 wage: 2,
                 birthyear: 2020,
-                childs: []
+                children: []
             }, {
                 id: 4,
                 name: 'Maxi III',
                 wage: 1,
                 birthyear: 2022,
-                childs: []
+                children: []
             }]
         }]
     }, {
@@ -32,18 +32,18 @@ const model = {
         name: 'Erika Mustermann',
         wage: 12,
         birthyear: 1992,
-        childs: [{
+        children: [{
             id: 6,
             name: 'Erika Jr.',
             wage: 6,
             birthyear: 2012,
-            childs: []
+            children: []
         }, {
             id: 7,
             name: 'Erik',
             wage: 3,
             birthyear: 2014,
-            childs: []
+            children: []
         }]
     }]
 }
@@ -57,13 +57,13 @@ const viewModel = TemplateEngine.reactive({
         model.user = value
     },
 
-    a(personViewModelItem) {
+    reversePersonViewModelItem(personViewModelItem) {
         return {
             id: personViewModelItem.id,
             name: personViewModelItem.name,
             wage: personViewModelItem.wage.slice(0, -4),
             birthyear: new Date().getFullYear() - personViewModelItem.age,
-            childs: personViewModelItem.childs.map(viewModelChild => this.a(viewModelChild))
+            children: personViewModelItem.children.map(viewModelChild => this.reversePersonViewModelItem(viewModelChild))
         }
     },
 
@@ -75,15 +75,11 @@ const viewModel = TemplateEngine.reactive({
                 name: person.name,
                 wage: `${person.wage} USD`,
                 age: new Date().getFullYear() - person.birthyear,
-                childs: this.recursiveBeautifiedPersons(person.childs, layer + 1),
+                children: this.recursiveBeautifiedPersons(person.children, layer + 1),
                 layerDecoration: '»'.repeat(layer),
             }),
             { name: 'name', wage: 'wage', age: 'birthyear' },
-            // childs ist hier (vorerst) nicht notwendig,
-            // weil in mapped-array für Veränderungen in einem bestehenden Objekt ein set mit reverseTransform aufgerufen wird
-            // und auch hinzufügen funktioniert, weil push sowohl ins Model (reverseTransform) als auch ViewModel hinzufügt
-            // somit wird für jedes childs-Array die push-Funktion überschrieben
-            (personViewModelItem) => (this.a(personViewModelItem))
+            (personViewModelItem) => (this.reversePersonViewModelItem(personViewModelItem))
         )
     },
 
@@ -92,27 +88,23 @@ const viewModel = TemplateEngine.reactive({
     },
 
     newDemoChild_MaxJr() {
-        const maxJr = viewModel.beautifiedPersons[0].childs[0]
-
-        // wahrscheinlich fehlt hier ein set mit reverseTransform
+        const maxJr = viewModel.beautifiedPersons[0].children[0]
 
         const newChild = {
             id: 9,
             name: `Max III - New`,
             wage: '10 USD',
             age: 2,
-            childs: [{
+            children: [{
                 id: 10,
                 name: `Max IV - New`,
                 wage: '5 USD',
                 age: 1,
-                childs: []
+                children: []
             }]
         }
 
-        maxJr.childs.push(newChild)
-
-        console.log(maxJr.childs)
+        maxJr.children.push(newChild)
     },
 
     logModels() {

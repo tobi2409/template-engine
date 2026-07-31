@@ -81,7 +81,7 @@ Notes:
     <li>
       📁 <get>item#.name</get>
       <ul>
-        <template-use template-id="folder-template" data-list="item#.childs"></template-use>
+        <template-use template-id="folder-template" data-list="item#.children"></template-use>
       </ul>
     </li>
   </each>
@@ -94,9 +94,9 @@ toggleEdit: (e, dataElement) => {
 },
 delete: (e, dataElement, _, contextStack) => {
   const parent = contextStack.get(`item-level-${contextStack.size - 3}`)
-  if (parent?.data?.childs) {
-    const index = parent.data.childs.findIndex((c) => c === dataElement)
-    if (index !== -1) parent.data.childs.splice(index, 1)
+  if (parent?.data?.children) {
+    const index = parent.data.children.findIndex((c) => c === dataElement)
+    if (index !== -1) parent.data.children.splice(index, 1)
   }
 }
 ```
@@ -283,7 +283,7 @@ see top of README
 
 ## Technical background: NodeHolders and UUID identity
 
-- **NodeHolders:** The engine tracks which DOM nodes depend on a particular "full key" using a segmented Map managed by the node-holders utility ([src/components/utils/node-holders.js](src/components/utils/node-holders.js)). Full keys (for example `users.3.name` or `item#.childs.2.title`) are split into segments and stored in nested Maps; the leaf entries contain arrays of node-holders that reference that full key. When a property changes the engine builds the full key and looks up any matching holders to refresh — this enables targeted updates without scanning the entire DOM.
+- **NodeHolders:** The engine tracks which DOM nodes depend on a particular "full key" using a segmented Map managed by the node-holders utility ([src/components/utils/node-holders.js](src/components/utils/node-holders.js)). Full keys (for example `users.3.name` or `item#.children.2.title`) are split into segments and stored in nested Maps; the leaf entries contain arrays of node-holders that reference that full key. When a property changes the engine builds the full key and looks up any matching holders to refresh — this enables targeted updates without scanning the entire DOM.
 
 - **UUID / item identity:** For arrays the engine keeps stable per-item identities using a WeakMap-backed id cache (see [src/mapped-array.js](src/mapped-array.js)). When rendering `<each>` the engine assigns each object a stable id so that moving, inserting, or deleting items preserves existing DOM nodes for unchanged items. That reduces DOM churn and keeps per-item state (inputs, event handlers) stable across array mutations.
 
@@ -294,7 +294,7 @@ see top of README
 References:
 - Node holder implementation: [src/components/utils/node-holders.js](src/components/utils/node-holders.js)
 - Mapped array and item identity: [src/mapped-array.js](src/mapped-array.js)
-- Initial rendering and refresh dispatch: [src/components/initial-rendering.js](src/components/initial-rendering.js) and [src/components/refresh-delegator.js](src/components/refresh-delegator.js)
+- Initial rendering and refresh dispatch: [src/components/render-engine.js](src/components/render-engine.js) and [src/components/refresh-delegator.js](src/components/refresh-delegator.js)
 
 ## Development
 

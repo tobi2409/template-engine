@@ -152,6 +152,48 @@ describe('TemplateEngine.reactive', () => {
         assert.equal(items[2].querySelector('.get-resolved').textContent, 'C')
     })
 
+    test('renders updates for two views using same each source (change + push)', () => {
+        const { mount, templateUse } = setupTemplate(`
+            <div id="view-a">
+                <each of="items" as="item">
+                    <span class="item-a"><get>item.label</get></span>
+                </each>
+            </div>
+
+            <div id="view-b">
+                <each of="items" as="item">
+                    <span class="item-b"><get>item.label</get></span>
+                </each>
+            </div>
+        `)
+
+        const data = TemplateEngine.reactive({
+            items: [{ label: 'A' }, { label: 'B' }]
+        }, templateUse)
+
+        // Change existing item -> must update in both views
+        data.items[0].label = 'A*'
+
+        let viewAItems = mount.querySelectorAll('.item-a')
+        let viewBItems = mount.querySelectorAll('.item-b')
+
+        assert.equal(viewAItems.length, 2)
+        assert.equal(viewBItems.length, 2)
+        assert.equal(viewAItems[0].querySelector('.get-resolved').textContent, 'A*')
+        assert.equal(viewBItems[0].querySelector('.get-resolved').textContent, 'A*')
+
+        // Push new item -> must be rendered in both views
+        data.items.push({ label: 'C' })
+
+        viewAItems = mount.querySelectorAll('.item-a')
+        viewBItems = mount.querySelectorAll('.item-b')
+
+        assert.equal(viewAItems.length, 3)
+        assert.equal(viewBItems.length, 3)
+        assert.equal(viewAItems[2].querySelector('.get-resolved').textContent, 'C')
+        assert.equal(viewBItems[2].querySelector('.get-resolved').textContent, 'C')
+    })
+
     test('notifies dependent properties via dependency map', () => {
         const { mount, templateUse } = setupTemplate('<get>firstName</get><get>fullName</get>')
 

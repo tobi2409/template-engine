@@ -29,14 +29,13 @@ const NodeHolders = (function () {
         try {
             const ref = this.getByKey(fullKey, true)
 
-            
             if (!ref.has('holders')) {
                 ref.set('holders', [])
             }
 
             const holders = ref.get('holders')
 
-            if (!holders.some(e => e.node === nodeHolder.node)) {
+            if (!holders.some(e => e.controlNode === nodeHolder.controlNode && e.node === nodeHolder.node)) {
                 holders.push(nodeHolder)
             }
         } catch (error) {

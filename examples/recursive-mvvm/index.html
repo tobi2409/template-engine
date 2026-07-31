@@ -10,40 +10,6 @@
     <body>
         <div id="app"></div>
         
-        <template id="table-structured-data-content">
-            <each of="*list" as="p">
-                <div class="tree-node">
-                    <div class="table-row">
-                        <div class="table-cell"><get>p.layerDecoration</get></div>
-                        <div class="table-cell"><input type="text" bind-input-value="p.name" /></div>
-                        <div class="table-cell"><input type="text" bind-input-value="p.wage" /></div>
-                        <div class="table-cell"><input type="number" bind-input-value="p.age" /></div>
-                    </div>
-
-                    <div class="tree-children">
-                        <template-use
-                            template-id="table-structured-data-content"
-                            data-list="p.childs"></template-use>
-                    </div>
-                </div>
-            </each>
-        </template>
-        
-        <template id="table-structured-data">
-            <div class="table">
-                <div class="table-row header">
-                    <div class="table-cell"></div>
-                    <div class="table-cell">Name:</div>
-                    <div class="table-cell">Wage</div>
-                    <div class="table-cell">Age</div>
-                </div>
-
-                <template-use
-                    template-id="table-structured-data-content"
-                    data-list="beautifiedPersons"></template-use>
-            </div>
-        </template>
-
         <template id="ul-structured-data">
             <ul>
                 <each of="*list" as="p">
@@ -55,22 +21,64 @@
 
                         <template-use
                             template-id="ul-structured-data"
-                            data-list="p.childs"></template-use>
+                            data-list="p.children"></template-use>
                     </li>
                 </each>
             </ul>
         </template>
 
+        <template id="table-structured-data-content">
+            <each of="*list" as="p">
+                <div class="tree-node">
+                    <div class="table-row">
+                        <div class="table-cell"><get>p.layerDecoration</get></div>
+                        <div class="table-cell"><input type="text" bind-input-value="p.name" /></div>
+                        <div class="table-cell"><input type="text" bind-input-value="p.wage" /></div>
+                        <div class="table-cell"><input type="number" bind-input-value="p.age" /></div>
+                    </div>
+
+                    <div class="tree-children">
+                        <!-- parent wie tree-children sollte vorhanden sein -->
+                        <!-- beim Hinzufügen kann kommender each-NodeHolder sonst beim rekursiven Aufstieg nur auf DocumentFragment zugreifen -->
+                        <!-- das initiale Rendering hingegen funktioniert, weil der rekursive Aufstieg bis zum App-Parent läuft -->
+
+                        <template-use
+                            template-id="table-structured-data-content"
+                            data-list="p.children"></template-use>
+                    </div>
+                </div>
+            </each>
+        </template>
+        
+        <template id="table-structured-data">
+            <div class="table">
+                <div class="table-row-header-outer">
+                    <div class="table-row header">
+                        <div class="table-cell"></div>
+                        <div class="table-cell">Name:</div>
+                        <div class="table-cell">Wage</div>
+                        <div class="table-cell">Age</div>
+                    </div>
+                </div>
+
+                <template-use
+                    template-id="table-structured-data-content"
+                    data-list="beautifiedPersons"></template-use>
+            </div>
+        </template>
+
         <template id="app-template">
             <h1>👋 Hello, <get>user</get></h1>
 
-            <!--<template-use
+            <b>TODO: Default Node Bug</b>
+
+            <template-use
                 template-id="ul-structured-data"
-                data-list="beautifiedPersons"></template-use>-->
+                data-list="beautifiedPersons"></template-use>
 
             <template-use
                 template-id="table-structured-data"
-                data-list="persons"></template-use>
+                data-list="beautifiedPersons"></template-use>
 
             <br />
             <button action-click="newDemoChild_MaxJr">Add Demo Child to Max Jr.</button>

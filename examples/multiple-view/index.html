@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+    <div id="app"></div>
+
+    <template id="app-template">
+        <ul>
+            <each of="persons" as="p">
+                <li><get>p.name</get> (<get>p.age</get> years old)</li>
+            </each>
+        </ul>
+
+        <!-- TODO: Default Node Bug -->
+        <b>TODO: Default Node Bug</b>
+
+        <ul>
+            <each of="persons" as="p">
+                <li>
+                    <input type="text" bind-input-value="p.name">
+                    (<input type="number" bind-input-value="p.age"> years old)
+                </li>
+            </each>
+        </ul>
+
+        <ul>
+            <each of="persons" as="p">
+                <li>
+                    <input type="text" bind-input-value="p.name">
+                    is <input type="number" bind-input-value="p.age"> years old
+                </li>
+            </each>
+        </ul>
+
+        <button action-click="addPerson">➕ Add Person</button>
+    </template>
+
+    <template-use id="app-template-use" template-id="app-template" mount-id="app"></template-use>
+
+    <script type="module" src="./index.js"></script>
+</body>
+</html>

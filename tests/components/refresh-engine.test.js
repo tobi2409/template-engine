@@ -1,11 +1,11 @@
 import { test, describe, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { JSDOM } from 'jsdom'
-import InitialRendering from '../../src/components/initial-rendering.js'
-import RefreshRendering from '../../src/components/refresh-rendering.js'
+import RenderEngine from '../../src/components/render-engine.js'
+import RefreshRendering from '../../src/components/refresh-engine.js'
 import NodeHolders from '../../src/components/utils/node-holders.js'
 
-const { handleEachNode } = InitialRendering
+const { handleEachNode } = RenderEngine
 const { handleGetNodeRefresh, handleDefaultNodeRefresh, handleIfNodeRefresh, handleEachNodeRefresh } = RefreshRendering
 const { nodeHoldersByKeys } = NodeHolders
 
@@ -78,7 +78,7 @@ describe('handleIfNodeRefresh', () => {
         const ifNode = document.createElement('if')
 
         data.visible = true
-        handleIfNodeRefresh(data, { wrapper, fullKey: 'visible', contextStack: new Map(), params: new Map(), ifNode })
+        handleIfNodeRefresh(data, { wrapper, fullKey: 'visible', contextStack: new Map(), params: new Map(), controlNode: ifNode })
 
         assert.equal(wrapper.style.display, '')
     })
@@ -90,7 +90,7 @@ describe('handleIfNodeRefresh', () => {
         const ifNode = document.createElement('if')
 
         data.visible = false
-        handleIfNodeRefresh(data, { wrapper, fullKey: 'visible', contextStack: new Map(), params: new Map(), ifNode })
+        handleIfNodeRefresh(data, { wrapper, fullKey: 'visible', contextStack: new Map(), params: new Map(), controlNode: ifNode })
 
         assert.equal(wrapper.style.display, 'none')
     })
@@ -104,7 +104,7 @@ describe('handleIfNodeRefresh', () => {
         const ifNode = document.createElement('if')
 
         data.visible = true
-        handleIfNodeRefresh(data, { wrapper, fullKey: 'visible', contextStack: new Map(), params: new Map(), ifNode })
+        handleIfNodeRefresh(data, { wrapper, fullKey: 'visible', contextStack: new Map(), params: new Map(), controlNode: ifNode })
 
         // No children from ifNode (empty template) - old child should be gone
         assert.equal(wrapper.children.length, 0)
@@ -123,7 +123,7 @@ describe('handleIfNodeRefresh', () => {
         ifNode.appendChild(newChild)
 
         data.visible = true
-        handleIfNodeRefresh(data, { wrapper, fullKey: 'visible', contextStack: new Map(), params: new Map(), ifNode })
+        handleIfNodeRefresh(data, { wrapper, fullKey: 'visible', contextStack: new Map(), params: new Map(), controlNode: ifNode })
 
         assert.equal(wrapper.style.display, '')
         assert.equal(wrapper.children.length, 1)
@@ -143,7 +143,7 @@ describe('handleIfNodeRefresh', () => {
         ifNode.appendChild(newChild)
 
         data.visible = false
-        handleIfNodeRefresh(data, { wrapper, fullKey: 'visible', contextStack: new Map(), params: new Map(), ifNode })
+        handleIfNodeRefresh(data, { wrapper, fullKey: 'visible', contextStack: new Map(), params: new Map(), controlNode: ifNode })
 
         assert.equal(wrapper.style.display, 'none')
         assert.equal(wrapper.children.length, 0)
@@ -163,7 +163,7 @@ describe('handleIfNodeRefresh', () => {
         ifNode.appendChild(nestedIf)
 
         data.visible = true
-        handleIfNodeRefresh(data, { wrapper, fullKey: 'visible', contextStack: new Map(), params: new Map(), ifNode })
+        handleIfNodeRefresh(data, { wrapper, fullKey: 'visible', contextStack: new Map(), params: new Map(), controlNode: ifNode })
 
         assert.equal(wrapper.style.display, '')
         assert.equal(wrapper.children.length, 1)
@@ -185,7 +185,7 @@ describe('handleIfNodeRefresh', () => {
         ifNode.appendChild(nestedIf)
 
         data.visible = true
-        handleIfNodeRefresh(data, { wrapper, fullKey: 'visible', contextStack: new Map(), params: new Map(), ifNode })
+        handleIfNodeRefresh(data, { wrapper, fullKey: 'visible', contextStack: new Map(), params: new Map(), controlNode: ifNode })
 
         assert.equal(wrapper.style.display, '')
         assert.equal(wrapper.children.length, 1)
@@ -197,7 +197,7 @@ describe('handleIfNodeRefresh', () => {
         const data = { visible: true }
 
         assert.throws(
-            () => handleIfNodeRefresh(data, { wrapper: null, fullKey: 'visible', contextStack: new Map(), params: new Map(), ifNode: null }),
+            () => handleIfNodeRefresh(data, { wrapper: null, fullKey: 'visible', contextStack: new Map(), params: new Map(), controlNode: null }),
             /wrapper element missing/
         )
     })
@@ -214,7 +214,7 @@ describe('handleIfNodeRefresh', () => {
 
         // collapse
         data.visible = false
-        handleIfNodeRefresh(data, { wrapper, fullKey: 'visible', contextStack: new Map(), params: new Map(), ifNode })
+        handleIfNodeRefresh(data, { wrapper, fullKey: 'visible', contextStack: new Map(), params: new Map(), controlNode: ifNode })
 
         // children moved into fragment and wrapper empty
         assert.equal(wrapper.children.length, 0)
@@ -224,7 +224,7 @@ describe('handleIfNodeRefresh', () => {
 
         // expand again -> reattach same node
         data.visible = true
-        handleIfNodeRefresh(data, { wrapper, fullKey: 'visible', contextStack: new Map(), params: new Map(), ifNode })
+        handleIfNodeRefresh(data, { wrapper, fullKey: 'visible', contextStack: new Map(), params: new Map(), controlNode: ifNode })
 
         assert.equal(wrapper.children.length, 1)
         assert.equal(wrapper.children[0], child)
@@ -242,9 +242,9 @@ describe('handleIfNodeRefresh', () => {
         ifNode.appendChild(newChild)
         ifNode.setAttribute('justHideChildren', 'true')
 
-        // show -> no saved fragment exists, so InitialRendering.walk should create children
+        // show -> no saved fragment exists, so RenderEngine.walk should create children
         data.visible = true
-        handleIfNodeRefresh(data, { wrapper, fullKey: 'visible', contextStack: new Map(), params: new Map(), ifNode })
+        handleIfNodeRefresh(data, { wrapper, fullKey: 'visible', contextStack: new Map(), params: new Map(), controlNode: ifNode })
 
         assert.equal(wrapper.children.length, 1)
         assert.equal(wrapper.children[0].textContent, 'from-walk')

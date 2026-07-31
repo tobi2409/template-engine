@@ -36,14 +36,3 @@ let data = TemplateEngine.reactive({
 
 data.folders[0].children.splice(1, 1)
 data.folders[1].children.splice(1, 0, { id: 23, name: 'summary.docx', hasChildren: false, expanded: false, expandIcon: ' ', children: [] })
-        
-data.checkRendered = function() {
-    const msgs = []
-    const el23 = document.querySelector('[folder-id="23"]')
-    msgs.push(el23 ? 'Folder 23 present' : 'Folder 23 missing')
-    msgs.push(document.body.textContent.includes('summary.docx') ? 'summary.docx present' : 'summary.docx missing')
-    const ok = msgs.every(m => /present/.test(m))
-    const msg = (ok ? 'All checks passed:\n' : 'Some checks failed:\n') + msgs.join('\n')
-    console.log(msg)
-    alert(msg)
-}

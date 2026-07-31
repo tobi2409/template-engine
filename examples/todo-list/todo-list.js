@@ -25,13 +25,4 @@ const data = TemplateEngine.reactive({
 data.todos.push({ id: 4, name: 'Plan team meeting', showEdit: false })
 data.todos.splice(1, 1)
 
-data.checkRendered = function() {
-    const msgs = []
-    msgs.push(document.body.textContent.includes('Plan team meeting') ? 'Plan team meeting present' : 'Plan team meeting missing')
-    const liCount = document.querySelectorAll('ul > li').length
-    msgs.push(`DOM todo count: ${liCount}, data.todos.length: ${data.todos.length}`)
-    const ok = msgs[0].includes('present')
-    const msg = (ok ? 'Check passed:\n' : 'Check failed:\n') + msgs.join('\n')
-    console.log(msg)
-    alert(msg)
-}
+

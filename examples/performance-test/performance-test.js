@@ -29,14 +29,6 @@ measureAfterCommit(`Initial Render (${N} Items)`, () => {
     model = TemplateEngine.reactive({ items }, mount)
 })
 
-document.getElementById('verify-rendered').addEventListener('click', () => {
-    const domCount = document.querySelectorAll('.item').length
-    const modelCount = model.items.length
-    const msg = `DOM items: ${domCount} / model.items: ${modelCount}`
-    console.log(msg)
-    alert(msg)
-})
-
 setTimeout(() => {
     measureAfterCommit(`Update ${UPDATE_COUNT} Items`, () => {
         for (let i = 0; i < UPDATE_COUNT; i++) {

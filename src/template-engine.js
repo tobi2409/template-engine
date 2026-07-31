@@ -1,6 +1,6 @@
 // Reactive Component: Reactivity through Object.defineProperty-based data observation
 
-import InitialRendering from './components/initial-rendering.js'
+import RenderEngine from './components/render-engine.js'
 import NodeHolders from './components/utils/node-holders.js'
 import RefreshDelegator from './components/refresh-delegator.js'
 import Notifier from './components/utils/notifier.js'
@@ -231,7 +231,7 @@ const TemplateEngine = (function () {
             // run() first: lets the template engine assign UUIDs to array items.
             // makeReactive() then reads those UUIDs to build the correct fullKey paths.
             try {
-                InitialRendering.run(data, node, dependencies)
+                RenderEngine.run(data, node, dependencies)
             } catch (error) {
                 throw new Error(`[TemplateEngine] Error during initial render: ${error.message}`)
             }

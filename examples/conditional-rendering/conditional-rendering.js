@@ -48,14 +48,4 @@ data.team[0].reports[2].active = false
 
 console.log('Dashboard data:', data)
 
-data.checkRendered = function() {
-    const msgs = []
-    msgs.push(document.body.textContent.includes('Sophie Turner (Team Lead)') ? 'Sophie rename OK' : 'Sophie rename missing')
-    msgs.push(document.body.textContent.includes('Ava Johnson') ? 'Ava present' : 'Ava missing')
-    msgs.push(document.body.textContent.includes('Charlotte Davis (New)') ? 'Charlotte present' : 'Charlotte missing')
-    msgs.push(document.body.textContent.includes('Annual Salary') ? 'Salary visible' : 'Salary not visible')
-    const ok = msgs.every(m => /present|OK|visible/.test(m))
-    const msg = (ok ? 'All checks passed:\n' : 'Some checks failed:\n') + msgs.join('\n')
-    console.log(msg)
-    alert(msg)
-}
+

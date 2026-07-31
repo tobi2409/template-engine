@@ -28,12 +28,14 @@
                 <p><b><get>fullInfo</get></b></p>
             </if>
 
+            Wage:
             <input type="number" bind-input-value="wage" placeholder="Wage ..."/>
         </div>
 
         <h2>Person Data</h2>
 
         <button action-click="addPersonInfo">➕ Add Person</button>
+        <button action-click="logModels">📝 Log Models</button>
 
         <ul>
             <each of="beautifiedPersonData" as="personInfo">
@@ -49,7 +51,6 @@
                 </li>
             </each>
         </ul>
-        <button action-click="checkRendered">Verify Rendered Updates</button>
     </template>
 
     <template-use id="app-template-use" template-id="app-template" mount-id="app"></template-use>

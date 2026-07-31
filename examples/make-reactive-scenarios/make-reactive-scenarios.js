@@ -24,12 +24,4 @@ const data = TemplateEngine.reactive({
     s4c: (e, d) => { d.persons[d.persons.length - 1].name = 'Daniel' },
 }, document.getElementById('tpl-use'))
 
-data.checkRendered = function() {
-    const msgs = []
-    msgs.push(document.body.textContent.includes('David') ? 'David present' : 'David missing')
-    msgs.push(document.body.textContent.includes('Clara') ? 'Clara present' : 'Clara missing')
-    const ok = msgs.some(m => /present/.test(m))
-    const msg = (ok ? 'Some checks passed:\n' : 'Checks failed:\n') + msgs.join('\n')
-    console.log(msg)
-    alert(msg)
-}
+

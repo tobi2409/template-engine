@@ -2,7 +2,7 @@
 
 import NodeHolders from './utils/node-holders.js'
 import KeyResolver from './utils/key-resolver.js'
-import RefreshRendering from './refresh-rendering.js'
+import RefreshRendering from './refresh-engine.js'
 
 const RefreshDelegator = (function () {
     function refresh(data, change, app) {
@@ -77,7 +77,7 @@ const RefreshDelegator = (function () {
 
                     for (const nodeHolder of linkedNodeHolders.get('holders')) {
                         RefreshRendering.handleIfNodeRefresh(data, { wrapper: nodeHolder.wrapper, fullKey: change.fullKey,
-                            contextStack: nodeHolder.contextStack, params: nodeHolder.params, ifNode: nodeHolder.ifNode })
+                            contextStack: nodeHolder.contextStack, params: nodeHolder.params, controlNode: nodeHolder.controlNode })
                     }
 
                     break

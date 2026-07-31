@@ -34,7 +34,7 @@ describe('removeByReference', () => {
 
 describe('getParentContext', () => {
     test('returns parent context entry from contextStack', () => {
-        const parentEntry = { data: { childs: [] } }
+        const parentEntry = { data: { children: [] } }
         const contextStack = new Map([
             ['item-level-0', parentEntry],
             ['item-level-1', { data: {} }],
@@ -67,13 +67,13 @@ describe('getParentContext', () => {
         const childA = { id: 'a' }
         const childB = { id: 'b' }
         const contextStack = new Map([
-            ['item-level-0', { data: { childs: [childA, childB] } }],
+            ['item-level-0', { data: { children: [childA, childB] } }],
             ['item-level-1', { data: childA }],
             ['x', 1]
         ])
 
-        removeByReference(getParentContext(contextStack)?.data?.childs, childB)
+        removeByReference(getParentContext(contextStack)?.data?.children, childB)
 
-        assert.deepEqual(contextStack.get('item-level-0').data.childs, [childA])
+        assert.deepEqual(contextStack.get('item-level-0').data.children, [childA])
     })
 })

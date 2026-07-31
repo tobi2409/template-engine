@@ -22,7 +22,7 @@
                 <button action-click="delete">🗑️ Delete</button>
 
                 <ul>
-                    <template-use template-id="folder-template" data-list="item#.childs"></template-use>
+                    <template-use template-id="folder-template" data-list="item#.children"></template-use>
                 </ul>
 
             </li>
@@ -38,7 +38,6 @@
         <ul>
             <template-use template-id="folder-template" data-list="folders"></template-use>
         </ul>
-        <button action-click="checkRendered">Verify Rendered Updates</button>
     </template>
 
     <template-use id="app-template-use" template-id="app-template" mount-id="app" data-param1="/home"></template-use>

@@ -1,11 +1,11 @@
 import { test, describe, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { JSDOM } from 'jsdom'
-import InitialRendering from '../../src/components/initial-rendering.js'
+import RenderEngine from '../../src/components/render-engine.js'
 import NodeHolders from '../../src/components/utils/node-holders.js'
 import UuidItemMap from '../../src/components/utils/uuid-item-map.js'
 
-const { handleGetNode, handleDefaultNode, handleIfNode, handleEachNode } = InitialRendering
+const { handleGetNode, handleDefaultNode, handleIfNode, handleEachNode } = RenderEngine
 const { nodeHoldersByKeys } = NodeHolders
 const { getUuidByItem } = UuidItemMap
 
@@ -44,7 +44,7 @@ describe('handleGetNode', () => {
         const holders = nodeHoldersByKeys.getByKey('title')?.get('holders')
         assert.ok(holders?.length === 1)
         assert.equal(holders[0].action, 'updateGet')
-        assert.equal(holders[0].getNode, getNode)
+        assert.equal(holders[0].controlNode, getNode)
         assert.equal(holders[0].node, mountNode.children[0])
         assert.ok(holders[0].node.classList.contains('get-resolved'))
     })
@@ -290,7 +290,7 @@ describe('handleEachNode', () => {
         const holders = nodeHoldersByKeys.getByKey('items')?.get('holders')
         assert.ok(holders?.length === 1)
         assert.equal(holders[0].action, 'updateEach')
-        assert.strictEqual(holders[0].eachNode, eachNode)
+        assert.strictEqual(holders[0].controlNode, eachNode)
         assert.strictEqual(holders[0].mountNode, mountNode)
     })
 

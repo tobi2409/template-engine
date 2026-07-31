@@ -2,7 +2,7 @@
     display: table;
 }
 
-.table-row-outer {
+.table-row-header-outer, .tree-node, .tree-children {
     display: contents;
 }
 

@@ -59,8 +59,10 @@ export function createMappedArray(source, transform, writableProps = {}, reverse
 
     arr.splice = (start, deleteCount, ...items) => {
         try {
-            Array.prototype.splice.apply(arr, [start, deleteCount, ...items])
-            return source.splice(start, deleteCount, ...items.map(reverseTransform))
+            const modelItems = items.map(reverseTransform)
+            const mappedViewModelItems = createMappedArray(modelItems, transform, writableProps, reverseTransform)
+            Array.prototype.splice.apply(arr, [start, deleteCount, ...mappedViewModelItems])
+            return source.splice(start, deleteCount, ...modelItems)
         } catch (error) {
             throw new Error(`[TemplateEngine] Error in mapped array splice: ${error.message}`)
         }
@@ -68,8 +70,10 @@ export function createMappedArray(source, transform, writableProps = {}, reverse
 
     arr.unshift = (...items) => {
         try {
-            Array.prototype.unshift.apply(arr, ...items)
-            return source.unshift(...items.map(reverseTransform))
+            const modelItems = items.map(reverseTransform)
+            const mappedViewModelItems = createMappedArray(modelItems, transform, writableProps, reverseTransform)
+            Array.prototype.unshift.apply(arr, mappedViewModelItems)
+            return source.unshift(...modelItems)
         } catch (error) {
             throw new Error(`[TemplateEngine] Error in mapped array unshift: ${error.message}`)
         }
