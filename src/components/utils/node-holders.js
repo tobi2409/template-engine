@@ -42,17 +42,7 @@ const NodeHolders = (function () {
 
         const holders = ref.get('holders')
 
-        const holderIdentity = nodeHolder.controlNode ?? nodeHolder.node
-
-        if (!holders.some((e) => {
-            const existingIdentity = e.controlNode ?? e.node
-
-            if (holderIdentity !== undefined && existingIdentity !== undefined) {
-                return existingIdentity === holderIdentity
-            }
-
-            return e.controlNode === nodeHolder.controlNode && e.node === nodeHolder.node
-        })) {
+        if (!holders.some(e => e.controlNode === nodeHolder.controlNode && e.node === nodeHolder.node)) {
             holders.push(nodeHolder)
         }
     }

@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dynamic Attributes Demo - Template Engine</title>
-    <link rel="stylesheet" href="attributes.css" />
     </head>
 <body>
 
@@ -14,11 +13,12 @@
         <h1>🛍️ Product Catalog</h1>
         <p>Welcome, <strong><get>name</get></strong></p>
 
-        <div style-color="themeColor" style-font-weight="emphasisWeight">
+        <div id="catalog-header" style-color="themeColor" style-font-weight="emphasisWeight">
             You are browsing as <get>name</get> from <get>param1</get>
         </div>
 
         <h2>Categories</h2>
+        <button action-click="runDemoUpdates">⚡ Run Demo Updates</button>
         <ul>
             <each of="categories" as="cat">
                 <li attr-category-id="cat.id">

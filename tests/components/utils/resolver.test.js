@@ -107,7 +107,7 @@ describe('setByPath', () => {
         const data = {}
         assert.throws(
             () => setByPath('user.city', data, 'Hamburg'),
-            /path does not exist/
+            /path .* does not exist/
         )
     })
 })

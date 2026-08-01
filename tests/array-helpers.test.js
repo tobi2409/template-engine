@@ -26,9 +26,11 @@ describe('removeByReference', () => {
         assert.deepEqual(list, [a, b])
     })
 
-    test('returns -1 for non-array input', () => {
-        const index = removeByReference(null, {})
-        assert.equal(index, -1)
+    test('throws for non-array input', () => {
+        assert.throws(
+            () => removeByReference(null, {}),
+            /expects an array as the first argument/
+        )
     })
 })
 

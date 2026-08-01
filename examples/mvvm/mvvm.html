@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MVVM Demo - Template Engine</title>
-    <link rel="stylesheet" href="mvvm.css" />
 </head>
 <body>
 
@@ -13,7 +12,9 @@
     <template id="app-template">
         <h1>👋 Hello World</h1>
 
-        <p>First Name: <get>firstName</get></p>
+        <button action-click="runDemoUpdates">⚡ Run Demo Updates</button>
+
+        <p id="first-name-row">First Name: <get>firstName</get></p>
         <p>Last Name: <get>lastName</get></p>
         <p><b>Full Name: <get>fullName</get></b></p>
 
@@ -24,8 +25,8 @@
 
         <div>
             <if test="showWage">
-                <p>💵 Wage: $<get>wage</get></p>
-                <p><b><get>fullInfo</get></b></p>
+                <p id="wage-row">💵 Wage: $<get>wage</get></p>
+                <p id="wage-block"><b><get>fullInfo</get></b></p>
             </if>
 
             Wage:
@@ -37,7 +38,7 @@
         <button action-click="addPersonInfo">➕ Add Person</button>
         <button action-click="logModels">📝 Log Models</button>
 
-        <ul>
+        <ul id="person-list">
             <each of="beautifiedPersonData" as="personInfo">
                 <li attr-item-index="personInfo.id">
                     <get>personInfo.name</get> (<get>personInfo.age</get> years old)

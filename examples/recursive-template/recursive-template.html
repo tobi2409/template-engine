@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recursive Templates Demo - Template Engine</title>
-    <link rel="stylesheet" href="recursive-template.css" />
 </head>
 <body>
 
@@ -12,7 +11,7 @@
 
     <template id="folder-template">
         <each of="*list" as="item#">
-            <li>📁 <get>item#.name</get> (<get>item#.size</get> items)
+            <li attr-folder-id="item#.id">📁 <get>item#.name</get> (<get>item#.size</get> items)
 
                 <if test="item#.editing">
                     <input type="text" bind-input-value="item#.name">
@@ -35,7 +34,8 @@
         <p>Browsing: <get>param1</get> drive</p>
 
         <h2>Directory Structure</h2>
-        <ul>
+        <button action-click="runDemoUpdates">⚡ Run Demo Updates</button>
+        <ul id="folder-tree">
             <template-use template-id="folder-template" data-list="folders"></template-use>
         </ul>
     </template>

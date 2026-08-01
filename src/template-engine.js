@@ -10,11 +10,15 @@ const TemplateEngine = (function () {
     return {
         reactive(data, node, dependencies = {}) {
             if (!data || typeof data !== 'object') {
-                throw new TypeError(`TemplateEngine.reactive expected "data" to be an object, got ${data === null ? 'null' : typeof data}`)
+                throw new TypeError(`[TemplateEngine] reactive expected "data" to be an object, got ${data === null ? 'null' : typeof data}`)
             }
 
             if (!node || typeof node !== 'object' || node.nodeType !== Node.ELEMENT_NODE || node.tagName !== 'TEMPLATE-USE') {
-                throw new TypeError('TemplateEngine.reactive expected "node" to be a <template-use> element')
+                throw new TypeError('[TemplateEngine] reactive expected "node" to be a <template-use> element')
+            }
+
+            if (!dependencies || typeof dependencies !== 'object') {
+                throw new TypeError(`[TemplateEngine] reactive expected "dependencies" to be an object, got ${dependencies === null ? 'null' : typeof dependencies}`)
             }
 
             const topData = data

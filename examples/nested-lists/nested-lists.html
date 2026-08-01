@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nested Lists Demo - Template Engine</title>
-    <link rel="stylesheet" href="nested-lists.css" />
 </head>
 <body>
 
@@ -16,13 +15,14 @@
         <p>Department: <get>param1</get></p>
 
         <h2>Team Structure</h2>
-        <ul>
+        <button action-click="runDemoUpdates">⚡ Run Demo Updates</button>
+        <ul id="persons-list">
             <each of="persons" as="p">
-                <li><strong><get>p.name</get></strong> - <get>p.role</get>
+                <li attr-person-id="p.id"><strong><get>p.name</get></strong> - <get>p.role</get>
 
                     <ul>
                         <each of="p.children" as="c">
-                            <li><get>c.name</get> (<get>param1</get> team)</li>
+                            <li attr-child-id="c.id"><get>c.name</get> (<get>param1</get> team)</li>
                         </each>
                     </ul>
 

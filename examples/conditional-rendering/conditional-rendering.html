@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Conditional Rendering Demo - Template Engine</title>
-    <link rel="stylesheet" href="conditional-rendering.css" />
 </head>
 <body>
 
@@ -13,11 +12,13 @@
     <template id="team-template">
         <each of="*list" as="member">
             <if test="member.active" wrapper="li">
-                <get>member.name</get> - <get>member.role</get>
+                <div attr-member-id="member.id">
+                    <get>member.name</get> - <get>member.role</get>
 
-                <ul>
-                    <template-use template-id="team-template" data-list="member.reports"></template-use>
-                </ul>
+                    <ul>
+                        <template-use template-id="team-template" data-list="member.reports"></template-use>
+                    </ul>
+                </div>
             </if>
         </each>
     </template>
@@ -28,11 +29,12 @@
         <p>Environment: <get>param1</get></p>
 
         <if test="showSalary">
-            <p>💰 Annual Salary: $<get>salary</get></p>
+            <p id="salary-row">💰 Annual Salary: $<get>salary</get></p>
         </if>
 
         <h2>Active Team Members</h2>
-        <ul>
+        <button action-click="runDemoUpdates">⚡ Run Demo Updates</button>
+        <ul id="team-list">
             <template-use template-id="team-template" data-list="team"></template-use>
         </ul>
     </template>

@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lazy Loading Demo - Template Engine</title>
-    <link rel="stylesheet" href="lazy-loading.css" />
 </head>
 <body>
 
@@ -31,8 +30,9 @@
         <h1>📂 Lazy-Loading File System</h1>
         <p>Click on folders to expand and load their contents</p>
         <p>Current user: <strong><get>userName</get></strong></p>
+        <button action-click="runDemoUpdates">⚡ Run Demo Updates</button>
 
-        <ul>
+        <ul id="lazy-folder-tree">
             <template-use template-id="folder-template" data-list="folders"></template-use>
         </ul>
     </template>

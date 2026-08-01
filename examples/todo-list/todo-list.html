@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ToDo List - Template Engine</title>
-    <link rel="stylesheet" href="todo-list.css" />
 </head>
 <body>
     
@@ -14,9 +13,9 @@
         <h1>📝 Project Tasks</h1>
         <p>Two-way data binding with inline editing</p>
 
-        <ul>
+        <ul id="todo-list">
             <each of="todos" as="todo">
-                <li>
+                <li attr-todo-id="todo.id">
                     <get>todo.name</get>
 
                     <if test="todo.showEdit">
@@ -32,6 +31,7 @@
         <label for="new-todo-input">New task:</label>
         <input id="new-todo-input" type="text" bind-input-value="newTodo" placeholder="What needs to be done?" />
         <button id="add-todo-btn" action-click="add">➕ Add Task</button>
+        <button action-click="runDemoUpdates">⚡ Run Demo Updates</button>
     </template>
 
     <template-use id="app-template-use" template-id="app-template" mount-id="app"></template-use>

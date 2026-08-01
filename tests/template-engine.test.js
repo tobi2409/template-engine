@@ -39,7 +39,7 @@ describe('TemplateEngine.reactive', () => {
         const div = document.createElement('div')
         assert.throws(
             () => TemplateEngine.reactive({}, div),
-            /entry point must be template-use/
+            /reactive expected "node" to be a <template-use> element/
         )
     })
 

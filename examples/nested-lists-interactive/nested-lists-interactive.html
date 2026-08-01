@@ -15,10 +15,11 @@
         <p>Department: <get>param1</get></p>
 
         <h2>Team Structure</h2>
+        <button action-click="runDemoUpdates">⚡ Run Demo Updates</button>
 
-        <ul>
+        <ul id="persons-list-interactive">
             <each of="persons" as="p">
-                <li>
+                <li attr-person-id="p.id">
                     <strong><get>p.name</get></strong> - <get>p.role</get>
                     <button action-click="toggleEdit">✏️ Edit</button>
                     <button action-click="delete">🗑️ Delete</button>
@@ -29,7 +30,7 @@
 
                     <ul>
                         <each of="p.children" as="c">
-                            <li>
+                            <li attr-child-id="c.id">
                                 <b><get>watermark</get></b>
                                 <get>c.name</get> (<get>param1</get> team)
                                 <button action-click="toggleChildEdit">✏️ Edit</button>

@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <title>Template Engine Performance Test</title>
-<link rel="stylesheet" href="performance-test.css" />
 </head>
 <body>
 
     <div id="app"></div>
 
     <template id="app-template">
+        <button action-click="runBenchmark">▶ Start Benchmark</button>
         <each of="items" as="item">
-            <div class="item"><get>item.name</get> - <get>item.value</get></div>
+            <div class="item" attr-item-id="item.id"><get>item.name</get> - <get>item.value</get></div>
         </each>
     </template>
 
