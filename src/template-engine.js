@@ -5,6 +5,7 @@ import NodeHolders from './components/utils/node-holders.js'
 import RefreshDelegator from './components/refresh-delegator.js'
 import Notifier from './components/utils/notifier.js'
 import UuidItemMap from './components/utils/uuid-item-map.js'
+import MappedArray from './mapped-array.js'
 
 const TemplateEngine = (function () {
     return {
@@ -49,9 +50,48 @@ const TemplateEngine = (function () {
                 Notifier.notifyDependencies(topData, matchingDependents, change)
             }
 
-            function makeArrayItemsReactive(obj, fullKey) {
+            function makeArrayItemsReactive(obj, fullKey, mappedArrayConfig = undefined) {
                 for (let i = 0; i < obj.length; i++) {
                     const item = obj[i]
+
+                    // falls im Parameter reverseTransform gesetzt ist,
+                    // dann set-Algorithmus von createMappedArray aufrufen
+                    
+                    // TODO: verfolgt man diese Funktion weiter,
+                    // dann landet man bei defaultReactiveDataProperty
+                    // (diesen Code dorthin verschieben)
+
+                    if (mappedArrayConfig && typeof mappedArrayConfig === 'object'
+                        && mappedArrayConfig.hasOwnProperty('source')
+                        && mappedArrayConfig.hasOwnProperty('reverseTransform')
+                        && typeof mappedArrayConfig.source === 'object'
+                        && typeof mappedArrayConfig.reverseTransform === 'function'
+                    ) {
+                        const transformedModelItem = mappedArrayConfig.reverseTransform(item)
+
+                        if (transformedModelItem && typeof transformedModelItem === 'object') {
+                            const existingSourceItem = mappedArrayConfig.source[i]
+
+                            if (existingSourceItem && typeof existingSourceItem === 'object') {
+                                // IMPORTANT: keep source object identity stable.
+                                // Replacing source[i] breaks mapped-item cache and UUID/fullKey linkage.
+                                const oldKeys = Object.keys(existingSourceItem)
+                                const newKeys = Object.keys(transformedModelItem)
+
+                                for (const oldKey of oldKeys) {
+                                    if (!newKeys.includes(oldKey)) {
+                                        delete existingSourceItem[oldKey]
+                                    }
+                                }
+
+                                for (const [modelProp, modelValue] of Object.entries(transformedModelItem)) {
+                                    existingSourceItem[modelProp] = modelValue
+                                }
+                            } else {
+                                mappedArrayConfig.source[i] = transformedModelItem
+                            }
+                        }
+                    }
 
                     if (item && typeof item === 'object') {
                         const uuid = UuidItemMap.ensureUuidForItem(item)
@@ -151,12 +191,19 @@ const TemplateEngine = (function () {
                 Object.defineProperty(obj, prop, {
                     get() {
                         const value = descriptor.get ? descriptor.get.call(this) : undefined
-
+                        
                         if (value && typeof value === 'object') {
                             // Beispiel:
                             // get selectedPerson() { return this.persons[this.currentIndex] }
                             // -> selectedPerson.name bleibt reaktiv.
-                            makeReactive(value, nextFullKey)
+
+                            // falls value ein __source__ und __reverseTransform__ (wird von mappedArray angehangen) hat,
+                            // dann makeReactive mit diesem source und reverseTransform aufrufen
+                            // beautifiedPersons ist ein Array -> führt zu makeArrayItemsReactive
+
+                            makeReactive(value, nextFullKey,
+                                value.__source__ && value.__reverseTransform__ ?
+                                { source: value.__source__, reverseTransform: value.__reverseTransform__ } : undefined)
                         }
 
                         return value
@@ -188,7 +235,7 @@ const TemplateEngine = (function () {
                 })
             }
 
-            function makeReactive(obj, fullKey = '') {
+            function makeReactive(obj, fullKey = '', mappedArrayConfig = undefined) {
                 if (!obj || typeof obj !== 'object') {
                     return obj
                 }
@@ -212,7 +259,7 @@ const TemplateEngine = (function () {
                 })
 
                 if (Array.isArray(obj)) {
-                    makeArrayItemsReactive(obj, fullKey)
+                    makeArrayItemsReactive(obj, fullKey, mappedArrayConfig)
                     patchArrayMethods(obj, fullKey)
 
                     return obj

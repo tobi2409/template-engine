@@ -1,3 +1,5 @@
+//TODO: Zuständigkeiten prüfen (NodeHolder)
+
 // Refresh Component: Updates and reactivity
 
 import NodeHolders from './utils/node-holders.js'

@@ -55,28 +55,25 @@ describe('createMappedArray', () => {
         assert.equal(arr[0].value, 42)
     })
 
-    test('passes viewModelItem and modelItem to reverseTransform on writable updates', () => {
-        const sourceItem = { id: 1, name: 'Alice', birthyear: 2000 }
-        const source = [sourceItem]
+    test('passes set operation context to reverseTransform on writable updates', () => {
+        const source = [{ id: 1, name: 'Alice', birthyear: 2000 }]
 
-        let receivedViewModelItem = null
-        let receivedModelItem = null
+        let receivedContext = null
 
         const arr = createMappedArray(
             source,
             (item) => ({ name: item.name, age: new Date().getFullYear() - item.birthyear }),
             { age: 'birthyear' },
-            (viewModelItem, modelItem) => {
-                receivedViewModelItem = viewModelItem
-                receivedModelItem = modelItem
+            (viewModelItem, context) => {
+                receivedContext = context
                 return { birthyear: new Date().getFullYear() - viewModelItem.age }
             }
         )
 
-        arr[0].age = 31
+        arr[0].age = 29
 
-        assert.strictEqual(receivedViewModelItem, arr[0])
-        assert.strictEqual(receivedModelItem, sourceItem)
+        assert.equal(receivedContext.operation, 'set')
+        assert.equal(receivedContext.prop, 'age')
     })
 
     test('push delegates to source via reverseTransform', () => {
@@ -96,6 +93,26 @@ describe('createMappedArray', () => {
         assert.equal(arr[1].label, 'Bob')
         // the view entry must not be the same object that was pushed (it must be created by createMappedArray)
         assert.notStrictEqual(arr[1], pushed)
+    })
+
+    test('passes push operation context to reverseTransform', () => {
+        const source = [{ id: 1, name: 'Alice' }]
+
+        let receivedContext = null
+
+        const arr = createMappedArray(
+            source,
+            (item) => ({ label: item.name }),
+            {},
+            (result, context) => {
+                receivedContext = context
+                return { name: result.label }
+            }
+        )
+
+        arr.push({ label: 'Bob' })
+
+        assert.equal(receivedContext.operation, 'push')
     })
 
     test('pop removes last item from source', () => {
@@ -120,6 +137,7 @@ describe('createMappedArray', () => {
 
     test('unshift adds item at beginning of source via reverseTransform', () => {
         const source = [{ id: 2, name: 'Bob' }]
+
         const arr = createMappedArray(
             source,
             (item) => ({ label: item.name }),
@@ -129,10 +147,31 @@ describe('createMappedArray', () => {
 
         const unshifted = { label: 'Alice' }
         arr.unshift(unshifted)
+
         assert.equal(source.length, 2)
         assert.equal(source[0].name, 'Alice')
         assert.equal(arr[0].label, 'Alice')
         assert.notStrictEqual(arr[0], unshifted)
+    })
+
+    test('passes unshift operation context to reverseTransform', () => {
+        const source = [{ id: 2, name: 'Bob' }]
+
+        let receivedContext = null
+
+        const arr = createMappedArray(
+            source,
+            (item) => ({ label: item.name }),
+            {},
+            (result, context) => {
+                receivedContext = context
+                return { name: result.label }
+            }
+        )
+
+        arr.unshift({ label: 'Alice' })
+
+        assert.equal(receivedContext.operation, 'unshift')
     })
 
     test('splice removes and inserts items in source via reverseTransform', () => {
@@ -150,5 +189,27 @@ describe('createMappedArray', () => {
         assert.equal(source[1].name, 'Dave')
         assert.equal(arr[1].label, 'Dave')
         assert.notStrictEqual(arr[1], inserted)
+    })
+
+    test('passes splice operation context with metadata to reverseTransform', () => {
+        const source = [{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }, { id: 3, name: 'Carol' }]
+        let receivedContext = null
+
+        const arr = createMappedArray(
+            source,
+            (item) => ({ label: item.name }),
+            {},
+            (result, context) => {
+                receivedContext = context
+                return { name: result.label }
+            }
+        )
+
+        arr.splice(1, 1, { label: 'Dave' })
+
+        assert.equal(receivedContext.operation, 'splice')
+        assert.equal(receivedContext.start, 1)
+        assert.equal(receivedContext.deleteCount, 1)
+        assert.equal(receivedContext.insertCount, 1)
     })
 })
