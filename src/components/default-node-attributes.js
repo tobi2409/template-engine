@@ -3,7 +3,7 @@
 import NodeHolders from './utils/node-holders.js'
 import KeyResolver from './utils/key-resolver.js'
 import RefreshDelegator from './refresh-delegator.js'
-import Notifier from './utils/notifier.js'
+import DependencyNotifier from './utils/dependency-notifier.js'
 import UuidItemMap from './utils/uuid-item-map.js'
 
 // Helper function to apply attribute value to DOM element
@@ -71,8 +71,8 @@ function handleBindAttribute(cloned, attr, resolved, data, contextStack, params,
         }
         
         // Trigger dependent refreshes
-        const matchingDependents = Notifier.findMatchingDependencies(currentResolved.fullKey, dependencies)
-        Notifier.notifyDependencies(data, matchingDependents)
+        const matchingDependents = DependencyNotifier.findMatchingDependencies(currentResolved.fullKey, dependencies)
+        DependencyNotifier.notifyDependencies(data, matchingDependents)
     })
     
     // Register NodeHolder for Data → UI refresh

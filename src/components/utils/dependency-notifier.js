@@ -7,7 +7,7 @@ import NodeHolders from './node-holders.js'
 // Supports nested paths: if 'model.rawPersonData.0.name' changes,
 // dependencies on 'model.rawPersonData' should also be triggered
 // Recursively resolves transitive dependencies: A → B → C
-const Notifier = (function () {
+const DependencyNotifier = (function () {
     function findMatchingDependencies(fullKey, dependencies, visited = new Set()) {
         if (visited.has(fullKey)) {
             return []
@@ -72,4 +72,4 @@ const Notifier = (function () {
     }
 })()
 
-export default Notifier
+export default DependencyNotifier

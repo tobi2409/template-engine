@@ -155,3 +155,10 @@ viewModel.beautifiedPersons[0].children.push({
 // Ensure getters are evaluated so returned view objects become reactive
 void viewModel.beautifiedPersons
 viewModel.beautifiedPersons[0].name = 'Max Mustermann - Updated'
+viewModel.beautifiedPersons[0].children.push({
+    id: 2,
+    name: 'Max Jr. - Updated',
+    wage: '5 USD',
+    age: 14,
+    children: []
+})

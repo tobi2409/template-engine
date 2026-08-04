@@ -1,5 +1,5 @@
 import TemplateEngine from '../../src/template-engine.js'
-import { createMappedArray } from '../../src/mapped-array.js'
+import MappedArray from '../../src/mapped-array.js'
 
 const model = {
     user: 'Joe Doe',
@@ -8,43 +8,7 @@ const model = {
         name: 'Max Mustermann',
         wage: 10,
         birthyear: 1990,
-        children: [{
-            id: 2,
-            name: 'Max Jr.',
-            wage: 5,
-            birthyear: 2010,
-            children: [{
-                id: 3,
-                name: 'Max III',
-                wage: 2,
-                birthyear: 2020,
-                children: []
-            }, {
-                id: 4,
-                name: 'Maxi III',
-                wage: 1,
-                birthyear: 2022,
-                children: []
-            }]
-        }]
-    }, {
-        id: 5,
-        name: 'Erika Mustermann',
-        wage: 12,
-        birthyear: 1992,
-        children: [{
-            id: 6,
-            name: 'Erika Jr.',
-            wage: 6,
-            birthyear: 2012,
-            children: []
-        }, {
-            id: 7,
-            name: 'Erik',
-            wage: 3,
-            birthyear: 2014,
-            children: []
-        }]
+        children: []
     }]
 }
 
@@ -68,43 +32,39 @@ const viewModel = TemplateEngine.reactive({
     },
 
     recursiveBeautifiedPersons(persons, layer = 1) {
-        return createMappedArray(
+        return MappedArray.transformArray(
             persons,
             (person) => ({
                 id: person.id,
                 name: person.name,
                 wage: `${person.wage} USD`,
                 age: new Date().getFullYear() - person.birthyear,
-                children: this.recursiveBeautifiedPersons(person.children, layer + 1),
+                children: [],
                 layerDecoration: '»'.repeat(layer),
+                expanded: false,
+                childrenLoaded: false,
+                expand(_, viewItem) {
+                    if (!viewItem.childrenLoaded) {
+                        viewModel.loadServerData(viewItem)
+                        viewItem.childrenLoaded = true
+                    }
+
+                    console.log(viewItem)
+                    viewItem.expanded = !viewItem.expanded
+                }
             }),
-            { name: 'name', wage: 'wage', age: 'birthyear' },
-            (personViewModelItem) => (this.reversePersonViewModelItem(personViewModelItem))
+            (personView) => ({
+                id: personView.id,
+                name: personView.name,
+                wage: personView.wage.slice(0, -4),
+                birthyear: new Date().getFullYear() - personView.age,
+                children: personView.children.map(viewModelChild => this.reversePersonViewModelItem(viewModelChild))
+            })
         )
     },
 
     get beautifiedPersons() {
         return this.recursiveBeautifiedPersons(model.persons)
-    },
-
-    newDemoChild_MaxJr() {
-        const maxJr = viewModel.beautifiedPersons[0].children[0]
-
-        const newChild = {
-            id: 9,
-            name: `Max III - New`,
-            wage: '10 USD',
-            age: 2,
-            children: [{
-                id: 10,
-                name: `Max IV - New`,
-                wage: '5 USD',
-                age: 1,
-                children: []
-            }]
-        }
-
-        maxJr.children.push(newChild)
     },
 
     logModels() {
@@ -113,5 +73,18 @@ const viewModel = TemplateEngine.reactive({
     }
 }, document.getElementById('app-template-use'))
 
-// Ensure getters are evaluated so returned view objects become reactive
-void viewModel.beautifiedPersons
+viewModel.beautifiedPersons[0].name = 'Max Mustermann - Updated'
+/*viewModel.beautifiedPersons.push({
+    id: 2,
+    name: 'Max Mustermann - Sibling',
+    wage: '8 USD',
+    age: 34,
+    children: []
+})
+viewModel.beautifiedPersons[0].children.push({
+    id: 3,
+    name: 'Max Jr. - Updated',
+    wage: '5 USD',
+    age: 14,
+    children: []
+})*/

@@ -1,11 +1,9 @@
 // Reactive Component: Reactivity through Object.defineProperty-based data observation
 
 import RenderEngine from './components/render-engine.js'
-import NodeHolders from './components/utils/node-holders.js'
-import RefreshDelegator from './components/refresh-delegator.js'
-import Notifier from './components/utils/notifier.js'
+import Notifier from './components/reactivity-helpers/notifier.js'
 import UuidItemMap from './components/utils/uuid-item-map.js'
-import MappedArray from './mapped-array.js'
+import ModelSynchronization from './components/reactivity-helpers/model-synchronization.js'
 
 const TemplateEngine = (function () {
     return {
@@ -24,86 +22,34 @@ const TemplateEngine = (function () {
 
             const topData = data
 
-            function notifyKeyChange(fullKey) {
-                notifyChange(fullKey)
-            }
-
-            function notifyChange(fullKey, change = undefined) {
-                const linkedNodeHolders = NodeHolders.nodeHoldersByKeys.getByKey(fullKey)
-                const matchingDependents = Notifier.findMatchingDependencies(fullKey, dependencies)
-
-                if ((!linkedNodeHolders || linkedNodeHolders.get('holders')?.length === 0)
-                    && matchingDependents.length === 0) {
-                    return
-                }
-
-                if (linkedNodeHolders?.get('holders')?.length > 0) {
-                    if (change) {
-                        RefreshDelegator.refresh(topData, change)
-                    } else {
-                        for (const nodeHolder of linkedNodeHolders.get('holders')) {
-                            RefreshDelegator.refresh(topData, { fullKey, action: nodeHolder.action })
-                        }
-                    }
-                }
-
-                Notifier.notifyDependencies(topData, matchingDependents, change)
-            }
-
             function makeArrayItemsReactive(obj, fullKey, mappedArrayConfig = undefined) {
                 for (let i = 0; i < obj.length; i++) {
                     const item = obj[i]
 
-                    // falls im Parameter reverseTransform gesetzt ist,
-                    // dann set-Algorithmus von createMappedArray aufrufen
-                    
-                    // TODO: verfolgt man diese Funktion weiter,
-                    // dann landet man bei defaultReactiveDataProperty
-                    // (diesen Code dorthin verschieben)
-
-                    if (mappedArrayConfig && typeof mappedArrayConfig === 'object'
+                    const mappedArrayItemConfig = (mappedArrayConfig
+                        && typeof mappedArrayConfig === 'object'
                         && mappedArrayConfig.hasOwnProperty('source')
                         && mappedArrayConfig.hasOwnProperty('reverseTransform')
-                        && typeof mappedArrayConfig.source === 'object'
-                        && typeof mappedArrayConfig.reverseTransform === 'function'
-                    ) {
-                        const transformedModelItem = mappedArrayConfig.reverseTransform(item)
-
-                        if (transformedModelItem && typeof transformedModelItem === 'object') {
-                            const existingSourceItem = mappedArrayConfig.source[i]
-
-                            if (existingSourceItem && typeof existingSourceItem === 'object') {
-                                // IMPORTANT: keep source object identity stable.
-                                // Replacing source[i] breaks mapped-item cache and UUID/fullKey linkage.
-                                const oldKeys = Object.keys(existingSourceItem)
-                                const newKeys = Object.keys(transformedModelItem)
-
-                                for (const oldKey of oldKeys) {
-                                    if (!newKeys.includes(oldKey)) {
-                                        delete existingSourceItem[oldKey]
-                                    }
-                                }
-
-                                for (const [modelProp, modelValue] of Object.entries(transformedModelItem)) {
-                                    existingSourceItem[modelProp] = modelValue
-                                }
-                            } else {
-                                mappedArrayConfig.source[i] = transformedModelItem
-                            }
+                        && Array.isArray(mappedArrayConfig.source)
+                        && typeof mappedArrayConfig.reverseTransform === 'function')
+                        ? {
+                            viewModelArray: obj,
+                            sourceItem: mappedArrayConfig.source[i],
+                            reverseTransform: mappedArrayConfig.reverseTransform
                         }
-                    }
+                        : undefined
 
                     if (item && typeof item === 'object') {
                         const uuid = UuidItemMap.ensureUuidForItem(item)
                         const itemFullKey = fullKey ? `${fullKey}.${uuid}` : String(uuid)
                         // Beispiel: data.persons = [{ name: 'Anna' }, { name: 'Ben' }] ->
                         // data.persons[0].name = 'Clara' soll triggern.
-                        makeReactive(item, itemFullKey)
+                        makeReactive(item, itemFullKey, mappedArrayItemConfig)
                     }
                 }
             }
 
-            function patchArrayMethods(obj, fullKey) {
+            function patchArrayMethods(obj, fullKey, mappedArrayConfig = undefined) {
                 for (const method of ['push', 'pop', 'shift', 'unshift', 'splice']) {
                     // If the array already has a custom method push, pop, ... (e.g. from createMappedArray),
                     // wrap it instead of Array.prototype so the source sync is preserved.
@@ -114,23 +60,58 @@ const TemplateEngine = (function () {
                     Object.defineProperty(obj, method, {
                         value: function(...args) {
                             const change = { fullKey, action: method }
+                            let insertedViewItems = []
+                            let insertedModelItems = []
 
                             if (method === 'push' || method === 'unshift') {
                                 change.items = args
+                                insertedViewItems = args
                             } else if (method === 'splice') {
                                 change.startIndex = args[0]
                                 change.deleteCount = args[1] || 0
                                 change.items = args.slice(2)
+                                insertedViewItems = change.items
+                            }
+
+                            if (mappedArrayConfig && typeof mappedArrayConfig === 'object'
+                                && Array.isArray(mappedArrayConfig.source)
+                                && typeof mappedArrayConfig.reverseTransform === 'function') {
+                                if (method === 'push') {
+                                    insertedModelItems = insertedViewItems.map((item) => mappedArrayConfig.reverseTransform(item, { operation: 'push' }))
+                                    mappedArrayConfig.source.push(...insertedModelItems)
+                                } else if (method === 'unshift') {
+                                    insertedModelItems = insertedViewItems.map((item) => mappedArrayConfig.reverseTransform(item, { operation: 'unshift' }))
+                                    mappedArrayConfig.source.unshift(...insertedModelItems)
+                                } else if (method === 'splice') {
+                                    insertedModelItems = insertedViewItems.map((item) => mappedArrayConfig.reverseTransform(item,
+                                        { operation: 'splice', start: change.startIndex, deleteCount: change.deleteCount, insertCount: insertedViewItems.length }))
+
+                                    mappedArrayConfig.source.splice(change.startIndex, change.deleteCount, ...insertedModelItems)
+                                } else if (method === 'pop') {
+                                    mappedArrayConfig.source.pop()
+                                } else if (method === 'shift') {
+                                    mappedArrayConfig.source.shift()
+                                }
                             }
 
                             if (change.items) {
-                                for (const item of change.items) {
+                                for (let itemIndex = 0; itemIndex < change.items.length; itemIndex++) {
+                                    const item = change.items[itemIndex]
                                     if (item && typeof item === 'object') {
                                         const uuid = UuidItemMap.ensureUuidForItem(item)
                                         const itemFullKey = fullKey ? `${fullKey}.${uuid}` : uuid
                                             // Beispiel: data.persons.push({ name: 'David' }) ->
                                             // danach muss data.persons[2].name = 'Daniel' triggern.
-                                        makeReactive(item, itemFullKey)
+
+                                        const mappedArrayItemConfig = insertedModelItems[itemIndex] && mappedArrayConfig
+                                            ? {
+                                                viewModelItem: item,
+                                                sourceItem: insertedModelItems[itemIndex],
+                                                reverseTransform: mappedArrayConfig.reverseTransform
+                                            }
+                                            : undefined
+
+                                        makeReactive(item, itemFullKey, mappedArrayItemConfig)
                                     }
                                 }
                             }
@@ -138,7 +119,7 @@ const TemplateEngine = (function () {
                             const result = original.apply(this, args)
 
                             try {
-                                notifyChange(fullKey, change)
+                                Notifier.notifyChange(topData, fullKey, change, dependencies)
                             } catch (error) {
                                 throw new Error(`[TemplateEngine] Error during refresh of "${fullKey}" after "${method}"`, { cause: error })
                             }
@@ -152,14 +133,14 @@ const TemplateEngine = (function () {
                 }
             }
 
-            function defineReactiveDataProperty(obj, prop, descriptor, nextFullKey) {
+            function defineReactiveDataProperty(obj, prop, descriptor, nextFullKey, mappedArrayItemConfig = undefined) {
                 let _value = descriptor.value
 
                 if (_value && typeof _value === 'object') {
                     // Beispiel: data.person = { address: { city: 'Berlin' } } ->
                     // data.person.address.city = 'Hamburg' soll triggern.
                     // wenn Objekt bereits verschachtelt vorhanden ist, dann muss es auch reaktiv gemacht werden.
-                    makeReactive(_value, nextFullKey)
+                    makeReactive(_value, nextFullKey, mappedArrayItemConfig)
                 }
 
                 Object.defineProperty(obj, prop, {
@@ -167,17 +148,17 @@ const TemplateEngine = (function () {
                         return _value
                     },
                     set(newValue) {
-                        _value = newValue
+                        ModelSynchronization.synchronizeViewModelItemWithModelArray(mappedArrayItemConfig)
 
                         if (newValue && typeof newValue === 'object') {
                             // Beispiel: data.person.address = { city: 'Köln' } ->
                             // danach data.person.address.city = 'Bonn' soll triggern. (multilevel reactivity)
                             // wenn verschachteltes Objekt gesetzt wird, dann muss es auch reaktiv gemacht werden.
-                            makeReactive(newValue, nextFullKey)
+                            makeReactive(newValue, nextFullKey, mappedArrayItemConfig)
                         }
 
                         try {
-                            notifyKeyChange(nextFullKey)
+                            Notifier.notifyKeyChange(topData, nextFullKey, dependencies)
                         } catch (error) {
                             throw new Error(`[TemplateEngine] Error during refresh of "${nextFullKey}"`, { cause: error })
                         }
@@ -221,11 +202,14 @@ const TemplateEngine = (function () {
                             // Beispiel:
                             // set selectedPerson(v) { this.persons[this.currentIndex] = v }
                             // data.selectedPerson = { name: 'Finn' } -> neuer Wert wird reaktiv.
-                            makeReactive(currentValue, nextFullKey)
+                            makeReactive(currentValue, nextFullKey,
+                                currentValue.__source__ && currentValue.__reverseTransform__
+                                    ? { source: currentValue.__source__, reverseTransform: currentValue.__reverseTransform__ }
+                                    : undefined)
                         }
 
                         try {
-                            notifyKeyChange(nextFullKey)
+                            Notifier.notifyKeyChange(topData, nextFullKey, dependencies)
                         } catch (error) {
                             throw new Error(`[TemplateEngine] Error during refresh of "${nextFullKey}"`, { cause: error })
                         }
@@ -260,7 +244,7 @@ const TemplateEngine = (function () {
 
                 if (Array.isArray(obj)) {
                     makeArrayItemsReactive(obj, fullKey, mappedArrayConfig)
-                    patchArrayMethods(obj, fullKey)
+                    patchArrayMethods(obj, fullKey, mappedArrayConfig)
 
                     return obj
                 }
@@ -277,7 +261,7 @@ const TemplateEngine = (function () {
 
                     if ('value' in descriptor) {
                         // prop e.g. name -> create setters/getters for name
-                        defineReactiveDataProperty(obj, prop, descriptor, nextFullKey)
+                        defineReactiveDataProperty(obj, prop, descriptor, nextFullKey, mappedArrayConfig)
                     } else {
                         // objects with getters/setters and without value
                         defineReactiveAccessorProperty(obj, prop, descriptor, nextFullKey)
