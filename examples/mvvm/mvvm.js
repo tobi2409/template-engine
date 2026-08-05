@@ -1,5 +1,5 @@
 import TemplateEngine from '../../src/template-engine.js'
-import { createMappedArray } from '../../src/mapped-array.js'
+import { createMappedArray } from '../../src/viewmodel-array.js'
 
 function assertSelectorContains(selector, expectedText, step) {
     const node = document.querySelector(selector)

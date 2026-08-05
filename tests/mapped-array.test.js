@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import { createMappedArray } from '../src/mapped-array.js'
+import { createMappedArray } from '../src/viewmodel-array.js'
 
 describe('createMappedArray', () => {
     test('maps source items with transform', () => {

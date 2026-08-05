@@ -22,34 +22,25 @@ const TemplateEngine = (function () {
 
             const topData = data
 
-            function makeArrayItemsReactive(obj, fullKey, mappedArrayConfig = undefined) {
+            function makeArrayItemsReactive(obj, fullKey, viewModelArrayConfig = undefined) {
                 for (let i = 0; i < obj.length; i++) {
                     const item = obj[i]
-
-                    const mappedArrayItemConfig = (mappedArrayConfig
-                        && typeof mappedArrayConfig === 'object'
-                        && mappedArrayConfig.hasOwnProperty('source')
-                        && mappedArrayConfig.hasOwnProperty('reverseTransform')
-                        && Array.isArray(mappedArrayConfig.source)
-                        && typeof mappedArrayConfig.reverseTransform === 'function')
-                        ? {
-                            viewModelArray: obj,
-                            sourceItem: mappedArrayConfig.source[i],
-                            reverseTransform: mappedArrayConfig.reverseTransform
-                        }
-                        : undefined
 
                     if (item && typeof item === 'object') {
                         const uuid = UuidItemMap.ensureUuidForItem(item)
                         const itemFullKey = fullKey ? `${fullKey}.${uuid}` : String(uuid)
                         // Beispiel: data.persons = [{ name: 'Anna' }, { name: 'Ben' }] ->
                         // data.persons[0].name = 'Clara' soll triggern.
-                        makeReactive(item, itemFullKey, mappedArrayItemConfig)
+
+                        let viewModelItemConfig = viewModelArrayConfig ? 
+                            ModelSynchronization.createViewModelItemConfig(viewModelArrayConfig, i) : undefined
+
+                        makeReactive(item, itemFullKey, viewModelArrayConfig, viewModelItemConfig)
                     }
                 }
             }
 
-            function patchArrayMethods(obj, fullKey, mappedArrayConfig = undefined) {
+            function patchArrayMethods(obj, fullKey, viewModelArrayConfig = undefined) {
                 for (const method of ['push', 'pop', 'shift', 'unshift', 'splice']) {
                     // If the array already has a custom method push, pop, ... (e.g. from createMappedArray),
                     // wrap it instead of Array.prototype so the source sync is preserved.
@@ -60,70 +51,45 @@ const TemplateEngine = (function () {
                     Object.defineProperty(obj, method, {
                         value: function(...args) {
                             const change = { fullKey, action: method }
-                            let insertedViewItems = []
-                            let insertedModelItems = []
 
                             if (method === 'push' || method === 'unshift') {
                                 change.items = args
-                                insertedViewItems = args
                             } else if (method === 'splice') {
                                 change.startIndex = args[0]
                                 change.deleteCount = args[1] || 0
                                 change.items = args.slice(2)
-                                insertedViewItems = change.items
                             }
+                            
+                            const result = original.apply(this, args)
 
-                            if (mappedArrayConfig && typeof mappedArrayConfig === 'object'
-                                && Array.isArray(mappedArrayConfig.source)
-                                && typeof mappedArrayConfig.reverseTransform === 'function') {
-                                if (method === 'push') {
-                                    insertedModelItems = insertedViewItems.map((item) => mappedArrayConfig.reverseTransform(item, { operation: 'push' }))
-                                    mappedArrayConfig.source.push(...insertedModelItems)
-                                } else if (method === 'unshift') {
-                                    insertedModelItems = insertedViewItems.map((item) => mappedArrayConfig.reverseTransform(item, { operation: 'unshift' }))
-                                    mappedArrayConfig.source.unshift(...insertedModelItems)
-                                } else if (method === 'splice') {
-                                    insertedModelItems = insertedViewItems.map((item) => mappedArrayConfig.reverseTransform(item,
-                                        { operation: 'splice', start: change.startIndex, deleteCount: change.deleteCount, insertCount: insertedViewItems.length }))
-
-                                    mappedArrayConfig.source.splice(change.startIndex, change.deleteCount, ...insertedModelItems)
-                                } else if (method === 'pop') {
-                                    mappedArrayConfig.source.pop()
-                                } else if (method === 'shift') {
-                                    mappedArrayConfig.source.shift()
-                                }
-                            }
+                            ModelSynchronization.updateModelArrayByViewModelArrayOperation(viewModelArrayConfig, method, change)
 
                             if (change.items) {
+                                // Make newly inserted items reactive
                                 for (let itemIndex = 0; itemIndex < change.items.length; itemIndex++) {
                                     const item = change.items[itemIndex]
+                                    
                                     if (item && typeof item === 'object') {
                                         const uuid = UuidItemMap.ensureUuidForItem(item)
                                         const itemFullKey = fullKey ? `${fullKey}.${uuid}` : uuid
-                                            // Beispiel: data.persons.push({ name: 'David' }) ->
-                                            // danach muss data.persons[2].name = 'Daniel' triggern.
 
-                                        const mappedArrayItemConfig = insertedModelItems[itemIndex] && mappedArrayConfig
-                                            ? {
-                                                viewModelItem: item,
-                                                sourceItem: insertedModelItems[itemIndex],
-                                                reverseTransform: mappedArrayConfig.reverseTransform
-                                            }
-                                            : undefined
+                                        let viewModelItemConfig = viewModelArrayConfig ? 
+                                            ModelSynchronization.createViewModelItemConfig(
+                                                viewModelArrayConfig,
+                                                method === 'push' || method === 'unshift' ? (obj.length - 1) + itemIndex : itemIndex
+                                            ) : undefined
 
-                                        makeReactive(item, itemFullKey, mappedArrayItemConfig)
+                                        makeReactive(item, itemFullKey, viewModelArrayConfig, viewModelItemConfig)
                                     }
                                 }
                             }
-
-                            const result = original.apply(this, args)
 
                             try {
                                 Notifier.notifyChange(topData, fullKey, change, dependencies)
                             } catch (error) {
                                 throw new Error(`[TemplateEngine] Error during refresh of "${fullKey}" after "${method}"`, { cause: error })
                             }
-
+                            
                             return result
                         },
                         enumerable: false,
@@ -133,14 +99,19 @@ const TemplateEngine = (function () {
                 }
             }
 
-            function defineReactiveDataProperty(obj, prop, descriptor, nextFullKey, mappedArrayItemConfig = undefined) {
+            function defineReactiveDataProperty(obj, prop, descriptor, nextFullKey, viewModelArrayConfig = undefined, viewModelItemConfig = undefined) {
                 let _value = descriptor.value
 
                 if (_value && typeof _value === 'object') {
                     // Beispiel: data.person = { address: { city: 'Berlin' } } ->
                     // data.person.address.city = 'Hamburg' soll triggern.
                     // wenn Objekt bereits verschachtelt vorhanden ist, dann muss es auch reaktiv gemacht werden.
-                    makeReactive(_value, nextFullKey, mappedArrayItemConfig)
+
+                    if (Array.isArray(_value)) {
+                        makeReactive(_value, nextFullKey, ModelSynchronization.createViewModelArrayConfig(_value))
+                    } else {
+                        makeReactive(_value, nextFullKey, viewModelArrayConfig, viewModelItemConfig)
+                    }
                 }
 
                 Object.defineProperty(obj, prop, {
@@ -148,20 +119,24 @@ const TemplateEngine = (function () {
                         return _value
                     },
                     set(newValue) {
-                        ModelSynchronization.synchronizeViewModelItemWithModelArray(mappedArrayItemConfig)
+                        _value = newValue
 
                         if (newValue && typeof newValue === 'object') {
                             // Beispiel: data.person.address = { city: 'Köln' } ->
                             // danach data.person.address.city = 'Bonn' soll triggern. (multilevel reactivity)
                             // wenn verschachteltes Objekt gesetzt wird, dann muss es auch reaktiv gemacht werden.
-                            makeReactive(newValue, nextFullKey, mappedArrayItemConfig)
-                        }
 
+                            //TODO: überprüfen
+                            makeReactive(newValue, nextFullKey)
+                        }
+                        
                         try {
                             Notifier.notifyKeyChange(topData, nextFullKey, dependencies)
                         } catch (error) {
                             throw new Error(`[TemplateEngine] Error during refresh of "${nextFullKey}"`, { cause: error })
                         }
+
+                        ModelSynchronization.updateModelItemByViewModelItem(viewModelItemConfig)
                     },
                     enumerable: descriptor.enumerable,
                     configurable: true
@@ -183,8 +158,7 @@ const TemplateEngine = (function () {
                             // beautifiedPersons ist ein Array -> führt zu makeArrayItemsReactive
 
                             makeReactive(value, nextFullKey,
-                                value.__source__ && value.__reverseTransform__ ?
-                                { source: value.__source__, reverseTransform: value.__reverseTransform__ } : undefined)
+                                Array.isArray(value) ? ModelSynchronization.createViewModelArrayConfig(value) : undefined)
                         }
 
                         return value
@@ -195,17 +169,14 @@ const TemplateEngine = (function () {
                         }
 
                         descriptor.set.call(this, newValue)
-
-                        const currentValue = descriptor.get ? descriptor.get.call(this) : newValue
-
+                        
                         if (currentValue && typeof currentValue === 'object') {
                             // Beispiel:
                             // set selectedPerson(v) { this.persons[this.currentIndex] = v }
                             // data.selectedPerson = { name: 'Finn' } -> neuer Wert wird reaktiv.
-                            makeReactive(currentValue, nextFullKey,
-                                currentValue.__source__ && currentValue.__reverseTransform__
-                                    ? { source: currentValue.__source__, reverseTransform: currentValue.__reverseTransform__ }
-                                    : undefined)
+                            
+                            //TODO: überprüfen
+                            makeReactive(currentValue, nextFullKey)
                         }
 
                         try {
@@ -213,13 +184,15 @@ const TemplateEngine = (function () {
                         } catch (error) {
                             throw new Error(`[TemplateEngine] Error during refresh of "${nextFullKey}"`, { cause: error })
                         }
+
+                        const currentValue = descriptor.get ? descriptor.get.call(this) : newValue
                     },
                     enumerable: descriptor.enumerable,
                     configurable: true
                 })
             }
 
-            function makeReactive(obj, fullKey = '', mappedArrayConfig = undefined) {
+            function makeReactive(obj, fullKey = '', viewModelArrayConfig = undefined, viewModelItemConfig = undefined) {
                 if (!obj || typeof obj !== 'object') {
                     return obj
                 }
@@ -243,8 +216,8 @@ const TemplateEngine = (function () {
                 })
 
                 if (Array.isArray(obj)) {
-                    makeArrayItemsReactive(obj, fullKey, mappedArrayConfig)
-                    patchArrayMethods(obj, fullKey, mappedArrayConfig)
+                    makeArrayItemsReactive(obj, fullKey, viewModelArrayConfig)
+                    patchArrayMethods(obj, fullKey, viewModelArrayConfig)
 
                     return obj
                 }
@@ -261,7 +234,7 @@ const TemplateEngine = (function () {
 
                     if ('value' in descriptor) {
                         // prop e.g. name -> create setters/getters for name
-                        defineReactiveDataProperty(obj, prop, descriptor, nextFullKey, mappedArrayConfig)
+                        defineReactiveDataProperty(obj, prop, descriptor, nextFullKey, viewModelArrayConfig, viewModelItemConfig)
                     } else {
                         // objects with getters/setters and without value
                         defineReactiveAccessorProperty(obj, prop, descriptor, nextFullKey)

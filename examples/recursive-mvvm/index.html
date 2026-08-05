@@ -18,6 +18,8 @@
                         <input type="text" bind-input-value="p.name" />
                         <input type="text" bind-input-value="p.wage" />
                         <input type="number" bind-input-value="p.age" />
+                        <input type="text" bind-input-value="p.address.street" />
+                        <input type="text" bind-input-value="p.address.city" />
 
                         <template-use
                             template-id="ul-structured-data"
@@ -35,6 +37,8 @@
                         <div class="table-cell"><input type="text" bind-input-value="p.name" /></div>
                         <div class="table-cell"><input type="text" bind-input-value="p.wage" /></div>
                         <div class="table-cell"><input type="number" bind-input-value="p.age" /></div>
+                        <div class="table-cell"><input type="text" bind-input-value="p.address.street" /></div>
+                        <div class="table-cell"><input type="text" bind-input-value="p.address.city" /></div>
                     </div>
 
                     <div class="tree-children">
@@ -55,15 +59,17 @@
                 <div class="table-row-header-outer">
                     <div class="table-row header">
                         <div class="table-cell"></div>
-                        <div class="table-cell">Name:</div>
+                        <div class="table-cell">Name</div>
                         <div class="table-cell">Wage</div>
                         <div class="table-cell">Age</div>
+                        <div class="table-cell">Street</div>
+                        <div class="table-cell">City</div>
                     </div>
                 </div>
 
                 <template-use
                     template-id="table-structured-data-content"
-                    data-list="beautifiedPersons"></template-use>
+                    data-list="persons"></template-use>
             </div>
         </template>
 
@@ -72,11 +78,14 @@
 
             <template-use
                 template-id="ul-structured-data"
-                data-list="beautifiedPersons"></template-use>
+                data-list="persons"></template-use>
 
             <template-use
                 template-id="table-structured-data"
-                data-list="beautifiedPersons"></template-use>
+                data-list="persons"></template-use>
+
+            <br />
+            <button action-click="demoUpdates">Demo Updates</button>
 
             <br />
             <button action-click="logModels">Log Models</button>

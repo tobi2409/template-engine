@@ -1,5 +1,5 @@
 import TemplateEngine from '../../src/template-engine.js'
-import MappedArray from '../../src/mapped-array.js'
+import ViewModelArray from '../../src/viewmodel-array.js'
 
 const fakeServerData = [{
     id: 1,
@@ -92,7 +92,7 @@ const viewModel = TemplateEngine.reactive({
     },
 
     recursiveBeautifiedPersons(persons, layer = 1) {
-        return MappedArray.transformArray(
+        return ViewModelArray.transformArray(
             persons,
             (person) => ({
                 id: person.id,

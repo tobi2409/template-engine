@@ -1,5 +1,5 @@
 import TemplateEngine from '../../src/template-engine.js'
-import MappedArray from '../../src/mapped-array.js'
+import ViewModelArray from '../../src/viewmodel-array.js'
 
 const model = {
     user: 'Joe Doe',
@@ -8,6 +8,26 @@ const model = {
         name: 'Max Mustermann',
         wage: 10,
         birthyear: 1990,
+        address: {
+            street: 'Main Street 1',
+            city: 'Berlin'
+        },
+        children: [{
+            id: 3,
+            name: 'Max Jr.',
+            wage: 5,
+            birthyear: 2010,
+            children: []
+        }]
+    }, {
+        id: 2,
+        name: 'Erika Mustermann',
+        wage: 12,
+        birthyear: 1992,
+        address: {
+            street: 'Second Street 2',
+            city: 'Hamburg'
+        },
         children: []
     }]
 }
@@ -21,50 +41,90 @@ const viewModel = TemplateEngine.reactive({
         model.user = value
     },
 
-    reversePersonViewModelItem(personViewModelItem) {
+    transform(personModelItem, layer) {
+        return {
+            id: personModelItem.id,
+            name: personModelItem.name,
+            wage: `${personModelItem.wage} USD`,
+            age: new Date().getFullYear() - personModelItem.birthyear,
+            address: {
+                street: personModelItem.address?.street || '',
+                city: personModelItem.address?.city || ''
+            },
+            children: [],
+            layerDecoration: '»'.repeat(layer),
+            expanded: false,
+            childrenLoaded: false,
+            expand(_, viewItem) {
+                if (!viewItem.childrenLoaded) {
+                    viewModel.loadServerData(viewItem)
+                    viewItem.childrenLoaded = true
+                }
+
+                viewItem.expanded = !viewItem.expanded
+            }
+        }
+    },
+
+    reverseTransform(personViewModelItem) {
         return {
             id: personViewModelItem.id,
             name: personViewModelItem.name,
             wage: personViewModelItem.wage.slice(0, -4),
             birthyear: new Date().getFullYear() - personViewModelItem.age,
-            children: personViewModelItem.children.map(viewModelChild => this.reversePersonViewModelItem(viewModelChild))
+            address: {
+                street: personViewModelItem.address?.street || '',
+                city: personViewModelItem.address?.city || ''
+            },
+            children: []//personViewModelItem.children.map(viewModelChild => this.reversePersonViewModelItem(viewModelChild))
         }
     },
 
     recursiveBeautifiedPersons(persons, layer = 1) {
-        return MappedArray.transformArray(
+        return ViewModelArray.get(
             persons,
-            (person) => ({
-                id: person.id,
-                name: person.name,
-                wage: `${person.wage} USD`,
-                age: new Date().getFullYear() - person.birthyear,
-                children: [],
-                layerDecoration: '»'.repeat(layer),
-                expanded: false,
-                childrenLoaded: false,
-                expand(_, viewItem) {
-                    if (!viewItem.childrenLoaded) {
-                        viewModel.loadServerData(viewItem)
-                        viewItem.childrenLoaded = true
-                    }
-
-                    console.log(viewItem)
-                    viewItem.expanded = !viewItem.expanded
-                }
-            }),
-            (personView) => ({
-                id: personView.id,
-                name: personView.name,
-                wage: personView.wage.slice(0, -4),
-                birthyear: new Date().getFullYear() - personView.age,
-                children: personView.children.map(viewModelChild => this.reversePersonViewModelItem(viewModelChild))
-            })
+            (personModelItem) => (this.transform(personModelItem, layer)),
+            (personViewModelItem) => (this.reverseTransform(personViewModelItem))
         )
     },
 
-    get beautifiedPersons() {
+    get persons() {
         return this.recursiveBeautifiedPersons(model.persons)
+    },
+
+    demoUpdates() {
+        viewModel.persons[0].name = 'Max Mustermann - Updated'
+        viewModel.persons[0].age = 100
+
+        viewModel.persons[1].age = 80
+        viewModel.persons[1].address.city = 'Munich'
+
+        viewModel.persons.push({
+            id: 4,
+            name: 'Max Mustermann - Sibling',
+            wage: '5 USD',
+            age: 29,
+            address: {
+                street: 'Third Street 4',
+                city: 'Frankfurt'
+            },
+            children: [] // [] // { __recursive__: true, data: [] }
+        })
+
+        viewModel.persons[2].age = 60
+        viewModel.persons[2].address.street = 'Updated Street 2'
+
+        viewModel.persons[0].children.push({
+            id: 3,
+            name: 'Max Jr.',
+            wage: '5 USD',
+            age: 14,
+            address: {
+                street: 'Main Street 3',
+                city: 'Köln'
+            },
+            children: [] // { __recursive__: true, data: [] }
+        })
     },
 
     logModels() {
@@ -73,7 +133,6 @@ const viewModel = TemplateEngine.reactive({
     }
 }, document.getElementById('app-template-use'))
 
-viewModel.beautifiedPersons[0].name = 'Max Mustermann - Updated'
 /*viewModel.beautifiedPersons.push({
     id: 2,
     name: 'Max Mustermann - Sibling',
