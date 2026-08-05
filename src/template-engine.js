@@ -107,7 +107,10 @@ const TemplateEngine = (function () {
                     // data.person.address.city = 'Hamburg' soll triggern.
                     // wenn Objekt bereits verschachtelt vorhanden ist, dann muss es auch reaktiv gemacht werden.
 
-                    if (Array.isArray(_value)) {
+                    if (Array.isArray(_value) && _value.__recursive__) {
+                        _value.__modelArray__ = viewModelItemConfig && viewModelItemConfig.modelItem ? viewModelItemConfig.modelItem.children : undefined
+                        _value.__reverseTransform__ = viewModelArrayConfig ? viewModelArrayConfig.reverseTransform : undefined
+
                         makeReactive(_value, nextFullKey, ModelSynchronization.createViewModelArrayConfig(_value))
                     } else {
                         makeReactive(_value, nextFullKey, viewModelArrayConfig, viewModelItemConfig)

@@ -17,6 +17,10 @@ const model = {
             name: 'Max Jr.',
             wage: 5,
             birthyear: 2010,
+            address: {
+                street: 'Main Street 3',
+                city: 'Bremen'
+            },
             children: []
         }]
     }, {
@@ -41,7 +45,7 @@ const viewModel = TemplateEngine.reactive({
         model.user = value
     },
 
-    transform(personModelItem, layer) {
+    transform(personModelItem) {
         return {
             id: personModelItem.id,
             name: personModelItem.name,
@@ -51,8 +55,7 @@ const viewModel = TemplateEngine.reactive({
                 street: personModelItem.address?.street || '',
                 city: personModelItem.address?.city || ''
             },
-            children: [],
-            layerDecoration: '»'.repeat(layer),
+            children: ViewModelArray.markRecursive(personModelItem.children.map(child => this.transform(child))),
             expanded: false,
             childrenLoaded: false,
             expand(_, viewItem) {
@@ -76,25 +79,25 @@ const viewModel = TemplateEngine.reactive({
                 street: personViewModelItem.address?.street || '',
                 city: personViewModelItem.address?.city || ''
             },
-            children: []//personViewModelItem.children.map(viewModelChild => this.reversePersonViewModelItem(viewModelChild))
+            children: personViewModelItem.children.map(viewModelChild => this.reverseTransform(viewModelChild))
         }
     },
 
-    recursiveBeautifiedPersons(persons, layer = 1) {
+    get persons() {
         return ViewModelArray.get(
-            persons,
-            (personModelItem) => (this.transform(personModelItem, layer)),
+            model.persons,
+            (personModelItem) => (this.transform(personModelItem)),
             (personViewModelItem) => (this.reverseTransform(personViewModelItem))
         )
-    },
-
-    get persons() {
-        return this.recursiveBeautifiedPersons(model.persons)
     },
 
     demoUpdates() {
         viewModel.persons[0].name = 'Max Mustermann - Updated'
         viewModel.persons[0].age = 100
+
+        viewModel.persons[0].children[0].name = 'Max Jr. - Updated'
+        viewModel.persons[0].children[0].age = 20
+        viewModel.persons[0].children[0].address.street = 'Updated Street 3'
 
         viewModel.persons[1].age = 80
         viewModel.persons[1].address.city = 'Munich'
@@ -108,7 +111,7 @@ const viewModel = TemplateEngine.reactive({
                 street: 'Third Street 4',
                 city: 'Frankfurt'
             },
-            children: [] // [] // { __recursive__: true, data: [] }
+            children: [] // ViewModelArray.markRecursive([])
         })
 
         viewModel.persons[2].age = 60
@@ -116,7 +119,7 @@ const viewModel = TemplateEngine.reactive({
 
         viewModel.persons[0].children.push({
             id: 3,
-            name: 'Max Jr.',
+            name: 'Max Jr. - Sibling',
             wage: '5 USD',
             age: 14,
             address: {

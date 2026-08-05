@@ -47,7 +47,17 @@ const ViewModelArray = (function () {
         return viewModelArray
     }
 
-    return { get }
+    function markRecursive(viewModelArray) {
+        if (!Array.isArray(viewModelArray)) {
+            throw new TypeError(`transformArray expected "viewModelArray" to be an array, got ${viewModelArray === null ? 'null' : typeof viewModelArray}`)
+        }
+
+        const cloned = [...viewModelArray]
+        cloned.__recursive__ = true
+        return cloned
+    }
+
+    return { get, markRecursive }
 })()
 
 export default ViewModelArray

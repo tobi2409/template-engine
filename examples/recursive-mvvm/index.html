@@ -14,7 +14,6 @@
             <ul>
                 <each of="*list" as="p">
                     <li>
-                        <get>p.layerDecoration</get>
                         <input type="text" bind-input-value="p.name" />
                         <input type="text" bind-input-value="p.wage" />
                         <input type="number" bind-input-value="p.age" />
@@ -33,7 +32,6 @@
             <each of="*list" as="p">
                 <div class="tree-node">
                     <div class="table-row">
-                        <div class="table-cell"><get>p.layerDecoration</get></div>
                         <div class="table-cell"><input type="text" bind-input-value="p.name" /></div>
                         <div class="table-cell"><input type="text" bind-input-value="p.wage" /></div>
                         <div class="table-cell"><input type="number" bind-input-value="p.age" /></div>
