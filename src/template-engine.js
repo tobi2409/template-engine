@@ -35,7 +35,7 @@ const TemplateEngine = (function () {
                         let viewModelItemConfig = viewModelArrayConfig ? 
                             ModelSynchronization.createViewModelItemConfig(viewModelArrayConfig, i) : undefined
 
-                        makeReactive(item, itemFullKey, viewModelArrayConfig, viewModelItemConfig)
+                        makeReactive(item, itemFullKey, viewModelArrayConfig, viewModelItemConfig, [])
                     }
                 }
             }
@@ -51,6 +51,7 @@ const TemplateEngine = (function () {
                     Object.defineProperty(obj, method, {
                         value: function(...args) {
                             const change = { fullKey, action: method }
+                            const oldLength = this.length
 
                             if (method === 'push' || method === 'unshift') {
                                 change.items = args
@@ -76,10 +77,16 @@ const TemplateEngine = (function () {
                                         let viewModelItemConfig = viewModelArrayConfig ? 
                                             ModelSynchronization.createViewModelItemConfig(
                                                 viewModelArrayConfig,
-                                                method === 'push' || method === 'unshift' ? (obj.length - 1) + itemIndex : itemIndex
+                                                method === 'push'
+                                                    ? oldLength + itemIndex
+                                                    : method === 'unshift'
+                                                        ? itemIndex
+                                                        : method === 'splice'
+                                                            ? change.startIndex + itemIndex
+                                                            : itemIndex
                                             ) : undefined
 
-                                        makeReactive(item, itemFullKey, viewModelArrayConfig, viewModelItemConfig)
+                                        makeReactive(item, itemFullKey, viewModelArrayConfig, viewModelItemConfig, [])
                                     }
                                 }
                             }
@@ -99,7 +106,8 @@ const TemplateEngine = (function () {
                 }
             }
 
-            function defineReactiveDataProperty(obj, prop, descriptor, nextFullKey, viewModelArrayConfig = undefined, viewModelItemConfig = undefined) {
+            function defineReactiveDataProperty(obj, prop, descriptor, nextFullKey, viewModelArrayConfig = undefined,
+                viewModelItemConfig = undefined, pathSegments = []) {
                 let _value = descriptor.value
 
                 if (_value && typeof _value === 'object') {
@@ -108,12 +116,13 @@ const TemplateEngine = (function () {
                     // wenn Objekt bereits verschachtelt vorhanden ist, dann muss es auch reaktiv gemacht werden.
 
                     if (Array.isArray(_value) && _value.__recursive__) {
-                        _value.__modelArray__ = viewModelItemConfig && viewModelItemConfig.modelItem ? viewModelItemConfig.modelItem.children : undefined
+                        _value.__modelArray__ = viewModelItemConfig && viewModelItemConfig.modelItem ?
+                                    viewModelItemConfig.modelItem.children : undefined
                         _value.__reverseTransform__ = viewModelArrayConfig ? viewModelArrayConfig.reverseTransform : undefined
 
-                        makeReactive(_value, nextFullKey, ModelSynchronization.createViewModelArrayConfig(_value))
+                        makeReactive(_value, nextFullKey, ModelSynchronization.createViewModelArrayConfig(_value), undefined, [])
                     } else {
-                        makeReactive(_value, nextFullKey, viewModelArrayConfig, viewModelItemConfig)
+                        makeReactive(_value, nextFullKey, viewModelArrayConfig, viewModelItemConfig, pathSegments)
                     }
                 }
 
@@ -130,7 +139,7 @@ const TemplateEngine = (function () {
                             // wenn verschachteltes Objekt gesetzt wird, dann muss es auch reaktiv gemacht werden.
 
                             //TODO: überprüfen
-                            makeReactive(newValue, nextFullKey)
+                            makeReactive(newValue, nextFullKey, viewModelArrayConfig, viewModelItemConfig, pathSegments)
                         }
                         
                         try {
@@ -139,7 +148,7 @@ const TemplateEngine = (function () {
                             throw new Error(`[TemplateEngine] Error during refresh of "${nextFullKey}"`, { cause: error })
                         }
 
-                        ModelSynchronization.updateModelItemByViewModelItem(viewModelItemConfig)
+                        ModelSynchronization.updateModelItemByViewModelItem(viewModelItemConfig, pathSegments)
                     },
                     enumerable: descriptor.enumerable,
                     configurable: true
@@ -172,6 +181,8 @@ const TemplateEngine = (function () {
                         }
 
                         descriptor.set.call(this, newValue)
+
+                        const currentValue = descriptor.get ? descriptor.get.call(this) : newValue
                         
                         if (currentValue && typeof currentValue === 'object') {
                             // Beispiel:
@@ -179,7 +190,10 @@ const TemplateEngine = (function () {
                             // data.selectedPerson = { name: 'Finn' } -> neuer Wert wird reaktiv.
                             
                             //TODO: überprüfen
-                            makeReactive(currentValue, nextFullKey)
+                            makeReactive(currentValue, nextFullKey,
+                                Array.isArray(currentValue) ? ModelSynchronization.createViewModelArrayConfig(currentValue) : undefined,
+                                undefined,
+                                [])
                         }
 
                         try {
@@ -188,14 +202,13 @@ const TemplateEngine = (function () {
                             throw new Error(`[TemplateEngine] Error during refresh of "${nextFullKey}"`, { cause: error })
                         }
 
-                        const currentValue = descriptor.get ? descriptor.get.call(this) : newValue
                     },
                     enumerable: descriptor.enumerable,
                     configurable: true
                 })
             }
 
-            function makeReactive(obj, fullKey = '', viewModelArrayConfig = undefined, viewModelItemConfig = undefined) {
+            function makeReactive(obj, fullKey = '', viewModelArrayConfig = undefined, viewModelItemConfig = undefined, pathSegments = []) {
                 if (!obj || typeof obj !== 'object') {
                     return obj
                 }
@@ -207,7 +220,7 @@ const TemplateEngine = (function () {
                 // - defineReactiveDataProperty(...)
                 // - defineReactiveAccessorProperty(...)
                 // Bereits gepatcht? Dann nicht nochmal reaktiv machen.
-                if (Object.prototype.hasOwnProperty.call(obj, '__reactive__')) {
+                if (Object.prototype.hasOwnProperty.call(obj, '__reactive__') && obj.__reactive__ === true) {
                     return obj
                 }
 
@@ -237,7 +250,15 @@ const TemplateEngine = (function () {
 
                     if ('value' in descriptor) {
                         // prop e.g. name -> create setters/getters for name
-                        defineReactiveDataProperty(obj, prop, descriptor, nextFullKey, viewModelArrayConfig, viewModelItemConfig)
+                        defineReactiveDataProperty(
+                            obj,
+                            prop,
+                            descriptor,
+                            nextFullKey,
+                            viewModelArrayConfig,
+                            viewModelItemConfig,
+                            [...pathSegments, prop]
+                        )
                     } else {
                         // objects with getters/setters and without value
                         defineReactiveAccessorProperty(obj, prop, descriptor, nextFullKey)

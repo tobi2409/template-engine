@@ -1,3 +1,5 @@
+import PathUtils from '../utils/path-utils.js'
+
 const ModelSynchronization = (function () {
 
     function createViewModelArrayConfig(viewModelArray) {
@@ -20,25 +22,32 @@ const ModelSynchronization = (function () {
                 } : undefined
     }
 
-    function updateModelItemByViewModelItem(viewModelItemConfig = undefined) {
+    function updateModelItemByViewModelItem(viewModelItemConfig, reversedViewModelProps) {
         if (viewModelItemConfig) {
-            const reverseTransformedItem = viewModelItemConfig.reverseTransform(viewModelItemConfig.viewModelItem,
+            const changedSegments = Array.isArray(reversedViewModelProps) ? reversedViewModelProps : []
+            const topLevelProp = changedSegments.length > 0 ? changedSegments[0] : undefined
+            const reverseProps = topLevelProp ? [topLevelProp] : undefined
+
+            const reverseTransformedItem = viewModelItemConfig.reverseTransform(viewModelItemConfig.viewModelItem, reverseProps
                                                                                 /*{ operation: 'set', prop }*/)
 
             if (reverseTransformedItem && typeof reverseTransformedItem === 'object') {
                 const existingModelItem = viewModelItemConfig.modelItem
 
                 if (existingModelItem && typeof existingModelItem === 'object' && existingModelItem !== reverseTransformedItem) {
-                    const oldKeys = Object.keys(existingModelItem)
-                    const newKeys = Object.keys(reverseTransformedItem)
+                    if (changedSegments.length > 1) {
+                        const nestedValue = PathUtils.getBySegments(reverseTransformedItem, changedSegments)
 
-                    for (const oldKey of oldKeys) {
-                        if (!newKeys.includes(oldKey)) {
-                            delete existingModelItem[oldKey]
+                        if (nestedValue !== undefined) {
+                            PathUtils.setBySegments(existingModelItem, changedSegments, nestedValue)
+                            return
                         }
                     }
 
-                    for (const [modelProp, modelValue] of Object.entries(reverseTransformedItem)) {
+                    const definedEntries = Object.entries(reverseTransformedItem)
+                        .filter(([, value]) => value !== undefined)
+
+                    for (const [modelProp, modelValue] of definedEntries) {
                         existingModelItem[modelProp] = modelValue
                     }
                 }

@@ -69,17 +69,17 @@ const viewModel = TemplateEngine.reactive({
         }
     },
 
-    reverseTransform(personViewModelItem) {
+    reverseTransform(personViewModelItem, reversedViewModelProps = ['id', 'name', 'wage', 'age', 'address', 'children']) {
         return {
-            id: personViewModelItem.id,
-            name: personViewModelItem.name,
-            wage: personViewModelItem.wage.slice(0, -4),
-            birthyear: new Date().getFullYear() - personViewModelItem.age,
-            address: {
-                street: personViewModelItem.address?.street || '',
-                city: personViewModelItem.address?.city || ''
-            },
-            children: personViewModelItem.children.map(viewModelChild => this.reverseTransform(viewModelChild))
+            id: reversedViewModelProps.includes('id') ? personViewModelItem.id : undefined,
+            name: reversedViewModelProps.includes('name') ? personViewModelItem.name : undefined,
+            wage: reversedViewModelProps.includes('wage') ? personViewModelItem.wage.slice(0, -4) : undefined,
+            birthyear: reversedViewModelProps.includes('age') ? new Date().getFullYear() - personViewModelItem.age : undefined,
+            address: reversedViewModelProps.includes('address') ? {
+                street: reversedViewModelProps.includes('address') ? personViewModelItem.address?.street || '' : undefined,
+                city: reversedViewModelProps.includes('address') ? personViewModelItem.address?.city || '' : undefined
+            } : undefined,
+            children: reversedViewModelProps.includes('children') ? personViewModelItem.children.map(viewModelChild => this.reverseTransform(viewModelChild)) : undefined
         }
     },
 
@@ -87,13 +87,14 @@ const viewModel = TemplateEngine.reactive({
         return ViewModelArray.get(
             model.persons,
             (personModelItem) => (this.transform(personModelItem)),
-            (personViewModelItem) => (this.reverseTransform(personViewModelItem))
+            (personViewModelItem, prop) => (this.reverseTransform(personViewModelItem, prop))
         )
     },
 
     demoUpdates() {
         viewModel.persons[0].name = 'Max Mustermann - Updated'
         viewModel.persons[0].age = 100
+        //delete viewModel.persons[0].wage
 
         viewModel.persons[0].children[0].name = 'Max Jr. - Updated'
         viewModel.persons[0].children[0].age = 20
