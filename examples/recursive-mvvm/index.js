@@ -36,21 +36,6 @@ const model = {
     }]
 }
 
-function findPersonById(persons, id) {
-    for (const person of persons || []) {
-        if (person.id === id) {
-            return person
-        }
-
-        const nested = findPersonById(person.children, id)
-        if (nested) {
-            return nested
-        }
-    }
-
-    return undefined
-}
-
 const viewModel = TemplateEngine.reactive({
     get user() {
         return model.user
@@ -84,7 +69,7 @@ const viewModel = TemplateEngine.reactive({
         }
     },
 
-    reverseTransform(personViewModelItem, reversedViewModelProps = ['id', 'name', 'wage', 'age', 'street', 'city', 'children'], currentModelItem = undefined) {
+    reverseTransform(personViewModelItem, reversedViewModelProps = ['id', 'name', 'wage', 'age', 'street', 'city', 'children']) {
         /*const address = reversedViewModelProps.includes('address') ? {
             street: reversedViewModelProps.includes('street') ? personViewModelItem.address?.street || '' : undefined,
             city: reversedViewModelProps.includes('city') ? personViewModelItem.address?.city || '' : undefined
@@ -96,17 +81,10 @@ const viewModel = TemplateEngine.reactive({
             wage: reversedViewModelProps.includes('wage') ? personViewModelItem.wage.slice(0, -4) : undefined,
             birthyear: reversedViewModelProps.includes('age') ? new Date().getFullYear() - personViewModelItem.age : undefined,
             address: ['street', 'city'].some(prop => reversedViewModelProps.includes(prop)) ? {
-                street: reversedViewModelProps.includes('street')
-                    ? personViewModelItem.address?.street || ''
-                    : currentModelItem?.address?.street,
-                city: reversedViewModelProps.includes('city')
-                    ? personViewModelItem.address?.city || ''
-                    : currentModelItem?.address?.city
+                street: reversedViewModelProps.includes('street') ? personViewModelItem.address?.street || '' : undefined,
+                city: reversedViewModelProps.includes('city') ? personViewModelItem.address?.city || '' : undefined
             } : undefined,
-            children: reversedViewModelProps.includes('children')
-                ? personViewModelItem.children.map((viewModelChild, index) =>
-                    this.reverseTransform(viewModelChild, reversedViewModelProps, currentModelItem?.children?.[index]))
-                : undefined
+            children: reversedViewModelProps.includes('children') ? personViewModelItem.children.map(viewModelChild => this.reverseTransform(viewModelChild)) : undefined
         }
     },
 
@@ -114,11 +92,7 @@ const viewModel = TemplateEngine.reactive({
         return ViewModelArray.get(
             model.persons,
             (personModelItem) => (this.transform(personModelItem)),
-            (personViewModelItem, prop) => (this.reverseTransform(
-                personViewModelItem,
-                prop,
-                findPersonById(model.persons, personViewModelItem.id)
-            ))
+            (personViewModelItem, prop) => (this.reverseTransform(personViewModelItem, prop))
         )
     },
 
