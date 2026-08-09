@@ -35,7 +35,7 @@ const TemplateEngine = (function () {
                         let viewModelItemConfig = viewModelArrayConfig ? 
                             ModelSynchronization.createViewModelItemConfig(viewModelArrayConfig, i) : undefined
 
-                        makeReactive(item, itemFullKey, viewModelArrayConfig, viewModelItemConfig, [])
+                        makeReactive(item, itemFullKey, viewModelArrayConfig, viewModelItemConfig)
                     }
                 }
             }
@@ -51,7 +51,6 @@ const TemplateEngine = (function () {
                     Object.defineProperty(obj, method, {
                         value: function(...args) {
                             const change = { fullKey, action: method }
-                            const oldLength = this.length
 
                             if (method === 'push' || method === 'unshift') {
                                 change.items = args
@@ -77,16 +76,10 @@ const TemplateEngine = (function () {
                                         let viewModelItemConfig = viewModelArrayConfig ? 
                                             ModelSynchronization.createViewModelItemConfig(
                                                 viewModelArrayConfig,
-                                                method === 'push'
-                                                    ? oldLength + itemIndex
-                                                    : method === 'unshift'
-                                                        ? itemIndex
-                                                        : method === 'splice'
-                                                            ? change.startIndex + itemIndex
-                                                            : itemIndex
+                                                method === 'push' || method === 'unshift' ? (obj.length - 1) + itemIndex : itemIndex
                                             ) : undefined
 
-                                        makeReactive(item, itemFullKey, viewModelArrayConfig, viewModelItemConfig, [])
+                                        makeReactive(item, itemFullKey, viewModelArrayConfig, viewModelItemConfig)
                                     }
                                 }
                             }
@@ -106,8 +99,7 @@ const TemplateEngine = (function () {
                 }
             }
 
-            function defineReactiveDataProperty(obj, prop, descriptor, nextFullKey, viewModelArrayConfig = undefined,
-                viewModelItemConfig = undefined, pathSegments = []) {
+            function defineReactiveDataProperty(obj, prop, descriptor, nextFullKey, viewModelArrayConfig = undefined, viewModelItemConfig = undefined) {
                 let _value = descriptor.value
 
                 if (_value && typeof _value === 'object') {
@@ -120,9 +112,9 @@ const TemplateEngine = (function () {
                                     viewModelItemConfig.modelItem.children : undefined
                         _value.__reverseTransform__ = viewModelArrayConfig ? viewModelArrayConfig.reverseTransform : undefined
 
-                        makeReactive(_value, nextFullKey, ModelSynchronization.createViewModelArrayConfig(_value), undefined, [])
+                        makeReactive(_value, nextFullKey, ModelSynchronization.createViewModelArrayConfig(_value))
                     } else {
-                        makeReactive(_value, nextFullKey, viewModelArrayConfig, viewModelItemConfig, pathSegments)
+                        makeReactive(_value, nextFullKey, viewModelArrayConfig, viewModelItemConfig)
                     }
                 }
 
@@ -139,7 +131,7 @@ const TemplateEngine = (function () {
                             // wenn verschachteltes Objekt gesetzt wird, dann muss es auch reaktiv gemacht werden.
 
                             //TODO: überprüfen
-                            makeReactive(newValue, nextFullKey, viewModelArrayConfig, viewModelItemConfig, pathSegments)
+                            makeReactive(newValue, nextFullKey)
                         }
                         
                         try {
@@ -148,7 +140,7 @@ const TemplateEngine = (function () {
                             throw new Error(`[TemplateEngine] Error during refresh of "${nextFullKey}"`, { cause: error })
                         }
 
-                        ModelSynchronization.updateModelItemByViewModelItem(viewModelItemConfig, pathSegments)
+                        ModelSynchronization.updateModelItemByViewModelItem(viewModelItemConfig, [prop])
                     },
                     enumerable: descriptor.enumerable,
                     configurable: true
@@ -181,8 +173,6 @@ const TemplateEngine = (function () {
                         }
 
                         descriptor.set.call(this, newValue)
-
-                        const currentValue = descriptor.get ? descriptor.get.call(this) : newValue
                         
                         if (currentValue && typeof currentValue === 'object') {
                             // Beispiel:
@@ -190,10 +180,7 @@ const TemplateEngine = (function () {
                             // data.selectedPerson = { name: 'Finn' } -> neuer Wert wird reaktiv.
                             
                             //TODO: überprüfen
-                            makeReactive(currentValue, nextFullKey,
-                                Array.isArray(currentValue) ? ModelSynchronization.createViewModelArrayConfig(currentValue) : undefined,
-                                undefined,
-                                [])
+                            makeReactive(currentValue, nextFullKey)
                         }
 
                         try {
@@ -202,17 +189,17 @@ const TemplateEngine = (function () {
                             throw new Error(`[TemplateEngine] Error during refresh of "${nextFullKey}"`, { cause: error })
                         }
 
+                        const currentValue = descriptor.get ? descriptor.get.call(this) : newValue
                     },
                     enumerable: descriptor.enumerable,
                     configurable: true
                 })
             }
 
-            function makeReactive(obj, fullKey = '', viewModelArrayConfig = undefined, viewModelItemConfig = undefined, pathSegments = []) {
+            function makeReactive(obj, fullKey = '', viewModelArrayConfig = undefined, viewModelItemConfig = undefined) {
                 if (!obj || typeof obj !== 'object') {
                     return obj
                 }
-
                 // WICHTIG:
                 // __reactive__ ist nur ein Marker gegen doppeltes Patchen.
                 // Die echte Reaktivität entsteht erst in:
@@ -250,15 +237,7 @@ const TemplateEngine = (function () {
 
                     if ('value' in descriptor) {
                         // prop e.g. name -> create setters/getters for name
-                        defineReactiveDataProperty(
-                            obj,
-                            prop,
-                            descriptor,
-                            nextFullKey,
-                            viewModelArrayConfig,
-                            viewModelItemConfig,
-                            [...pathSegments, prop]
-                        )
+                        defineReactiveDataProperty(obj, prop, descriptor, nextFullKey, viewModelArrayConfig, viewModelItemConfig)
                     } else {
                         // objects with getters/setters and without value
                         defineReactiveAccessorProperty(obj, prop, descriptor, nextFullKey)

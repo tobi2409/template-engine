@@ -1,5 +1,3 @@
-import PathUtils from '../utils/path-utils.js'
-
 const ModelSynchronization = (function () {
 
     function createViewModelArrayConfig(viewModelArray) {
@@ -24,26 +22,13 @@ const ModelSynchronization = (function () {
 
     function updateModelItemByViewModelItem(viewModelItemConfig, reversedViewModelProps) {
         if (viewModelItemConfig) {
-            const changedSegments = Array.isArray(reversedViewModelProps) ? reversedViewModelProps : []
-            const topLevelProp = changedSegments.length > 0 ? changedSegments[0] : undefined
-            const reverseProps = topLevelProp ? [topLevelProp] : undefined
-
-            const reverseTransformedItem = viewModelItemConfig.reverseTransform(viewModelItemConfig.viewModelItem, reverseProps
+            const reverseTransformedItem = viewModelItemConfig.reverseTransform(viewModelItemConfig.viewModelItem, reversedViewModelProps
                                                                                 /*{ operation: 'set', prop }*/)
 
             if (reverseTransformedItem && typeof reverseTransformedItem === 'object') {
                 const existingModelItem = viewModelItemConfig.modelItem
 
                 if (existingModelItem && typeof existingModelItem === 'object' && existingModelItem !== reverseTransformedItem) {
-                    if (changedSegments.length > 1) {
-                        const nestedValue = PathUtils.getBySegments(reverseTransformedItem, changedSegments)
-
-                        if (nestedValue !== undefined) {
-                            PathUtils.setBySegments(existingModelItem, changedSegments, nestedValue)
-                            return
-                        }
-                    }
-
                     const definedEntries = Object.entries(reverseTransformedItem)
                         .filter(([, value]) => value !== undefined)
 
