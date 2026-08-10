@@ -22,8 +22,8 @@ const ModelSynchronization = (function () {
 
     function updateModelItemByViewModelItem(viewModelItemConfig, reversedViewModelProps) {
         if (viewModelItemConfig) {
-            const reverseTransformedItem = viewModelItemConfig.reverseTransform(viewModelItemConfig.viewModelItem, reversedViewModelProps
-                                                                                /*{ operation: 'set', prop }*/)
+            const reverseTransformedItem = viewModelItemConfig.reverseTransform(viewModelItemConfig.viewModelItem, reversedViewModelProps,
+                                                                                    viewModelItemConfig.modelItem/*, { operation: 'set', prop }*/)
 
             if (reverseTransformedItem && typeof reverseTransformedItem === 'object') {
                 const existingModelItem = viewModelItemConfig.modelItem

@@ -1,39 +1,41 @@
 import TemplateEngine from '../../src/template-engine.js'
 import ViewModelArray from '../../src/viewmodel-array.js'
 
-const model = {
-    user: 'Joe Doe',
-    persons: [{
-        id: 1,
-        name: 'Max Mustermann',
-        wage: 10,
-        birthyear: 1990,
+const fakeServerData = [{
+    id: 1,
+    name: 'Max Mustermann',
+    wage: 10,
+    birthyear: 1990,
+    address: {
+        street: 'Main Street 1',
+        city: 'Berlin'
+    },
+    children: [{
+        id: 3,
+        name: 'Max Jr.',
+        wage: 5,
+        birthyear: 2010,
         address: {
-            street: 'Main Street 1',
-            city: 'Berlin'
-        },
-        children: [{
-            id: 3,
-            name: 'Max Jr.',
-            wage: 5,
-            birthyear: 2010,
-            address: {
-                street: 'Main Street 3',
-                city: 'Bremen'
-            },
-            children: []
-        }]
-    }, {
-        id: 2,
-        name: 'Erika Mustermann',
-        wage: 12,
-        birthyear: 1992,
-        address: {
-            street: 'Second Street 2',
-            city: 'Hamburg'
+            street: 'Main Street 3',
+            city: 'Bremen'
         },
         children: []
     }]
+}, {
+    id: 2,
+    name: 'Erika Mustermann',
+    wage: 12,
+    birthyear: 1992,
+    address: {
+        street: 'Second Street 2',
+        city: 'Hamburg'
+    },
+    children: []
+}]
+
+const model = {
+    user: 'Joe Doe',
+    persons: []
 }
 
 const viewModel = TemplateEngine.reactive({
@@ -69,20 +71,15 @@ const viewModel = TemplateEngine.reactive({
         }
     },
 
-    reverseTransform(personViewModelItem, reversedViewModelProps = ['id', 'name', 'wage', 'age', 'street', 'city', 'children']) {
-        /*const address = reversedViewModelProps.includes('address') ? {
-            street: reversedViewModelProps.includes('street') ? personViewModelItem.address?.street || '' : undefined,
-            city: reversedViewModelProps.includes('city') ? personViewModelItem.address?.city || '' : undefined
-        } : undefined*/
-
+    reverseTransform(personViewModelItem, reversedViewModelProps = ['id', 'name', 'wage', 'age', 'street', 'city', 'children'], modelItem) {
         return {
             id: reversedViewModelProps.includes('id') ? personViewModelItem.id : undefined,
             name: reversedViewModelProps.includes('name') ? personViewModelItem.name : undefined,
             wage: reversedViewModelProps.includes('wage') ? personViewModelItem.wage.slice(0, -4) : undefined,
             birthyear: reversedViewModelProps.includes('age') ? new Date().getFullYear() - personViewModelItem.age : undefined,
             address: ['street', 'city'].some(prop => reversedViewModelProps.includes(prop)) ? {
-                street: reversedViewModelProps.includes('street') ? personViewModelItem.address?.street || '' : undefined,
-                city: reversedViewModelProps.includes('city') ? personViewModelItem.address?.city || '' : undefined
+                street: reversedViewModelProps.includes('street') ? personViewModelItem.address?.street || '' : modelItem?.address?.street || '',
+                city: reversedViewModelProps.includes('city') ? personViewModelItem.address?.city || '' : modelItem?.address?.city || ''
             } : undefined,
             children: reversedViewModelProps.includes('children') ? personViewModelItem.children.map(viewModelChild => this.reverseTransform(viewModelChild)) : undefined
         }
@@ -92,7 +89,7 @@ const viewModel = TemplateEngine.reactive({
         return ViewModelArray.get(
             model.persons,
             (personModelItem) => (this.transform(personModelItem)),
-            (personViewModelItem, prop) => (this.reverseTransform(personViewModelItem, prop))
+            (personViewModelItem, prop, modelItem) => (this.reverseTransform(personViewModelItem, prop, modelItem))
         )
     },
 
@@ -114,7 +111,17 @@ const viewModel = TemplateEngine.reactive({
                 street: 'Main Street 3',
                 city: 'Köln'
             },
-            children: [] // { __recursive__: true, data: [] }
+            children: [{
+                id: 5,
+                name: 'Max III.',
+                wage: '2 USD',
+                age: 1,
+                address: {
+                    street: 'Main Street 5',
+                    city: 'Köln'
+                },
+                children: []
+            }] // { __recursive__: true, data: [] }
         })
 
         viewModel.persons[1].age = 80
