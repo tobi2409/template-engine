@@ -1,41 +1,41 @@
 import TemplateEngine from '../../src/template-engine.js'
 import ViewModelArray from '../../src/viewmodel-array.js'
-
-const fakeServerData = [{
-    id: 1,
-    name: 'Max Mustermann',
-    wage: 10,
-    birthyear: 1990,
-    address: {
-        street: 'Main Street 1',
-        city: 'Berlin'
-    },
-    children: [{
-        id: 3,
-        name: 'Max Jr.',
-        wage: 5,
-        birthyear: 2010,
-        address: {
-            street: 'Main Street 3',
-            city: 'Bremen'
-        },
-        children: []
-    }]
-}, {
-    id: 2,
-    name: 'Erika Mustermann',
-    wage: 12,
-    birthyear: 1992,
-    address: {
-        street: 'Second Street 2',
-        city: 'Hamburg'
-    },
-    children: []
-}]
+import ModelSynchronization from '../../src/components/reactivity-helpers/model-synchronization.js'
+import { fakeServerData } from './fake-server-data.js'
+import { runDemoUpdates } from './demo-updates.js'
 
 const model = {
     user: 'Joe Doe',
     persons: []
+}
+
+function clonePersonWithEmptyChildren(person) {
+    return {
+        id: person.id,
+        name: person.name,
+        wage: person.wage,
+        birthyear: person.birthyear,
+        address: {
+            street: person.address?.street || '',
+            city: person.address?.city || ''
+        },
+        children: []
+    }
+}
+
+function findPersonById(persons, id) {
+    for (const person of persons) {
+        if (person.id === id) {
+            return person
+        }
+
+        const nestedMatch = findPersonById(person.children || [], id)
+        if (nestedMatch) {
+            return nestedMatch
+        }
+    }
+
+    return undefined
 }
 
 const viewModel = TemplateEngine.reactive({
@@ -86,6 +86,7 @@ const viewModel = TemplateEngine.reactive({
     },
 
     get persons() {
+        // Singleton is provided by mappedViewModelArrayCache
         return ViewModelArray.get(
             model.persons,
             (personModelItem) => (this.transform(personModelItem)),
@@ -93,54 +94,29 @@ const viewModel = TemplateEngine.reactive({
         )
     },
 
+    loadServerData(viewItem) {
+        const serverItem = findPersonById(fakeServerData, viewItem.id)
+        const nextServerChildren = (serverItem?.children || []).map(clonePersonWithEmptyChildren)
+
+        ModelSynchronization.withoutModelSynchronization(() => {
+            const modelItem = findPersonById(model.persons, viewItem.id)
+
+            if (!modelItem) {
+                return
+            }
+
+            modelItem.children.splice(0, modelItem.children.length, ...nextServerChildren)
+
+            viewItem.children.splice(
+                0,
+                viewItem.children.length,
+                ...modelItem.children.map(child => viewModel.transform(child))
+            )
+        })
+    },
+
     demoUpdates() {
-        viewModel.persons[0].name = 'Max Mustermann - Updated'
-        viewModel.persons[0].age = 100
-        //delete viewModel.persons[0].wage
-
-        viewModel.persons[0].children[0].name = 'Max Jr. - Updated'
-        viewModel.persons[0].children[0].age = 20
-        viewModel.persons[0].children[0].address.street = 'Updated Street 3'
-
-        viewModel.persons[0].children.push({
-            id: 3,
-            name: 'Max Jr. - Sibling',
-            wage: '5 USD',
-            age: 14,
-            address: {
-                street: 'Main Street 3',
-                city: 'Köln'
-            },
-            children: [{
-                id: 5,
-                name: 'Max III.',
-                wage: '2 USD',
-                age: 1,
-                address: {
-                    street: 'Main Street 5',
-                    city: 'Köln'
-                },
-                children: []
-            }] // { __recursive__: true, data: [] }
-        })
-
-        viewModel.persons[1].age = 80
-        viewModel.persons[1].address.city = 'Munich'
-
-        viewModel.persons.push({
-            id: 4,
-            name: 'Max Mustermann - Sibling',
-            wage: '5 USD',
-            age: 29,
-            address: {
-                street: 'Third Street 4',
-                city: 'Frankfurt'
-            },
-            children: [] // ViewModelArray.markRecursive([])
-        })
-
-        viewModel.persons[2].age = 60
-        viewModel.persons[2].address.street = 'Updated Street 2'
+        runDemoUpdates(viewModel, (viewItem) => viewModel.loadServerData(viewItem))
     },
 
     logModels() {
@@ -149,17 +125,12 @@ const viewModel = TemplateEngine.reactive({
     }
 }, document.getElementById('app-template-use'))
 
-/*viewModel.beautifiedPersons.push({
-    id: 2,
-    name: 'Max Mustermann - Sibling',
-    wage: '8 USD',
-    age: 34,
-    children: []
+ModelSynchronization.withoutModelSynchronization(() => {
+    model.persons.splice(0, model.persons.length, ...fakeServerData.map(clonePersonWithEmptyChildren))
+
+    viewModel.persons.splice(
+        0,
+        viewModel.persons.length,
+        ...model.persons.map((person) => viewModel.transform(person))
+    )
 })
-viewModel.beautifiedPersons[0].children.push({
-    id: 3,
-    name: 'Max Jr. - Updated',
-    wage: '5 USD',
-    age: 14,
-    children: []
-})*/

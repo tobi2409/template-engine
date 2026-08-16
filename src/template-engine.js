@@ -140,6 +140,9 @@ const TemplateEngine = (function () {
                             throw new Error(`[TemplateEngine] Error during refresh of "${nextFullKey}"`, { cause: error })
                         }
 
+                        // NOTE:
+                        // reverseTransform should be able to evaluate contiguous path keys
+                        // for nested fields (e.g. "address.street"), not only flat property names.
                         ModelSynchronization.updateModelItemByViewModelItem(viewModelItemConfig, [prop])
                     },
                     enumerable: descriptor.enumerable,
@@ -173,6 +176,7 @@ const TemplateEngine = (function () {
                         }
 
                         descriptor.set.call(this, newValue)
+                        const currentValue = descriptor.get ? descriptor.get.call(this) : newValue
                         
                         if (currentValue && typeof currentValue === 'object') {
                             // Beispiel:
@@ -188,8 +192,6 @@ const TemplateEngine = (function () {
                         } catch (error) {
                             throw new Error(`[TemplateEngine] Error during refresh of "${nextFullKey}"`, { cause: error })
                         }
-
-                        const currentValue = descriptor.get ? descriptor.get.call(this) : newValue
                     },
                     enumerable: descriptor.enumerable,
                     configurable: true

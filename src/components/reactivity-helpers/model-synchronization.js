@@ -1,5 +1,25 @@
 const ModelSynchronization = (function () {
 
+    let modelSynchronizationDisabledDepth = 0
+
+    function isModelSynchronizationDisabled() {
+        return modelSynchronizationDisabledDepth > 0
+    }
+
+    async function withoutModelSynchronization(callback) {
+        if (typeof callback !== 'function') {
+            throw new TypeError('[ModelSynchronization] withoutModelSynchronization expected "callback" to be a function')
+        }
+
+        modelSynchronizationDisabledDepth++
+
+        try {
+            return await Promise.resolve(callback())
+        } finally {
+            modelSynchronizationDisabledDepth--
+        }
+    }
+
     function createViewModelArrayConfig(viewModelArray) {
         return viewModelArray.__modelArray__ && viewModelArray.__reverseTransform__ ?
             { 
@@ -21,6 +41,10 @@ const ModelSynchronization = (function () {
     }
 
     function updateModelItemByViewModelItem(viewModelItemConfig, reversedViewModelProps) {
+        if (isModelSynchronizationDisabled()) {
+            return
+        }
+
         if (viewModelItemConfig) {
             const reverseTransformedItem = viewModelItemConfig.reverseTransform(viewModelItemConfig.viewModelItem, reversedViewModelProps,
                                                                                     viewModelItemConfig.modelItem/*, { operation: 'set', prop }*/)
@@ -41,6 +65,10 @@ const ModelSynchronization = (function () {
     }
 
     function updateModelArrayByViewModelArrayOperation(viewModelArrayConfig, method, change) {
+        if (isModelSynchronizationDisabled()) {
+            return
+        }
+
         if (viewModelArrayConfig) {
             if (method === 'push') {
                 const insertedModelItems = change.items.map((item) => viewModelArrayConfig.reverseTransform(item/*, { operation: 'push' }*/))
@@ -61,7 +89,14 @@ const ModelSynchronization = (function () {
         }
     }
 
-    return { createViewModelArrayConfig, createViewModelItemConfig, updateModelItemByViewModelItem, updateModelArrayByViewModelArrayOperation }
+    return {
+        createViewModelArrayConfig,
+        createViewModelItemConfig,
+        updateModelItemByViewModelItem,
+        updateModelArrayByViewModelArrayOperation,
+        withoutModelSynchronization,
+        isModelSynchronizationDisabled
+    }
 
 })()
 

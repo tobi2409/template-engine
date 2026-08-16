@@ -1,21 +1,6 @@
 import TemplateEngine from '../../src/template-engine.js'
-import { createMappedArray } from '../../src/viewmodel-array.js'
-
-function assertSelectorContains(selector, expectedText, step) {
-    const node = document.querySelector(selector)
-
-    if (!node || !node.textContent.includes(expectedText)) {
-        throw new Error(`Demo update not rendered (${step}): expected "${expectedText}" in "${selector}"`)
-    }
-}
-
-function assertSelectorNotContains(selector, unexpectedText, step) {
-    const node = document.querySelector(selector)
-
-    if (node && node.textContent.includes(unexpectedText)) {
-        throw new Error(`Demo update not rendered (${step}): expected "${unexpectedText}" to be removed from "${selector}"`)
-    }
-}
+import ViewModelArray from '../../src/viewmodel-array.js'
+import { runDemoUpdates } from './demo-updates.js'
 
 const model = {
     firstName: 'Alex',
@@ -62,7 +47,7 @@ const viewModel = TemplateEngine.reactive({
     },
 
     get beautifiedPersonData() {
-        return createMappedArray(
+        return ViewModelArray.get(
             model.rawPersonData,
             (p, index) => ({
                 id: p.id,
@@ -70,11 +55,10 @@ const viewModel = TemplateEngine.reactive({
                 age: new Date().getFullYear() - p.birthyear,
                 showEdit: false
             }),
-            { name: 'name', age: 'birthyear' },
             (item) => ({
                 id: item.id,
                 name: item.name,
-                birthyear: item.birthyear || (new Date().getFullYear() - item.age)
+                birthyear: new Date().getFullYear() - item.age
             })
         )
     },
@@ -101,20 +85,7 @@ const viewModel = TemplateEngine.reactive({
     },
 
     runDemoUpdates: function() {
-        viewModel.firstName = 'Emily'
-        viewModel.wage = 200
-        viewModel.beautifiedPersonData.push({ id: 3, name: 'Sample', birthyear: 1985 })
-        viewModel.beautifiedPersonData[0].name = 'Test Updated'
-        viewModel.beautifiedPersonData.splice(1, 1)
-
-        assertSelectorContains('#first-name-row', 'Emily', 'update firstName')
-        assertSelectorNotContains('#wage-block', 'earns $200', 'hide wage block')
-        assertSelectorContains('#person-list li[item-index="3"]', 'Sample', 'push person')
-        assertSelectorContains('#person-list li[item-index="1"]', 'Test Updated', 'rename first person')
-
-        if (document.querySelector('#person-list li[item-index="2"]')) {
-            throw new Error('Demo update not rendered (splice remove second person): expected #person-list li[item-index="2"] to be removed')
-        }
+        runDemoUpdates(viewModel)
     }
 }, document.getElementById('app-template-use'), {
     'firstName': ['fullName'],

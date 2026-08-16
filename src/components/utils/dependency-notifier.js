@@ -39,7 +39,7 @@ const DependencyNotifier = (function () {
         return [...new Set(allMatches)]
     }
 
-    function notifyDependencies(data, dependencyValues, sourceChange = null) {
+    function notifyDependencies(data, dependencyValues, sourceChange = undefined) {
         for (const dependencyValue of dependencyValues || []) {
             const action = sourceChange?.action || NodeHolders.nodeHoldersByKeys.getByKey(dependencyValue)?.get('holders')?.[0]?.action || 'update'
 
