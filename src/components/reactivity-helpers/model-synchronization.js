@@ -63,15 +63,31 @@ const ModelSynchronization = (function () {
                             ? propertyMapping[viewModelProp] : viewModelProp)
 
                     for (const modelProp of currentModelProps) {
-                        console.log(reverseTransformedItem, KeyResolver.resolve(modelProp, reverseTransformedItem))
-                        KeyResolver.setByPath(modelProp, existingModelItem, KeyResolver.resolve(modelProp, reverseTransformedItem))
-                        //existingModelItem[modelProp] = reverseTransformedItem[modelProp]()
+                        KeyResolver.setByPath(modelProp, existingModelItem, KeyResolver.resolve(modelProp, reverseTransformedItem, new Map(), true))
                     }
                 }
             }
         }
     }
 
+    function evaluateReverseTransformedValue(value) {
+        if (typeof value === 'function') {
+            return evaluateReverseTransformedValue(value())
+        }
+
+        if (Array.isArray(value)) {
+            return value.map(evaluateReverseTransformedValue)
+        }
+
+        if (value && typeof value === 'object') {
+            return Object.fromEntries(Object.entries(value).map(([key, nestedValue]) =>
+                [key, evaluateReverseTransformedValue(nestedValue)]))
+        }
+
+        return value
+    }
+
+    // viewModelProps isn't used here because we don't have partially updated items in array operations
     function updateModelArrayByViewModelArrayOperation(viewModelArrayConfig, method, change) {
         if (isModelSynchronizationDisabled()) {
             return
@@ -79,15 +95,16 @@ const ModelSynchronization = (function () {
 
         if (viewModelArrayConfig) {
             if (method === 'push') {
-                const insertedModelItems = change.items.map((item) => viewModelArrayConfig.reverseTransform(item/*, { operation: 'push' }*/))
+                const insertedModelItems = change.items.map((item) =>
+                    evaluateReverseTransformedValue(viewModelArrayConfig.reverseTransform(item)))
                 viewModelArrayConfig.modelArray.push(...insertedModelItems)
             } else if (method === 'unshift') {
-                const insertedModelItems = change.items.map((item) => viewModelArrayConfig.reverseTransform(item/*, { operation: 'unshift' }*/))
+                const insertedModelItems = change.items.map((item) =>
+                    evaluateReverseTransformedValue(viewModelArrayConfig.reverseTransform(item)))
                 viewModelArrayConfig.modelArray.unshift(...insertedModelItems)
             } else if (method === 'splice') {
-                const insertedModelItems = change.items.map((item) => viewModelArrayConfig.reverseTransform(item/*,
-                    { operation: 'splice', start: change.startIndex, deleteCount: change.deleteCount, insertCount: change.items.length }*/))
-
+                const insertedModelItems = change.items.map((item) =>
+                    evaluateReverseTransformedValue(viewModelArrayConfig.reverseTransform(item)))
                 viewModelArrayConfig.modelArray.splice(change.startIndex, change.deleteCount, ...insertedModelItems)
             } else if (method === 'pop') {
                 viewModelArrayConfig.modelArray.pop()

@@ -59,6 +59,31 @@ describe('ModelSynchronization', () => {
         assert.equal(modelArray[0].name, 'Alice')
     })
 
+    test('evaluates all reverse-transform functions for inserted array items', () => {
+        const modelArray = []
+        const viewModelArrayConfig = {
+            viewModelArray: [],
+            modelArray,
+            reverseTransform: (item) => ({
+                name: () => item.label,
+                address: () => ({ street: () => item.street }),
+                tags: () => item.tags.map((tag) => () => tag)
+            })
+        }
+
+        ModelSynchronization.updateModelArrayByViewModelArrayOperation(viewModelArrayConfig, 'push', {
+            action: 'push',
+            fullKey: 'persons',
+            items: [{ label: 'Bob', street: 'Musterstraße', tags: ['new'] }]
+        })
+
+        assert.deepEqual(modelArray, [{
+            name: 'Bob',
+            address: { street: 'Musterstraße' },
+            tags: ['new']
+        }])
+    })
+
     test('keeps synchronization disabled for nested scopes until outer scope ends', async () => {
         assert.equal(ModelSynchronization.isModelSynchronizationDisabled(), false)
 

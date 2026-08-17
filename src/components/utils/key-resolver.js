@@ -31,13 +31,14 @@ const KeyResolver = (function () {
         return key
     }
 
-    function resolve(key, data, params = new Map()) {
+    function resolve(key, data, params = new Map(), evaluateFunctions = false) {
         const splitted = key.split('.')
         let value = data
 
         for (const [index, segment] of splitted.entries()) {
             if (index === 0 && params.has(segment)) {
-                return params.get(segment)
+                value = params.get(segment)
+                return evaluateFunctions && typeof value === 'function' ? value() : value
             }
 
             if (segment.startsWith('__uuid__')) {
@@ -57,6 +58,10 @@ const KeyResolver = (function () {
             }
 
             value = value[segment]
+
+            if (evaluateFunctions && typeof value === 'function') {
+                value = value()
+            }
         }
 
         return value

@@ -17,6 +17,17 @@ describe('resolve', () => {
         assert.equal(resolve('user.address.city', data), 'Berlin')
     })
 
+    test('optionally evaluates function-valued path segments', () => {
+        const data = {
+            address: () => ({
+                street: () => 'Musterstraße'
+            })
+        }
+
+        assert.equal(typeof resolve('address', data), 'function')
+        assert.equal(resolve('address.street', data, new Map(), true), 'Musterstraße')
+    })
+
     test('returns undefined for missing key', () => {
         const data = { name: 'Alice' }
         assert.equal(resolve('age', data), undefined)
