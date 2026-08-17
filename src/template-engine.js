@@ -111,6 +111,7 @@ const TemplateEngine = (function () {
                         _value.__modelArray__ = viewModelItemConfig && viewModelItemConfig.modelItem ?
                                     viewModelItemConfig.modelItem.children : undefined
                         _value.__reverseTransform__ = viewModelArrayConfig ? viewModelArrayConfig.reverseTransform : undefined
+                        _value.__propertyMapping__ = viewModelArrayConfig ? viewModelArrayConfig.propertyMapping : undefined
 
                         makeReactive(_value, nextFullKey, ModelSynchronization.createViewModelArrayConfig(_value))
                     } else {

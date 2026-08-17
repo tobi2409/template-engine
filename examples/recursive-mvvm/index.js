@@ -9,7 +9,8 @@ const model = {
     persons: []
 }
 
-function clonePersonWithEmptyChildren(person) {
+// in real world, this would be a SELECT query to the server, returning a person with children
+function clonePersonDeep(person) {
     return {
         id: person.id,
         name: person.name,
@@ -19,23 +20,8 @@ function clonePersonWithEmptyChildren(person) {
             street: person.address?.street || '',
             city: person.address?.city || ''
         },
-        children: []
+        children: (person.children || []).map(clonePersonDeep)
     }
-}
-
-function findPersonById(persons, id) {
-    for (const person of persons) {
-        if (person.id === id) {
-            return person
-        }
-
-        const nestedMatch = findPersonById(person.children || [], id)
-        if (nestedMatch) {
-            return nestedMatch
-        }
-    }
-
-    return undefined
 }
 
 const viewModel = TemplateEngine.reactive({
@@ -57,31 +43,21 @@ const viewModel = TemplateEngine.reactive({
                 street: personModelItem.address?.street || '',
                 city: personModelItem.address?.city || ''
             },
-            children: ViewModelArray.markRecursive(personModelItem.children.map(child => this.transform(child))),
-            expanded: false,
-            childrenLoaded: false,
-            expand(_, viewItem) {
-                if (!viewItem.childrenLoaded) {
-                    viewModel.loadServerData(viewItem)
-                    viewItem.childrenLoaded = true
-                }
-
-                viewItem.expanded = !viewItem.expanded
-            }
+            children: ViewModelArray.markRecursive(personModelItem.children.map(child => this.transform(child)))
         }
     },
 
-    reverseTransform(personViewModelItem, reversedViewModelProps = ['id', 'name', 'wage', 'age', 'street', 'city', 'children'], modelItem) {
+    reverseTransform(personViewModelItem, modelItem) {
         return {
-            id: reversedViewModelProps.includes('id') ? personViewModelItem.id : undefined,
-            name: reversedViewModelProps.includes('name') ? personViewModelItem.name : undefined,
-            wage: reversedViewModelProps.includes('wage') ? personViewModelItem.wage.slice(0, -4) : undefined,
-            birthyear: reversedViewModelProps.includes('age') ? new Date().getFullYear() - personViewModelItem.age : undefined,
-            address: ['street', 'city'].some(prop => reversedViewModelProps.includes(prop)) ? {
-                street: reversedViewModelProps.includes('street') ? personViewModelItem.address?.street || '' : modelItem?.address?.street || '',
-                city: reversedViewModelProps.includes('city') ? personViewModelItem.address?.city || '' : modelItem?.address?.city || ''
-            } : undefined,
-            children: reversedViewModelProps.includes('children') ? personViewModelItem.children.map(viewModelChild => this.reverseTransform(viewModelChild)) : undefined
+            id: () => personViewModelItem.id,
+            name: () => personViewModelItem.name,
+            wage: () => personViewModelItem.wage.slice(0, -4),
+            birthyear: () => new Date().getFullYear() - personViewModelItem.age,
+            address: () => ({
+                street: () => personViewModelItem.address?.street,
+                city: () => personViewModelItem.address?.city,
+            }),
+            children: () => personViewModelItem.children.map(viewModelChild => this.reverseTransform(viewModelChild))
         }
     },
 
@@ -90,33 +66,13 @@ const viewModel = TemplateEngine.reactive({
         return ViewModelArray.get(
             model.persons,
             (personModelItem) => (this.transform(personModelItem)),
-            (personViewModelItem, prop, modelItem) => (this.reverseTransform(personViewModelItem, prop, modelItem))
+            (personViewModelItem, prop, modelItem) => (this.reverseTransform(personViewModelItem, prop, modelItem)),
+            { age: 'birthyear' }
         )
     },
 
-    loadServerData(viewItem) {
-        const serverItem = findPersonById(fakeServerData, viewItem.id)
-        const nextServerChildren = (serverItem?.children || []).map(clonePersonWithEmptyChildren)
-
-        ModelSynchronization.withoutModelSynchronization(() => {
-            const modelItem = findPersonById(model.persons, viewItem.id)
-
-            if (!modelItem) {
-                return
-            }
-
-            modelItem.children.splice(0, modelItem.children.length, ...nextServerChildren)
-
-            viewItem.children.splice(
-                0,
-                viewItem.children.length,
-                ...modelItem.children.map(child => viewModel.transform(child))
-            )
-        })
-    },
-
-    demoUpdates() {
-        runDemoUpdates(viewModel, (viewItem) => viewModel.loadServerData(viewItem))
+    demoUpdates() { 
+        runDemoUpdates(viewModel, model)
     },
 
     logModels() {
@@ -126,7 +82,7 @@ const viewModel = TemplateEngine.reactive({
 }, document.getElementById('app-template-use'))
 
 ModelSynchronization.withoutModelSynchronization(() => {
-    model.persons.splice(0, model.persons.length, ...fakeServerData.map(clonePersonWithEmptyChildren))
+    model.persons.splice(0, model.persons.length, ...fakeServerData.map(clonePersonDeep))
 
     viewModel.persons.splice(
         0,

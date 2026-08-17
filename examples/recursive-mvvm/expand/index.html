@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Recursive MVVM (Expand)</title>
+
+        <link rel="stylesheet" href="../index.css" />
+    </head>
+    <body>
+        <div id="app"></div>
+
+        <template id="ul-structured-data">
+            <ul>
+                <each of="*list" as="p">
+                    <li>
+                        <button action-click="p.expand">Expand</button>
+                        <input type="text" bind-input-value="p.name" />
+                        <input type="text" bind-input-value="p.wage" />
+                        <input type="number" bind-input-value="p.age" />
+                        <input type="text" bind-input-value="p.address.street" />
+                        <input type="text" bind-input-value="p.address.city" />
+
+                        <if test="p.expanded">
+                            <template-use
+                                template-id="ul-structured-data"
+                                data-list="p.children"></template-use>
+                        </if>
+                    </li>
+                </each>
+            </ul>
+        </template>
+
+        <template id="app-template">
+            <h1>👋 Hello, <get>user</get></h1>
+
+            <template-use
+                template-id="ul-structured-data"
+                data-list="persons"></template-use>
+
+            <br />
+            <button action-click="logModels">Log Models</button>
+        </template>
+
+        <template-use
+            id="app-template-use"
+            template-id="app-template"
+            mount-id="app"
+        >
+        </template-use>
+
+        <script type="module" src="index.js"></script>
+    </body>
+</html>
