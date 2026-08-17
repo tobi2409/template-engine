@@ -1,3 +1,5 @@
+import KeyResolver from "../utils/key-resolver.js"
+
 const ModelSynchronization = (function () {
 
     let modelSynchronizationDisabledDepth = 0
@@ -61,8 +63,9 @@ const ModelSynchronization = (function () {
                             ? propertyMapping[viewModelProp] : viewModelProp)
 
                     for (const modelProp of currentModelProps) {
-                        console.log(modelProp)
-                        existingModelItem[modelProp] = reverseTransformedItem[modelProp]()
+                        console.log(reverseTransformedItem, KeyResolver.resolve(modelProp, reverseTransformedItem))
+                        KeyResolver.setByPath(modelProp, existingModelItem, KeyResolver.resolve(modelProp, reverseTransformedItem))
+                        //existingModelItem[modelProp] = reverseTransformedItem[modelProp]()
                     }
                 }
             }

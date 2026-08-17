@@ -99,8 +99,10 @@ const TemplateEngine = (function () {
                 }
             }
 
-            function defineReactiveDataProperty(obj, prop, descriptor, nextFullKey, viewModelArrayConfig = undefined, viewModelItemConfig = undefined) {
+            function defineReactiveDataProperty(obj, prop, descriptor, nextFullKey, viewModelArrayConfig = undefined, viewModelItemConfig = undefined, objectSegments = undefined) {
                 let _value = descriptor.value
+                // baut den Pfad relativ zum Item-Root auf (z.B. "address.street"), erst sobald ein Objekt verschachtelt ist
+                const currentObjectSegments = objectSegments ? `${objectSegments}.${prop}` : prop
 
                 if (_value && typeof _value === 'object') {
                     // Beispiel: data.person = { address: { city: 'Berlin' } } ->
@@ -115,7 +117,7 @@ const TemplateEngine = (function () {
 
                         makeReactive(_value, nextFullKey, ModelSynchronization.createViewModelArrayConfig(_value))
                     } else {
-                        makeReactive(_value, nextFullKey, viewModelArrayConfig, viewModelItemConfig)
+                        makeReactive(_value, nextFullKey, viewModelArrayConfig, viewModelItemConfig, currentObjectSegments)
                     }
                 }
 
@@ -141,10 +143,7 @@ const TemplateEngine = (function () {
                             throw new Error(`[TemplateEngine] Error during refresh of "${nextFullKey}"`, { cause: error })
                         }
 
-                        // NOTE:
-                        // reverseTransform should be able to evaluate contiguous path keys
-                        // for nested fields (e.g. "address.street"), not only flat property names.
-                        ModelSynchronization.updateModelItemByViewModelItem(viewModelItemConfig, [prop])
+                        ModelSynchronization.updateModelItemByViewModelItem(viewModelItemConfig, [currentObjectSegments])
                     },
                     enumerable: descriptor.enumerable,
                     configurable: true
@@ -199,7 +198,7 @@ const TemplateEngine = (function () {
                 })
             }
 
-            function makeReactive(obj, fullKey = '', viewModelArrayConfig = undefined, viewModelItemConfig = undefined) {
+            function makeReactive(obj, fullKey = '', viewModelArrayConfig = undefined, viewModelItemConfig = undefined, objectSegments = undefined) {
                 if (!obj || typeof obj !== 'object') {
                     return obj
                 }
@@ -240,7 +239,7 @@ const TemplateEngine = (function () {
 
                     if ('value' in descriptor) {
                         // prop e.g. name -> create setters/getters for name
-                        defineReactiveDataProperty(obj, prop, descriptor, nextFullKey, viewModelArrayConfig, viewModelItemConfig)
+                        defineReactiveDataProperty(obj, prop, descriptor, nextFullKey, viewModelArrayConfig, viewModelItemConfig, objectSegments)
                     } else {
                         // objects with getters/setters and without value
                         defineReactiveAccessorProperty(obj, prop, descriptor, nextFullKey)
