@@ -10,7 +10,7 @@ A lightweight, vanilla JavaScript template engine with declarative HTML tags and
 - Efficient key-to-node tracking via internal node holders
 - Nested context support for scoped access inside loops
 - Array update support: `push`, `pop`, `shift`, `unshift`, `splice`
-- Optional view-model helper: `createMappedArray(...)`
+- Optional view-model helper: `ViewModelArray.get(...)`
 
 ## Installation
 
@@ -32,6 +32,9 @@ Interesting snippets from those demos:
 ### MVVM: computed fields + dependency chaining
 
 ```js
+import TemplateEngine from './template-engine.js'
+import ViewModelArray from './viewmodel-array.js'
+
 const viewModel = TemplateEngine.reactive({
   get fullName() {
     return `${this.firstName} ${this.lastName}`
@@ -43,7 +46,7 @@ const viewModel = TemplateEngine.reactive({
     return `${this.fullName} earns $${this.wage}`
   },
   getBeautifiedData() {
-    return createMappedArray(
+    return ViewModelArray.get(
       model.rawPersonData,
       (p) => ({
         id: p.id,
@@ -51,12 +54,12 @@ const viewModel = TemplateEngine.reactive({
         age: new Date().getFullYear() - p.birthyear,
         showEdit: false
       }),
-      { name: 'name', age: 'birthyear' },
       (item) => ({
-        id: item.id,
-        name: item.name,
-        birthyear: item.birthyear || (new Date().getFullYear() - item.age)
-      })
+        id: () => item.id,
+        name: () => item.name,
+        birthyear: () => new Date().getFullYear() - item.age
+      }),
+      { age: 'birthyear' }
     )
   }
 }, document.getElementById('app-template-use'), {
@@ -277,15 +280,50 @@ Why this matters:
 - Makes reactive chains explicit and maintainable.
 - Works well for computed/display-only fields.
 
-## Mapped Array
+## ViewModelArray
 
-see top of README
+`ViewModelArray.get(modelArray, transform, reverseTransform?, propertyMapping?)`
+maps model items to view-model items and keeps the mapped array associated with
+its source array.
+
+```js
+import ViewModelArray from './viewmodel-array.js'
+
+const viewModelPersons = ViewModelArray.get(
+  model.persons,
+  (person) => ({
+    id: person.id,
+    name: person.name,
+    age: new Date().getFullYear() - person.birthyear
+  }),
+  (person) => ({
+    id: () => person.id,
+    name: () => person.name,
+    birthyear: () => new Date().getFullYear() - person.age
+  }),
+  { age: 'birthyear' }
+)
+```
+
+Arguments:
+
+- `modelArray`: source array containing model objects.
+- `transform`: required function that creates a view-model item.
+- `reverseTransform`: optional function used to synchronize view-model changes back to the model. Its returned properties should be functions, so only the properties affected by a partial update need to be evaluated. It defaults to the identity transformation.
+- `propertyMapping`: optional object mapping view-model property names to model property names, for example `{ age: 'birthyear' }`.
+
+`ViewModelArray.get` caches the mapped array for a source array and preserves
+mapped item identity. Array operations such as `push`, `pop`, `shift`,
+`unshift`, and `splice` can therefore be rendered reactively and synchronized
+back to the model when `reverseTransform` is provided. For partial property
+updates, the functions returned by `reverseTransform` prevent unrelated model
+properties from being recalculated.
 
 ## Technical background: NodeHolders and UUID identity
 
 - **NodeHolders:** The engine tracks which DOM nodes depend on a particular "full key" using a segmented Map managed by the node-holders utility ([src/components/utils/node-holders.js](src/components/utils/node-holders.js)). Full keys (for example `users.3.name` or `item#.children.2.title`) are split into segments and stored in nested Maps; the leaf entries contain arrays of node-holders that reference that full key. When a property changes the engine builds the full key and looks up any matching holders to refresh — this enables targeted updates without scanning the entire DOM.
 
-- **UUID / item identity:** For arrays the engine keeps stable per-item identities using a WeakMap-backed id cache (see [src/mapped-array.js](src/mapped-array.js)). When rendering `<each>` the engine assigns each object a stable id so that moving, inserting, or deleting items preserves existing DOM nodes for unchanged items. That reduces DOM churn and keeps per-item state (inputs, event handlers) stable across array mutations.
+- **UUID / item identity:** For arrays the engine keeps stable per-item identities using a WeakMap-backed id cache (see [src/components/utils/uuid-item-map.js](src/components/utils/uuid-item-map.js)). When rendering `<each>` the engine assigns each object a stable id so that moving, inserting, or deleting items preserves existing DOM nodes for unchanged items. That reduces DOM churn and keeps per-item state (inputs, event handlers) stable across array mutations.
 
 - **Benefits:** targeted refreshes for changed keys, minimal DOM re-creation, efficient nested/context lookups, and stable per-item state during array operations.
 
@@ -293,7 +331,8 @@ see top of README
 
 References:
 - Node holder implementation: [src/components/utils/node-holders.js](src/components/utils/node-holders.js)
-- Mapped array and item identity: [src/mapped-array.js](src/mapped-array.js)
+- Mapped array helper: [src/viewmodel-array.js](src/viewmodel-array.js)
+- Item identity helper: [src/components/utils/uuid-item-map.js](src/components/utils/uuid-item-map.js)
 - Initial rendering and refresh dispatch: [src/components/render-engine.js](src/components/render-engine.js) and [src/components/refresh-delegator.js](src/components/refresh-delegator.js)
 
 ## Development
