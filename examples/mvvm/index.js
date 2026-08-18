@@ -56,10 +56,11 @@ const viewModel = TemplateEngine.reactive({
                 showEdit: false
             }),
             (item) => ({
-                id: item.id,
-                name: item.name,
-                birthyear: new Date().getFullYear() - item.age
-            })
+                id: () => item.id,
+                name: () => item.name,
+                birthyear: () => new Date().getFullYear() - item.age
+            }),
+            { age: 'birthyear' }
         )
     },
 
@@ -85,7 +86,7 @@ const viewModel = TemplateEngine.reactive({
     },
 
     runDemoUpdates: function() {
-        runDemoUpdates(viewModel)
+        runDemoUpdates(viewModel, model)
     }
 }, document.getElementById('app-template-use'), {
     'firstName': ['fullName'],

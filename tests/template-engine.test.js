@@ -2,6 +2,7 @@ import { test, describe, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { JSDOM } from 'jsdom'
 import TemplateEngine from '../src/template-engine.js'
+import ModelSynchronization from '../src/components/reactivity-helpers/model-synchronization.js'
 import NodeHolders from '../src/components/utils/node-holders.js'
 
 const { nodeHoldersByKeys } = NodeHolders
@@ -212,5 +213,22 @@ describe('TemplateEngine.reactive', () => {
 
         const spans = mount.querySelectorAll('.get-resolved')
         assert.equal(spans[1].textContent, 'Bob Smith')
+    })
+})
+
+describe('TemplateEngine.withoutModelSynchronization', () => {
+    test('delegates to model synchronization scope', async () => {
+        await TemplateEngine.withoutModelSynchronization(() => {
+            assert.equal(ModelSynchronization.isModelSynchronizationDisabled(), true)
+        })
+
+        assert.equal(ModelSynchronization.isModelSynchronizationDisabled(), false)
+    })
+
+    test('throws when callback is not a function', async () => {
+        await assert.rejects(
+            TemplateEngine.withoutModelSynchronization(null),
+            /withoutModelSynchronization expected "callback" to be a function/
+        )
     })
 })

@@ -1,6 +1,5 @@
 import TemplateEngine from '../../src/template-engine.js'
 import ViewModelArray from '../../src/viewmodel-array.js'
-import ModelSynchronization from '../../src/components/reactivity-helpers/model-synchronization.js'
 import { fakeServerData } from './fake-server-data.js'
 import { runDemoUpdates } from './demo-updates.js'
 
@@ -81,7 +80,7 @@ const viewModel = TemplateEngine.reactive({
     }
 }, document.getElementById('app-template-use'))
 
-ModelSynchronization.withoutModelSynchronization(() => {
+TemplateEngine.withoutModelSynchronization(() => {
     model.persons.splice(0, model.persons.length, ...fakeServerData.map(clonePersonDeep))
 
     viewModel.persons.splice(

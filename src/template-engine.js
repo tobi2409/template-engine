@@ -7,6 +7,10 @@ import ModelSynchronization from './components/reactivity-helpers/model-synchron
 
 const TemplateEngine = (function () {
     return {
+        withoutModelSynchronization(callback) {
+            return ModelSynchronization.withoutModelSynchronization(callback)
+        },
+
         reactive(data, node, dependencies = {}) {
             if (!data || typeof data !== 'object') {
                 throw new TypeError(`[TemplateEngine] reactive expected "data" to be an object, got ${data === null ? 'null' : typeof data}`)

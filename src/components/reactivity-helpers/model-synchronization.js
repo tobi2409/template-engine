@@ -54,7 +54,7 @@ const ModelSynchronization = (function () {
                                                                                     currentViewModelProps /*, { operation: 'set', prop }*/)
                                                                         
             if (reverseTransformedItem && typeof reverseTransformedItem === 'object') {
-                const propertyMapping = viewModelItemConfig.propertyMapping
+                const propertyMapping = viewModelItemConfig.propertyMapping ?? {}
                 const existingModelItem = viewModelItemConfig.modelItem
 
                 if (existingModelItem && typeof existingModelItem === 'object') {

@@ -14,7 +14,13 @@ function assertSelectorNotContains(selector, unexpectedText, step) {
     }
 }
 
-export function runDemoUpdates(viewModel) {
+function assertValue(actualValue, expectedValue, step) {
+    if (actualValue !== expectedValue) {
+        throw new Error(`Demo update not synchronized to model (${step}): expected "${expectedValue}", got "${actualValue}"`)
+    }
+}
+
+export function runDemoUpdates(viewModel, model) {
     viewModel.firstName = 'Emily'
     viewModel.wage = 200
     viewModel.beautifiedPersonData.push({ id: 3, name: 'Sample', age: 40, showEdit: false })
@@ -29,4 +35,12 @@ export function runDemoUpdates(viewModel) {
     if (document.querySelector('#person-list li[item-index="2"]')) {
         throw new Error('Demo update not rendered (splice remove second person): expected #person-list li[item-index="2"] to be removed')
     }
+
+    assertValue(model.firstName, 'Emily', 'model firstName')
+    assertValue(model.wage, 200, 'model wage')
+    assertValue(model.rawPersonData.length, 2, 'model person count after push and splice')
+    assertValue(model.rawPersonData[0].name, 'Test Updated', 'model first person name')
+    assertValue(model.rawPersonData[1].id, 3, 'model pushed person id')
+    assertValue(model.rawPersonData[1].name, 'Sample', 'model pushed person name')
+    assertValue(model.rawPersonData[1].birthyear, new Date().getFullYear() - 40, 'model pushed person birthyear')
 }

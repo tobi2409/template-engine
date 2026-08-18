@@ -24,6 +24,10 @@ const ViewModelArray = (function () {
             throw new TypeError(`transformArray expected "reverseTransform" to be a function, got ${typeof reverseTransform}`)
         }
 
+        if (propertyMapping === null || typeof propertyMapping !== 'object' || Array.isArray(propertyMapping)) {
+            throw new TypeError(`transformArray expected "propertyMapping" to be an object, got ${propertyMapping === null ? 'null' : Array.isArray(propertyMapping) ? 'array' : typeof propertyMapping}`)
+        }
+
         let viewModelArray = mappedViewModelArrayCache.get(modelArray)
 
         if (!viewModelArray) {

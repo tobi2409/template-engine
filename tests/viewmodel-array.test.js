@@ -59,6 +59,18 @@ describe('ViewModelArray.get', () => {
             /expected "reverseTransform" to be a function/
         )
     })
+
+    test('throws for null or non-object propertyMapping', () => {
+        assert.throws(
+            () => ViewModelArray.get([], () => ({}), undefined, null),
+            /expected "propertyMapping" to be an object, got null/
+        )
+
+        assert.throws(
+            () => ViewModelArray.get([], () => ({}), undefined, []),
+            /expected "propertyMapping" to be an object, got array/
+        )
+    })
 })
 
 describe('ViewModelArray.markRecursive', () => {
