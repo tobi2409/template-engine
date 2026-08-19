@@ -1,3 +1,7 @@
+const database = new alasql.Database('family-tree')
+
+database.exec('CREATE TABLE persons (id INT, parentId INT, name STRING, wage INT, birthyear INT, street STRING, city STRING)')
+
 export const fakeServerData = [{
     id: 1,
     name: 'Max Mustermann',
@@ -59,3 +63,40 @@ export const fakeServerData = [{
         children: []
     }]
 }]
+
+function insertPersons(persons, parentId = null) {
+    for (const person of persons) {
+        database.tables.persons.data.push({
+            id: person.id,
+            parentId,
+            name: person.name,
+            wage: person.wage,
+            birthyear: person.birthyear,
+            street: person.address?.street || '',
+            city: person.address?.city || ''
+        })
+        
+        insertPersons(person.children || [], person.id)
+    }
+}
+
+insertPersons(fakeServerData)
+
+export function getPersons(parentId = null) {
+    const query = parentId === null
+        ? 'SELECT id, name, wage, birthyear, street, city FROM persons WHERE parentId IS NULL'
+        : 'SELECT id, name, wage, birthyear, street, city FROM persons WHERE parentId = ?'
+    const parameters = parentId === null ? [] : [parentId]
+
+    return database.exec(query, parameters).map((person) => ({
+        id: person.id,
+        name: person.name,
+        wage: person.wage,
+        birthyear: person.birthyear,
+        address: {
+            street: person.street,
+            city: person.city
+        },
+        children: []
+    }))
+}

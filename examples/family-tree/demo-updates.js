@@ -34,6 +34,18 @@ export function runDemoUpdates(viewModel, model) {
     viewModel.persons[0].children[0].age = 20
     viewModel.persons[0].children[0].address.street = 'Updated Street 3'
 
+    viewModel.persons[0].children[0].children.push({
+        id: 9,
+        name: 'Max Jr. - Child',
+        wage: '4 USD',
+        age: 3,
+        address: {
+            street: 'Child Street 9',
+            city: 'Leipzig'
+        },
+        children: []
+    })
+
     viewModel.persons[0].children.push({
         id: 33,
         name: 'Max Jr. - Sibling',
@@ -76,6 +88,7 @@ export function runDemoUpdates(viewModel, model) {
 
     assertSelectorCount('#app > ul > li', 3, 'render all root persons count')
     assertSelectorCount('#app > ul > li:nth-child(1) > ul > li', 2, 'render all children for root person 1')
+    assertSelectorCount('#app > ul > li:nth-child(1) > ul > li:nth-child(1) > ul > li', 1, 'render nested grandchild for root person 1 child 1')
     assertSelectorCount('#app > ul > li:nth-child(1) > ul > li:nth-child(2) > ul > li', 1, 'render nested grandchild for root person 1 child 2')
     assertSelectorCount('#app > ul > li:nth-child(2) > ul > li', 0, 'render empty children list for root person 2')
     assertSelectorCount('#app > ul > li:nth-child(3) > ul > li', 0, 'render empty children list for root person 3')
@@ -86,6 +99,8 @@ export function runDemoUpdates(viewModel, model) {
     assertInputValue('#app > ul > li:nth-child(1) > ul > li:nth-child(1) > input:nth-of-type(1)', 'Max Jr. - Updated', 'update child 1 name')
     assertInputValue('#app > ul > li:nth-child(1) > ul > li:nth-child(1) > input:nth-of-type(3)', 20, 'update child 1 age')
     assertInputValue('#app > ul > li:nth-child(1) > ul > li:nth-child(1) > input:nth-of-type(4)', 'Updated Street 3', 'update child 1 street')
+    assertInputValue('#app > ul > li:nth-child(1) > ul > li:nth-child(1) > ul > li:nth-child(1) > input:nth-of-type(1)', 'Max Jr. - Child', 'render nested child of first child')
+    assertInputValue('#app > ul > li:nth-child(1) > ul > li:nth-child(1) > ul > li:nth-child(1) > input:nth-of-type(4)', 'Child Street 9', 'render nested child street of first child')
 
     assertInputValue('#app > ul > li:nth-child(1) > ul > li:nth-child(2) > input:nth-of-type(1)', 'Max Jr. - Sibling', 'push child 2 name')
     assertInputValue('#app > ul > li:nth-child(1) > ul > li:nth-child(2) > input:nth-of-type(3)', 14, 'push child 2 age')
@@ -110,6 +125,9 @@ export function runDemoUpdates(viewModel, model) {
     assertValue(model.persons[0].children[0].name, 'Max Jr. - Updated', 'model child 1 name')
     assertValue(model.persons[0].children[0].birthyear, currentYear - 20, 'model child 1 birthyear')
     assertValue(model.persons[0].children[0].address.street, 'Updated Street 3', 'model child 1 street')
+    assertValue(model.persons[0].children[0].children.length, 1, 'model nested child count of first child')
+    assertValue(model.persons[0].children[0].children[0].name, 'Max Jr. - Child', 'model nested child name of first child')
+    assertValue(model.persons[0].children[0].children[0].address.street, 'Child Street 9', 'model nested child street of first child')
 
     assertValue(model.persons[0].children[1].name, 'Max Jr. - Sibling', 'model child 2 name')
     assertValue(model.persons[0].children[1].wage, '5', 'model child 2 wage')
