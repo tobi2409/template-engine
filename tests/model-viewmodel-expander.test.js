@@ -1,13 +1,13 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import DataExpander from '../src/data-expander.js'
+import ModelViewModelExpander from '../src/model-viewmodel-expander.js'
 
 test('getExpandTargets returns root arrays when no parent item exists', () => {
     const rootModelArray = [{ id: 1, children: [] }]
     const rootViewModelArray = [{ id: 1, children: [] }]
 
-    const result = DataExpander.getExpandTargets(undefined, undefined, rootViewModelArray, rootModelArray)
+    const result = ModelViewModelExpander.getExpandTargets(undefined, undefined, rootViewModelArray, rootModelArray)
 
     assert.equal(result.viewModelArray, rootViewModelArray)
     assert.equal(result.modelItem, undefined)
@@ -18,7 +18,7 @@ test('getExpandTargets resolves nested child arrays using the model parent', () 
     const rootModelArray = [{ id: 1, children: [] }]
     const rootViewModelArray = [{ id: 1, children: [] }]
     const parent = { id: 7, children: [{ id: 9, children: [] }] }
-    const result = DataExpander.getExpandTargets(parent, parent, rootViewModelArray, rootModelArray)
+    const result = ModelViewModelExpander.getExpandTargets(parent, parent, rootViewModelArray, rootModelArray)
 
     assert.deepEqual(result.modelItem, { id: 7, children: [{ id: 9, children: [] }] })
     assert.deepEqual(result.modelArray, [{ id: 9, children: [] }])
@@ -30,7 +30,7 @@ test('expandNextData replaces model and view model arrays', () => {
     const viewModelArray = [{ id: 1, name: 'OLD' }]
     const nextData = [{ id: 2, name: 'beta' }, { id: 3, name: 'gamma' }]
 
-    const result = DataExpander.expandNextData(
+    const result = ModelViewModelExpander.expandNextData(
         nextData,
         viewModelArray,
         modelArray,
@@ -48,7 +48,7 @@ test('expandNextData replaces model and view model arrays', () => {
 test('createExpandHandler loads children once and toggles expansion', () => {
     // Captures calls to the loader passed into the handler factory.
     const viewModelArray = []
-    const expand = DataExpander.createExpandHandler((viewModelParent) => viewModelArray.push(viewModelParent))
+    const expand = ModelViewModelExpander.createExpandHandler((viewModelParent) => viewModelArray.push(viewModelParent))
     const viewModelParent = { expanded: false, childrenLoaded: false }
 
     // The first expansion loads the children and marks the item as expanded.
@@ -66,7 +66,7 @@ test('createExpandHandler loads children once and toggles expansion', () => {
 
 test('createExpandHandler supports custom expand options', () => {
     let loadCount = 0
-    const expand = DataExpander.createExpandHandler(() => loadCount++, {
+    const expand = ModelViewModelExpander.createExpandHandler(() => loadCount++, {
         expandedAttribute: 'isExpanded',
         childrenLoadedAttribute: 'hasLoadedChildren'
     })

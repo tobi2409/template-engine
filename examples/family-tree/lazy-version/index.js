@@ -1,6 +1,6 @@
 import TemplateEngine from '../../../src/template-engine.js'
 import ViewModelArray from '../../../src/viewmodel-array.js'
-import DataExpander from '../../../src/data-expander.js'
+import ModelViewModelExpander from '../../../src/model-viewmodel-expander.js'
 import { getPersons } from './fake-server-data.js'
 
 const model = {
@@ -30,7 +30,7 @@ const viewModel = TemplateEngine.reactive({
             children: ViewModelArray.markRecursive(personModelItem.children.map(child => this.transform(child))),
             expanded: false,
             childrenLoaded: false,
-            expand: DataExpander.createExpandHandler((viewModelParent) => viewModel.loadServerData(viewModelParent, personModelItem)),
+            expand: ModelViewModelExpander.createExpandHandler((viewModelParent) => viewModel.loadServerData(viewModelParent, personModelItem)),
             cacheName: (_, viewItem) => {
                 console.log(viewItem.id, viewItem.name) // TODO: cache id, name for later use in saveToDatabase
             }
@@ -65,14 +65,14 @@ const viewModel = TemplateEngine.reactive({
         TemplateEngine.withoutModelSynchronization(() => {
             const nextPersons = getPersons(viewModelParent?.id)
 
-            const { viewModelArray, modelArray } = DataExpander.getExpandTargets(
+            const { viewModelArray, modelArray } = ModelViewModelExpander.getExpandTargets(
                 viewModelParent,
                 modelParent,
                 viewModel.persons,
                 model.persons
             )
 
-            DataExpander.expandNextData(
+            ModelViewModelExpander.expandNextData(
                 nextPersons,
                 viewModelArray,
                 modelArray,

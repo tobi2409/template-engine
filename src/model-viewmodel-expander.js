@@ -1,4 +1,4 @@
-const DataExpander = (function () {
+const ModelViewModelExpander = (function () {
     function getExpandTargets(
         viewModelItem,
         modelItem,
@@ -27,7 +27,7 @@ const DataExpander = (function () {
         transformItem = (item) => item
     ) {
         modelArray.splice(0, modelArray.length, ...nextData)
-        
+
         viewModelArray.splice(
             0,
             viewModelArray.length,
@@ -57,4 +57,4 @@ const DataExpander = (function () {
     }
 })()
 
-export default DataExpander
+export default ModelViewModelExpander
