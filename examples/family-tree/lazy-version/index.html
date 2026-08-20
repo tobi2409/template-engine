@@ -21,7 +21,7 @@
                         <input type="text" bind-input-value="p.address.street" />
                         <input type="text" bind-input-value="p.address.city" />
 
-                        <if test="p.expanded">
+                        <if test="p.expanded" justHideChildren="true">
                             <template-use
                                 template-id="ul-structured-data"
                                 data-list="p.children"></template-use>

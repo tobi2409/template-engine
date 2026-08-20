@@ -63,9 +63,9 @@ const viewModel = TemplateEngine.reactive({
 
     loadServerData(viewModelParent = undefined, modelParent = undefined) {
         TemplateEngine.withoutModelSynchronization(() => {
-            const nextPersons = getPersons(modelParent?.id)
+            const nextPersons = getPersons(viewModelParent?.id)
 
-            const { modelArray, viewModelArray } = DataExpander.getExpandTargets(
+            const { viewModelArray, modelArray } = DataExpander.getExpandTargets(
                 viewModelParent,
                 modelParent,
                 viewModel.persons,
