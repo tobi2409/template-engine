@@ -8,8 +8,6 @@ const model = {
     persons: []
 }
 
-const modelPersonsById = DataExpander.createModelIndex()
-
 const viewModel = TemplateEngine.reactive({
     get user() {
         return model.user
@@ -32,7 +30,10 @@ const viewModel = TemplateEngine.reactive({
             children: ViewModelArray.markRecursive(personModelItem.children.map(child => this.transform(child))),
             expanded: false,
             childrenLoaded: false,
-            expand: DataExpander.createExpandHandler((viewModelParent) => viewModel.loadServerData(viewModelParent))
+            expand: DataExpander.createExpandHandler((viewModelParent) => viewModel.loadServerData(viewModelParent, personModelItem)),
+            cacheName: (_, viewItem) => {
+                console.log(viewItem.id, viewItem.name) // TODO: cache id, name for later use in saveToDatabase
+            }
         }
     },
 
@@ -40,7 +41,7 @@ const viewModel = TemplateEngine.reactive({
         return {
             id: () => personViewModelItem.id,
             name: () => personViewModelItem.name,
-            wage: () => personViewModelItem.wage.slice(0, -4),
+            wage: () => personViewModelItem.wage.slice(0, -4), // TODO: Input validation, Convert to number
             birthyear: () => new Date().getFullYear() - personViewModelItem.age,
             address: () => ({
                 street: () => personViewModelItem.address?.street,
@@ -60,22 +61,21 @@ const viewModel = TemplateEngine.reactive({
         )
     },
 
-    loadServerData(viewModelParent = undefined) {
+    loadServerData(viewModelParent = undefined, modelParent = undefined) {
         TemplateEngine.withoutModelSynchronization(() => {
-            const nextPersons = getPersons(viewModelParent?.id)
+            const nextPersons = getPersons(modelParent?.id)
 
             const { modelArray, viewModelArray } = DataExpander.getExpandTargets(
                 viewModelParent,
-                model.persons,
+                modelParent,
                 viewModel.persons,
-                modelPersonsById
+                model.persons
             )
 
             DataExpander.expandNextData(
                 nextPersons,
-                modelArray,
                 viewModelArray,
-                modelPersonsById,
+                modelArray,
                 (personModelItem) => this.transform(personModelItem)
             )
         })

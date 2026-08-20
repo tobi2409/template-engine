@@ -1,41 +1,33 @@
 const DataExpander = (function () {
-    function createModelIndex() {
-        return new Map()
-    }
-
     function getExpandTargets(
-        parentItem,
-        rootModelArray,
+        viewModelItem,
+        modelItem,
         rootViewModelArray,
-        modelIndex = createModelIndex(),
+        rootModelArray,
         options = {
-            modelChildrenKey: 'children',
             viewModelChildrenKey: 'children',
-            identifier: 'id'
+            modelChildrenKey: 'children'
         }
     ) {
-        const { modelChildrenKey, viewModelChildrenKey, identifier } = options
-        const modelParent = parentItem ? modelIndex.get(parentItem[identifier]) : undefined
-        const modelArray = modelParent ? modelParent[modelChildrenKey] : rootModelArray
-        const viewModelArray = parentItem ? parentItem[viewModelChildrenKey] : rootViewModelArray
+        const { modelChildrenKey, viewModelChildrenKey } = options
+        const modelArray = modelItem ? modelItem[modelChildrenKey] : rootModelArray
+        const viewModelArray = viewModelItem ? viewModelItem[viewModelChildrenKey] : rootViewModelArray
 
         return {
-            modelParent,
-            modelArray,
-            viewModelArray
+            viewModelArray,
+            modelItem,
+            modelArray
         }
     }
 
     function expandNextData(
         nextData,
-        modelArray,
         viewModelArray,
-        modelIndex = createModelIndex(),
-        transformItem = (item) => item,
-        identifier = 'id'
+        modelArray,
+        transformItem = (item) => item
     ) {
         modelArray.splice(0, modelArray.length, ...nextData)
-        nextData.forEach((item) => modelIndex.set(item[identifier], item))
+        
         viewModelArray.splice(
             0,
             viewModelArray.length,
@@ -45,19 +37,20 @@ const DataExpander = (function () {
         return viewModelArray
     }
 
-    function createExpandHandler(loadServerData) {
+    function createExpandHandler(loadServerData, options = {}) {
         return (_, viewModelParent) => {
-            if (!viewModelParent.childrenLoaded) {
+            const { expandedAttribute = 'expanded', childrenLoadedAttribute = 'childrenLoaded' } = options
+
+            if (!viewModelParent[childrenLoadedAttribute]) {
                 loadServerData(viewModelParent)
-                viewModelParent.childrenLoaded = true
+                viewModelParent[childrenLoadedAttribute] = true
             }
 
-            viewModelParent.expanded = !viewModelParent.expanded
+            viewModelParent[expandedAttribute] = !viewModelParent[expandedAttribute]
         }
     }
 
     return {
-        createModelIndex,
         getExpandTargets,
         expandNextData,
         createExpandHandler
