@@ -27,12 +27,14 @@ const viewModel = TemplateEngine.reactive({
                 street: personModelItem.address?.street || '',
                 city: personModelItem.address?.city || ''
             },
-            children: ViewModelArray.markRecursive(ViewModelArray.get(
+            children: ViewModelArray.get(
                 personModelItem.children,
                 (childModelItem) => this.transform(childModelItem),
                 (childViewModelItem) => this.reverseTransform(childViewModelItem),
-                { age: 'birthyear' }
-            )),
+                { age: 'birthyear' },
+                { newPerson: { name: 'Neuer Name ...' } },
+                true
+            ), /*{ data: [], state: { newPerson: { name: 'Neuer Name ...' } } },*/
             expanded: false,
             childrenLoaded: false,
             expand: ModelViewModelExpander.createExpandHandler((viewModelParent) => viewModel.loadServerData(viewModelParent, personModelItem)),
@@ -62,7 +64,8 @@ const viewModel = TemplateEngine.reactive({
             model.persons,
             (personModelItem) => (this.transform(personModelItem)),
             (personViewModelItem) => (this.reverseTransform(personViewModelItem)),
-            { age: 'birthyear' }
+            { age: 'birthyear' },
+            { newPerson: { name: 'Neuer Name ...' } }
         )
     },
 
@@ -79,7 +82,7 @@ const viewModel = TemplateEngine.reactive({
 
             ModelViewModelExpander.expandNextData(
                 nextPersons,
-                viewModelArray,
+                viewModelArray?.data,
                 modelArray,
                 (personModelItem) => this.transform(personModelItem)
             )

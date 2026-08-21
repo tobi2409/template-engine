@@ -74,6 +74,30 @@ describe('convertToFullKey', () => {
         const result = convertToFullKey('person', contextStack)
         assert.equal(result, `persons.${uuid}`)
     })
+
+    test('replaces a first segment with a direct parameter value', () => {
+        const params = new Map([['list', 'persons']])
+
+        assert.equal(convertToFullKey('*list.data', new Map(), params), 'persons.data')
+    })
+
+    test('splits a nested parameter value into separate path segments', () => {
+        const params = new Map([['list', 'person.name']])
+
+        assert.equal(convertToFullKey('*list.value', new Map(), params), 'person.name.value')
+    })
+
+    test('resolves nested parameter segments through the context stack', () => {
+        const item = { name: 'Alice' }
+        ensureUuidForItem(item)
+        const uuid = getUuidByItem(item)
+        const contextStack = new Map([
+            ['person', { fullKey: 'persons', data: item }]
+        ])
+        const params = new Map([['list', 'person.name']])
+
+        assert.equal(convertToFullKey('*list.value', contextStack, params), `persons.${uuid}.name.value`)
+    })
 })
 
 describe('resolveEx', () => {

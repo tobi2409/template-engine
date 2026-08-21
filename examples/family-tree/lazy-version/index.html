@@ -12,7 +12,7 @@
         
         <template id="ul-structured-data">
             <ul>
-                <each of="*list" as="p">
+                <each of="*list.data" as="p">
                     <li>
                         <button action-click="p.expand">Expand</button>
                         <input type="text" bind-input-value="p.name" action-change="p.cacheName" />
@@ -30,8 +30,9 @@
                 </each>
 
                 <li>
-                    <input type="text" bind-input-value="newPerson.name" placeholder="Name" />
-                    <button action-click="addNewPerson">Add Person</button>
+                    <get>*list.state.newPerson.name</get>
+                    <!--<input type="text" bind-input-value="newPerson.name" placeholder="Name" />
+                    <button action-click="addNewPerson">Add Person</button>-->
                 </li>
             </ul>
         </template>

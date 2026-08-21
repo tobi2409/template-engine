@@ -3,32 +3,42 @@
 import UuidItemMap from './uuid-item-map.js'
 
 const KeyResolver = (function () {
-    function convertToFullKey(relativeKey, contextStack = new Map()) {
-        const splitted = relativeKey.split('.')
-        const isFirstContext = contextStack.has(splitted[0])
 
-        if (!isFirstContext) {
-            return relativeKey
+    function dereferencePointer(pointer, params = new Map()) {
+        if (!params.has(pointer.slice(1))) {
+            throw new Error(`Cannot dereference pointer "${pointer}": no value found in params`)
         }
 
-        const context = contextStack.get(splitted[0])
+        return params.get(pointer.slice(1))
+    }
+    
+    function convertToFullKey(relativeKey, contextStack = new Map(), params = new Map()) {
+        const splitted = relativeKey.split('.')
+
+        const dereferencedSegments = splitted[0].startsWith('*')
+            ? dereferencePointer(splitted[0], params).split('.')
+            : [splitted[0]]
+        const firstSegment = dereferencedSegments[0]
+        const remainingSegments = dereferencedSegments.slice(1).concat(splitted.slice(1))
+        const dereferencedKey = [firstSegment, ...remainingSegments].join('.')
+
+        const isFirstContext = contextStack.has(firstSegment)
+
+        if (!isFirstContext) {
+            return dereferencedKey
+        }
+
+        const context = contextStack.get(firstSegment)
         const index = UuidItemMap.getUuidByItem(context.data)
 
         if (index === undefined) {
-            throw new Error(`Cannot resolve relative key "${relativeKey}": item index missing for context "${splitted[0]}"`)
+            throw new Error(`Cannot resolve relative key "${relativeKey}": item index missing for context "${splitted[0]}"
+                ${firstSegment !== splitted[0] ? `(dereferenced with "${firstSegment}")` : ''}`)
         }
 
-        return convertToFullKey(`${context.fullKey}.${index}${splitted.length > 1 ? '.' : ''}${splitted.slice(1).join('.')}`,
-                                contextStack)
-    }
-
-    function dereferenceKey(key, data, params = new Map()) {
-        if (key.startsWith('*')) {
-            const indirectKey = key.slice(1)
-            return resolve(indirectKey, data, params)
-        }
-
-        return key
+        return convertToFullKey(`${context.fullKey}.${index}${remainingSegments.length > 0 ? '.' : ''}${remainingSegments.join('.')}`,
+                                contextStack,
+                                params)
     }
 
     function resolve(key, data, params = new Map(), evaluateFunctions = false) {
@@ -68,8 +78,8 @@ const KeyResolver = (function () {
     }
 
     function resolveEx(key, data, contextStack = new Map(), params = new Map()) {
-        const dereferencedKey = key.startsWith('*') && params.has(key.slice(1)) ? dereferenceKey(key, data, params) : key
-        const fullKey = convertToFullKey(dereferencedKey, contextStack)
+        //const dereferencedKey = key.startsWith('*') && params.has(key.slice(1)) ? dereferencePointer(key, data, params) : key
+        const fullKey = convertToFullKey(key, contextStack, params)
         return { fullKey: fullKey, value: resolve(fullKey, data, params) }
     }
 
@@ -98,7 +108,7 @@ const KeyResolver = (function () {
 
     return {
         convertToFullKey,
-        dereferenceKey,
+        dereferencePointer,
         resolve,
         resolveEx,
         setByPath

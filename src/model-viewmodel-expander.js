@@ -1,4 +1,5 @@
 const ModelViewModelExpander = (function () {
+
     function getExpandTargets(
         viewModelItem,
         modelItem,
@@ -22,19 +23,19 @@ const ModelViewModelExpander = (function () {
 
     function expandNextData(
         nextData,
-        viewModelArray,
+        viewModelArrayData,
         modelArray,
         transformItem = (item) => item
     ) {
         modelArray.splice(0, modelArray.length, ...nextData)
 
-        viewModelArray.splice(
+        viewModelArrayData.splice(
             0,
-            viewModelArray.length,
+            viewModelArrayData.length,
             ...modelArray.map((item) => transformItem(item))
         )
 
-        return viewModelArray
+        return viewModelArrayData
     }
 
     function createExpandHandler(loadServerData, options = {}) {

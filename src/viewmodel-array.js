@@ -11,7 +11,7 @@ const mappedViewModelItemCache = new WeakMap()
 
 const ViewModelArray = (function () {
 
-    function get(modelArray, transform, reverseTransform = (viewModelItem) => viewModelItem, propertyMapping = {}) {
+    function get(modelArray, transform, reverseTransform = (viewModelItem) => viewModelItem, propertyMapping = {}, state = {}, recursive = false) {
         if (!Array.isArray(modelArray)) {
             throw new TypeError(`transformArray expected "modelArray" to be an array, got ${modelArray === null ? 'null' : typeof modelArray}`)
         }
@@ -26,6 +26,10 @@ const ViewModelArray = (function () {
 
         if (propertyMapping === null || typeof propertyMapping !== 'object' || Array.isArray(propertyMapping)) {
             throw new TypeError(`transformArray expected "propertyMapping" to be an object, got ${propertyMapping === null ? 'null' : Array.isArray(propertyMapping) ? 'array' : typeof propertyMapping}`)
+        }
+
+        if (state === null || typeof state !== 'object') {
+            throw new TypeError('transformArray expected "state" to be an object, got ' + (state === null ? 'null' : typeof state))
         }
 
         let viewModelArray = mappedViewModelArrayCache.get(modelArray)
@@ -46,22 +50,17 @@ const ViewModelArray = (function () {
             viewModelArray.__reverseTransform__ = reverseTransform
             viewModelArray.__propertyMapping__ = propertyMapping
 
+            if (recursive) {
+                viewModelArray.__recursive__ = true
+            }
+
             mappedViewModelArrayCache.set(modelArray, viewModelArray)
         }
 
-        return viewModelArray
+        return { data: viewModelArray, state }
     }
 
-    function markRecursive(viewModelArray) {
-        if (!Array.isArray(viewModelArray)) {
-            throw new TypeError(`transformArray expected "viewModelArray" to be an array, got ${viewModelArray === null ? 'null' : typeof viewModelArray}`)
-        }
-
-        viewModelArray.__recursive__ = true
-        return viewModelArray
-    }
-
-    return { get, markRecursive }
+    return { get }
 })()
 
 export default ViewModelArray
