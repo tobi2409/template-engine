@@ -32,8 +32,7 @@ const viewModel = TemplateEngine.reactive({
                 (childModelItem) => this.transform(childModelItem),
                 (childViewModelItem) => this.reverseTransform(childViewModelItem),
                 { age: 'birthyear' },
-                { newPerson: { name: 'Neuer Name ...' } },
-                true
+                { newPerson: { name: 'Neuer Name ...' } }
             ), /*{ data: [], state: { newPerson: { name: 'Neuer Name ...' } } },*/
             expanded: false,
             childrenLoaded: false,

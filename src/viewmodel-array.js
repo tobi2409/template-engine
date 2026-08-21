@@ -11,7 +11,7 @@ const mappedViewModelItemCache = new WeakMap()
 
 const ViewModelArray = (function () {
 
-    function get(modelArray, transform, reverseTransform = (viewModelItem) => viewModelItem, propertyMapping = {}, state = {}, recursive = false) {
+    function get(modelArray, transform, reverseTransform = (viewModelItem) => viewModelItem, propertyMapping = {}, state = {}/*, recursive = false*/) {
         if (!Array.isArray(modelArray)) {
             throw new TypeError(`transformArray expected "modelArray" to be an array, got ${modelArray === null ? 'null' : typeof modelArray}`)
         }
@@ -50,9 +50,9 @@ const ViewModelArray = (function () {
             viewModelArray.__reverseTransform__ = reverseTransform
             viewModelArray.__propertyMapping__ = propertyMapping
 
-            if (recursive) {
+            /*if (recursive) {
                 viewModelArray.__recursive__ = true
-            }
+            }*/
 
             mappedViewModelArrayCache.set(modelArray, viewModelArray)
         }
