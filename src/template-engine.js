@@ -114,10 +114,10 @@ const TemplateEngine = (function () {
                     // wenn Objekt bereits verschachtelt vorhanden ist, dann muss es auch reaktiv gemacht werden.
 
                     if (Array.isArray(_value) && _value.__recursive__) {
-                        _value.__modelArray__ = viewModelItemConfig && viewModelItemConfig.modelItem ?
+                        /*_value.__modelArray__ = viewModelItemConfig && viewModelItemConfig.modelItem ?
                                     viewModelItemConfig.modelItem.children : undefined
                         _value.__reverseTransform__ = viewModelArrayConfig ? viewModelArrayConfig.reverseTransform : undefined
-                        _value.__propertyMapping__ = viewModelArrayConfig ? viewModelArrayConfig.propertyMapping : undefined
+                        _value.__propertyMapping__ = viewModelArrayConfig ? viewModelArrayConfig.propertyMapping : undefined*/
 
                         makeReactive(_value, nextFullKey, ModelSynchronization.createViewModelArrayConfig(_value))
                     } else {

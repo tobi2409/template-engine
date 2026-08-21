@@ -57,9 +57,8 @@ const ViewModelArray = (function () {
             throw new TypeError(`transformArray expected "viewModelArray" to be an array, got ${viewModelArray === null ? 'null' : typeof viewModelArray}`)
         }
 
-        const cloned = [...viewModelArray]
-        cloned.__recursive__ = true
-        return cloned
+        viewModelArray.__recursive__ = true
+        return viewModelArray
     }
 
     return { get, markRecursive }
