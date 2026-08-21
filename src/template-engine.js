@@ -2,6 +2,7 @@
 
 import RenderEngine from './components/render-engine.js'
 import Notifier from './components/reactivity-helpers/notifier.js'
+import ReactivityFrame from './components/reactivity-helpers/reactivity-frame.js'
 import UuidItemMap from './components/utils/uuid-item-map.js'
 import ModelSynchronization from './components/reactivity-helpers/model-synchronization.js'
 
@@ -26,226 +27,69 @@ const TemplateEngine = (function () {
 
             const topData = data
 
-            function makeArrayItemsReactive(obj, fullKey, viewModelArrayConfig = undefined) {
-                for (let i = 0; i < obj.length; i++) {
-                    const item = obj[i]
-
-                    if (item && typeof item === 'object') {
-                        const uuid = UuidItemMap.ensureUuidForItem(item)
-                        const itemFullKey = fullKey ? `${fullKey}.${uuid}` : String(uuid)
-                        // Beispiel: data.persons = [{ name: 'Anna' }, { name: 'Ben' }] ->
-                        // data.persons[0].name = 'Clara' soll triggern.
-
-                        let viewModelItemConfig = viewModelArrayConfig ? 
-                            ModelSynchronization.createViewModelItemConfig(viewModelArrayConfig, i) : undefined
-
-                        makeReactive(item, itemFullKey, viewModelArrayConfig, viewModelItemConfig)
+            const frameParams = {
+                marker: '__reactive__',
+                getArrayItemKey: (item) => UuidItemMap.ensureUuidForItem(item),
+                getArrayItemExtraParams: (item, index, extraParams) => {
+                    const viewModelArrayConfig = extraParams.viewModelArrayConfig
+                    return {
+                        viewModelArrayConfig,
+                        viewModelItemConfig: viewModelArrayConfig
+                            ? ModelSynchronization.createViewModelItemConfig(viewModelArrayConfig, index)
+                            : undefined
                     }
-                }
-            }
-
-            function patchArrayMethods(obj, fullKey, viewModelArrayConfig = undefined) {
-                for (const method of ['push', 'pop', 'shift', 'unshift', 'splice']) {
-                    // If the array already has a custom method push, pop, ... (e.g. from createMappedArray),
-                    // wrap it instead of Array.prototype so the source sync is preserved.
-                    const original = (obj[method] !== Array.prototype[method])
-                        ? obj[method]
-                        : Array.prototype[method]
-
-                    Object.defineProperty(obj, method, {
-                        value: function(...args) {
-                            const change = { fullKey, action: method }
-
-                            if (method === 'push' || method === 'unshift') {
-                                change.items = args
-                            } else if (method === 'splice') {
-                                change.startIndex = args[0]
-                                change.deleteCount = args[1] || 0
-                                change.items = args.slice(2)
-                            }
-                            
-                            const result = original.apply(this, args)
-
-                            ModelSynchronization.updateModelArrayByViewModelArrayOperation(viewModelArrayConfig, method, change)
-
-                            if (change.items) {
-                                // Make newly inserted items reactive
-                                for (let itemIndex = 0; itemIndex < change.items.length; itemIndex++) {
-                                    const item = change.items[itemIndex]
-                                    
-                                    if (item && typeof item === 'object') {
-                                        const uuid = UuidItemMap.ensureUuidForItem(item)
-                                        const itemFullKey = fullKey ? `${fullKey}.${uuid}` : uuid
-
-                                        let viewModelItemConfig = viewModelArrayConfig ? 
-                                            ModelSynchronization.createViewModelItemConfig(
-                                                viewModelArrayConfig,
-                                                method === 'push' || method === 'unshift' ? (obj.length - 1) + itemIndex : itemIndex
-                                            ) : undefined
-
-                                        makeReactive(item, itemFullKey, viewModelArrayConfig, viewModelItemConfig)
-                                    }
-                                }
-                            }
-
-                            try {
-                                Notifier.notifyChange(topData, fullKey, change, dependencies)
-                            } catch (error) {
-                                throw new Error(`[TemplateEngine] Error during refresh of "${fullKey}" after "${method}"`, { cause: error })
-                            }
-                            
-                            return result
-                        },
-                        enumerable: false,
-                        writable: true,
-                        configurable: true
-                    })
-                }
-            }
-
-            function defineReactiveDataProperty(obj, prop, descriptor, nextFullKey, viewModelArrayConfig = undefined, viewModelItemConfig = undefined, objectSegments = undefined) {
-                let _value = descriptor.value
-                // baut den Pfad relativ zum Item-Root auf (z.B. "address.street"), erst sobald ein Objekt verschachtelt ist
-                const currentObjectSegments = objectSegments ? `${objectSegments}.${prop}` : prop
-
-                if (_value && typeof _value === 'object') {
-                    // Beispiel: data.person = { address: { city: 'Berlin' } } ->
-                    // data.person.address.city = 'Hamburg' soll triggern.
-                    // wenn Objekt bereits verschachtelt vorhanden ist, dann muss es auch reaktiv gemacht werden.
-
-                    makeReactive(_value, nextFullKey,
-                        Array.isArray(_value) ? ModelSynchronization.createViewModelArrayConfig(_value) : viewModelArrayConfig,
-                        Array.isArray(_value) ? undefined : viewModelItemConfig,
-                        Array.isArray(_value) ? undefined : currentObjectSegments
+                },
+                getNestedExtraParams: (value, fullKey, extraParams) => ({
+                    viewModelArrayConfig: Array.isArray(value)
+                        ? ModelSynchronization.createViewModelArrayConfig(value)
+                        : extraParams.viewModelArrayConfig,
+                    viewModelItemConfig: Array.isArray(value)
+                        ? undefined
+                        : extraParams.viewModelItemConfig
+                }),
+                onArrayChange: (change, array, extraParams) => {
+                    const viewModelArrayConfig = extraParams.viewModelArrayConfig
+                    ModelSynchronization.updateModelArrayByViewModelArrayOperation(
+                        viewModelArrayConfig,
+                        change.action,
+                        change
                     )
-                }
-
-                Object.defineProperty(obj, prop, {
-                    get() {
-                        return _value
-                    },
-                    set(newValue) {
-                        _value = newValue
-
-                        if (newValue && typeof newValue === 'object') {
-                            // Beispiel: data.person.address = { city: 'Köln' } ->
-                            // danach data.person.address.city = 'Bonn' soll triggern. (multilevel reactivity)
-                            // wenn verschachteltes Objekt gesetzt wird, dann muss es auch reaktiv gemacht werden.
-
-                            //TODO: überprüfen
-                            makeReactive(newValue, nextFullKey)
-                        }
-                        
-                        try {
-                            Notifier.notifyKeyChange(topData, nextFullKey, dependencies)
-                        } catch (error) {
-                            throw new Error(`[TemplateEngine] Error during refresh of "${nextFullKey}"`, { cause: error })
-                        }
-
-                        ModelSynchronization.updateModelItemByViewModelItem(viewModelItemConfig, [currentObjectSegments])
-                    },
-                    enumerable: descriptor.enumerable,
-                    configurable: true
-                })
-            }
-
-            function defineReactiveAccessorProperty(obj, prop, descriptor, nextFullKey) {
-                Object.defineProperty(obj, prop, {
-                    get() {
-                        const value = descriptor.get ? descriptor.get.call(this) : undefined
-                        
-                        if (value && typeof value === 'object') {
-                            // Beispiel:
-                            // get selectedPerson() { return this.persons[this.currentIndex] }
-                            // -> selectedPerson.name bleibt reaktiv.
-
-                            // falls value ein __source__ und __reverseTransform__ (wird von mappedArray angehangen) hat,
-                            // dann makeReactive mit diesem source und reverseTransform aufrufen
-                            // beautifiedPersons ist ein Array -> führt zu makeArrayItemsReactive
-
-                            makeReactive(value, nextFullKey,
-                                Array.isArray(value) ? ModelSynchronization.createViewModelArrayConfig(value) : undefined)
-                        }
-
-                        return value
-                    },
-                    set(newValue) {
-                        if (!descriptor.set) {
-                            return
-                        }
-
-                        descriptor.set.call(this, newValue)
-                        const currentValue = descriptor.get ? descriptor.get.call(this) : newValue
-                        
-                        if (currentValue && typeof currentValue === 'object') {
-                            // Beispiel:
-                            // set selectedPerson(v) { this.persons[this.currentIndex] = v }
-                            // data.selectedPerson = { name: 'Finn' } -> neuer Wert wird reaktiv.
-                            
-                            //TODO: überprüfen
-                            makeReactive(currentValue, nextFullKey)
-                        }
-
-                        try {
-                            Notifier.notifyKeyChange(topData, nextFullKey, dependencies)
-                        } catch (error) {
-                            throw new Error(`[TemplateEngine] Error during refresh of "${nextFullKey}"`, { cause: error })
-                        }
-                    },
-                    enumerable: descriptor.enumerable,
-                    configurable: true
-                })
-            }
-
-            function makeReactive(obj, fullKey = '', viewModelArrayConfig = undefined, viewModelItemConfig = undefined, objectSegments = undefined) {
-                if (!obj || typeof obj !== 'object') {
-                    return obj
-                }
-                // WICHTIG:
-                // __reactive__ ist nur ein Marker gegen doppeltes Patchen.
-                // Die echte Reaktivität entsteht erst in:
-                // - patchArrayMethods(...)
-                // - defineReactiveDataProperty(...)
-                // - defineReactiveAccessorProperty(...)
-                // Bereits gepatcht? Dann nicht nochmal reaktiv machen.
-                if (Object.prototype.hasOwnProperty.call(obj, '__reactive__') && obj.__reactive__ === true) {
-                    return obj
-                }
-
-                Object.defineProperty(obj, '__reactive__', {
-                    value: true,
-                    enumerable: false,
-                    writable: false,
-                    configurable: false
-                })
-
-                if (Array.isArray(obj)) {
-                    makeArrayItemsReactive(obj, fullKey, viewModelArrayConfig)
-                    patchArrayMethods(obj, fullKey, viewModelArrayConfig)
-
-                    return obj
-                }
-
-                // next-level descriptors with its properties
-                const descriptors = Object.getOwnPropertyDescriptors(obj)
-
-                for (const [prop, descriptor] of Object.entries(descriptors)) {
-                    if (prop === '__reactive__' || descriptor.configurable === false) {
-                        continue
+                },
+                onArrayItemsChange: (change) => {
+                    try {
+                        Notifier.notifyChange(topData, change.fullKey, change, dependencies)
+                    } catch (error) {
+                        throw new Error(`[TemplateEngine] Error during refresh of "${change.fullKey}" after "${change.action}"`, { cause: error })
+                    }
+                },
+                onDataPropertyGet: () => {},
+                onDataPropertySet: ({ fullKey, extraParams }) => {
+                    try {
+                        Notifier.notifyKeyChange(topData, fullKey, dependencies)
+                    } catch (error) {
+                        throw new Error(`[TemplateEngine] Error during refresh of "${fullKey}"`, { cause: error })
                     }
 
-                    const nextFullKey = fullKey ? `${fullKey}.${prop}` : String(prop)
-
-                    if ('value' in descriptor) {
-                        // prop e.g. name -> create setters/getters for name
-                        defineReactiveDataProperty(obj, prop, descriptor, nextFullKey, viewModelArrayConfig, viewModelItemConfig, objectSegments)
-                    } else {
-                        // objects with getters/setters and without value
-                        defineReactiveAccessorProperty(obj, prop, descriptor, nextFullKey)
+                    ModelSynchronization.updateModelItemByViewModelItem(
+                        extraParams.viewModelItemConfig,
+                        [extraParams.objectSegments]
+                    )
+                },
+                onAccessorPropertyGet: () => {},
+                onAccessorPropertySet: ({ fullKey }) => {
+                    try {
+                        Notifier.notifyKeyChange(topData, fullKey, dependencies)
+                    } catch (error) {
+                        throw new Error(`[TemplateEngine] Error during refresh of "${fullKey}"`, { cause: error })
                     }
                 }
+            }
 
-                return obj
+            function makeReactive(obj, fullKey = '', extraParams = {}) {
+                return ReactivityFrame.makeReactive(obj, fullKey, {
+                    ...frameParams,
+                    ...extraParams
+                })
             }
 
             // run() first: lets the template engine assign UUIDs to array items.

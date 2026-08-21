@@ -1,0 +1,75 @@
+import { describe, test } from 'node:test'
+import assert from 'node:assert/strict'
+import ReactivityFrame from '../../../src/components/reactivity-helpers/reactivity-frame.js'
+
+describe('ReactivityFrame', () => {
+    test('recursively instruments data properties and exposes get/set hooks', () => {
+        const events = []
+        const data = { person: { name: 'Alice' } }
+
+        ReactivityFrame.makeReactive(data, '', {
+            marker: '__frameReactive__',
+            onDataPropertyGet: (event) => events.push(['get', event.fullKey]),
+            onDataPropertySet: (event) => events.push(['set', event.fullKey, event.oldValue, event.newValue])
+        })
+
+        data.person.name
+        data.person.name = 'Bob'
+
+        assert.equal(data.person.__frameReactive__, true)
+        events.pop()
+        assert.deepEqual(events, [
+            ['get', 'person'],
+            ['get', 'person.name'],
+            ['get', 'person'],
+            ['set', 'person.name', 'Alice', 'Bob']
+        ])
+    })
+
+    test('instruments accessor properties when their value is read or set', () => {
+        let selected = { name: 'Alice' }
+        const events = []
+        const data = {
+            get selected() {
+                return selected
+            },
+            set selected(value) {
+                selected = value
+            }
+        }
+
+        ReactivityFrame.makeReactive(data, '', {
+            onAccessorPropertyGet: (event) => events.push(['get', event.fullKey, event.value.name]),
+            onAccessorPropertySet: (event) => events.push(['set', event.fullKey, event.oldValue.name, event.newValue.name])
+        })
+
+        data.selected
+        data.selected = { name: 'Bob' }
+
+        assert.deepEqual(events, [
+            ['get', 'selected', 'Alice'],
+            ['set', 'selected', 'Alice', 'Bob']
+        ])
+    })
+
+    test('passes prepared array changes and recursively handles inserted items', () => {
+        const events = []
+        const data = { items: [{ id: 'a', name: 'Alice' }] }
+
+        ReactivityFrame.makeReactive(data, '', {
+            marker: '__frameReactive__',
+            getArrayItemKey: (item) => item.id,
+            onArrayChange: (change) => events.push(['change', change]),
+            onArrayItemsChange: (change) => events.push(['complete', change.action])
+        })
+
+        data.items.push({ id: 'b', name: 'Bob' })
+        data.items[1].name = 'Bobby'
+
+        assert.equal(data.items[1].__frameReactive__, true)
+        assert.equal(events[0][0], 'change')
+        assert.equal(events[0][1].fullKey, 'items')
+        assert.equal(events[0][1].action, 'push')
+        assert.deepEqual(events[1], ['complete', 'push'])
+    })
+})
