@@ -11,6 +11,7 @@ const ModelViewModelExpander = (function () {
         }
     ) {
         const { modelChildrenKey, viewModelChildrenKey } = options
+        
         const modelArray = modelItem ? modelItem[modelChildrenKey] : rootModelArray
         const viewModelArray = viewModelItem ? viewModelItem[viewModelChildrenKey] : rootViewModelArray
 

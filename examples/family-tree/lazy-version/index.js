@@ -36,10 +36,7 @@ const viewModel = TemplateEngine.reactive({
             ), /*{ data: [], state: { newPerson: { name: 'Neuer Name ...' } } },*/
             expanded: false,
             childrenLoaded: false,
-            expand: ModelViewModelExpander.createExpandHandler((viewModelParent) => viewModel.loadServerData(viewModelParent, personModelItem)),
-            cacheName: (_, viewItem) => {
-                console.log(viewItem.id, viewItem.name) // TODO: cache id, name for later use in saveToDatabase
-            }
+            expand: ModelViewModelExpander.createExpandHandler((viewModelParent) => viewModel.loadServerData(viewModelParent, personModelItem))
         }
     },
 

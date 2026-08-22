@@ -34,19 +34,31 @@ const TemplateEngine = (function () {
                     const viewModelArrayConfig = extraParams.viewModelArrayConfig
                     return {
                         viewModelArrayConfig,
+                        objectSegments: viewModelArrayConfig
+                            ? undefined
+                            : extraParams.objectSegments,
                         viewModelItemConfig: viewModelArrayConfig
                             ? ModelSynchronization.createViewModelItemConfig(viewModelArrayConfig, index)
                             : undefined
                     }
                 },
-                getNestedExtraParams: (value, fullKey, extraParams) => ({
-                    viewModelArrayConfig: Array.isArray(value)
-                        ? ModelSynchronization.createViewModelArrayConfig(value)
-                        : extraParams.viewModelArrayConfig,
-                    viewModelItemConfig: Array.isArray(value)
-                        ? undefined
-                        : extraParams.viewModelItemConfig
-                }),
+                getNestedExtraParams: (value, fullKey, extraParams) => {
+                    const isArray = Array.isArray(value)
+                    const isViewModelArrayContainer = !isArray
+                        && Array.isArray(value?.data)
+                        && ModelSynchronization.createViewModelArrayConfig(value.data) !== undefined
+
+                    return {
+                        viewModelArrayConfig: isArray
+                            ? ModelSynchronization.createViewModelArrayConfig(value)
+                            : isViewModelArrayContainer
+                                ? undefined
+                                : extraParams.viewModelArrayConfig,
+                        viewModelItemConfig: isArray || isViewModelArrayContainer
+                            ? undefined
+                            : extraParams.viewModelItemConfig
+                    }
+                },
                 onArrayChange: (change, array, extraParams) => {
                     const viewModelArrayConfig = extraParams.viewModelArrayConfig
                     ModelSynchronization.updateModelArrayByViewModelArrayOperation(

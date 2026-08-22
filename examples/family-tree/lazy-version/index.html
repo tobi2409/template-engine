@@ -15,7 +15,7 @@
                 <each of="*list.data" as="p">
                     <li>
                         <button action-click="p.expand">Expand</button>
-                        <input type="text" bind-input-value="p.name" action-change="p.cacheName" />
+                        <input type="text" bind-input-value="p.name" />
                         <input type="text" bind-input-value="p.wage" />
                         <input type="number" bind-input-value="p.age" />
                         <input type="text" bind-input-value="p.address.street" />
@@ -30,9 +30,8 @@
                 </each>
 
                 <li>
-                    <get>*list.state.newPerson.name</get>
-                    <!--<input type="text" bind-input-value="newPerson.name" placeholder="Name" />
-                    <button action-click="addNewPerson">Add Person</button>-->
+                    <input type="text" bind-input-value="*list.state.newPerson.name" placeholder="Name" />
+                    <!--<button action-click="addNewPerson">Add Person</button>-->
                 </li>
             </ul>
         </template>

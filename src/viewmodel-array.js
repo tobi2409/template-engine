@@ -35,7 +35,7 @@ const ViewModelArray = (function () {
         let viewModelArray = mappedViewModelArrayCache.get(modelArray)
 
         if (!viewModelArray) {
-            viewModelArray = modelArray.map((item, index) => {
+            const data = modelArray.map((item, index) => {
                 let result = mappedViewModelItemCache.get(item)
 
                 if (!result) {
@@ -46,18 +46,19 @@ const ViewModelArray = (function () {
                 return result
             })
             
-            viewModelArray.__modelArray__ = modelArray
-            viewModelArray.__reverseTransform__ = reverseTransform
-            viewModelArray.__propertyMapping__ = propertyMapping
+            data.__modelArray__ = modelArray
+            data.__reverseTransform__ = reverseTransform
+            data.__propertyMapping__ = propertyMapping
 
             /*if (recursive) {
-                viewModelArray.__recursive__ = true
+                data.__recursive__ = true
             }*/
 
+            viewModelArray = { data, state }
             mappedViewModelArrayCache.set(modelArray, viewModelArray)
         }
 
-        return { data: viewModelArray, state }
+        return viewModelArray
     }
 
     return { get }

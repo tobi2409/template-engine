@@ -200,7 +200,10 @@ const ReactivityFrame = (function () {
                     fullKey,
                     oldValue,
                     newValue,
-                    extraParams
+                    extraParams: {
+                        ...extraParams,
+                        objectSegments: currentObjectSegments
+                    }
                 })
             },
             enumerable: descriptor.enumerable,
