@@ -31,6 +31,11 @@ const TemplateEngine = (function () {
                 marker: '__reactive__',
                 getArrayItemKey: (item) => UuidItemMap.ensureUuidForItem(item),
                 getArrayItemExtraParams: (item, index, extraParams) => {
+                    // Wird beim initialen Instrumentieren von Arrayelementen sowie für neu
+                    // eingefügte Objekte bei push, unshift und splice aufgerufen.
+                    // Dadurch wird objectSegments nur am Übergang Array -> Arrayelement zurückgesetzt.
+                    // viewModelItemConfig für das aktuelle Index, sofern viewModelArrayConfig existiert
+
                     const viewModelArrayConfig = extraParams.viewModelArrayConfig
                     return {
                         viewModelArrayConfig,
@@ -43,6 +48,11 @@ const TemplateEngine = (function () {
                     }
                 },
                 getNestedExtraParams: (value, fullKey, extraParams) => {
+                    // getNestedExtraParams wird für jedes Objekt aufgerufen, das als Wert einer Property gesetzt/gegettet wird.
+                    // handelt es sich beim Value um ein Array, wird eine viewModelArrayConfig erstellt
+                    // ein viewModelArrayContainer bekommt keine viewModelArrayConfig
+                    // ein normales Objekt bekommt die viewModelArrayConfig und viewModelItemConfig des übergeordneten Arrays
+
                     const isArray = Array.isArray(value)
                     const isViewModelArrayContainer = !isArray
                         && Array.isArray(value?.data)

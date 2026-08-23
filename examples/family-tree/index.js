@@ -1,3 +1,5 @@
+// TODO: Beispiel an neue API anpassen
+
 import TemplateEngine from '../../src/template-engine.js'
 import ViewModelArray from '../../src/viewmodel-array.js'
 import { fakeServerData } from './fake-server-data.js'

@@ -1,12 +1,13 @@
 import TemplateEngine from '../../../src/template-engine.js'
 import ViewModelArray from '../../../src/viewmodel-array.js'
 import ModelViewModelExpander from '../../../src/model-viewmodel-expander.js'
+import ModelJournal from '../../../src/model-journal.js'
 import { getPersons } from './fake-server-data.js'
 
-const model = {
+const model = ModelJournal.reactive({
     user: 'Joe Doe',
     persons: []
-}
+})
 
 const viewModel = TemplateEngine.reactive({
     get user() {
@@ -27,13 +28,7 @@ const viewModel = TemplateEngine.reactive({
                 street: personModelItem.address?.street || '',
                 city: personModelItem.address?.city || ''
             },
-            children: ViewModelArray.get(
-                personModelItem.children,
-                (childModelItem) => this.transform(childModelItem),
-                (childViewModelItem) => this.reverseTransform(childViewModelItem),
-                { age: 'birthyear' },
-                { newPerson: { name: 'Neuer Name ...' } }
-            ), /*{ data: [], state: { newPerson: { name: 'Neuer Name ...' } } },*/
+            children: this.getViewModelArray(personModelItem.children),
             expanded: false,
             childrenLoaded: false,
             expand: ModelViewModelExpander.createExpandHandler((viewModelParent) => viewModel.loadServerData(viewModelParent, personModelItem))
@@ -54,15 +49,36 @@ const viewModel = TemplateEngine.reactive({
         }
     },
 
+    // TODO: markRecursive
+    getViewModelArray(modelArray) {
+        return ViewModelArray.get(
+            modelArray,
+            (personModelItem) => this.transform(personModelItem),
+            (personViewModelItem) => this.reverseTransform(personViewModelItem),
+            { age: 'birthyear' },
+            { get length() { console.log(modelArray); return modelArray[0] },
+              newPerson: { name: '' },
+              addNewPerson: (_, context) => {
+                context.children.data.push({
+                    id: `new-${Math.random().toString(36).substring(2, 9)}`,
+                    name: context.children.state.newPerson.name,
+                    wage: '10 USD',
+                    age: 30,
+                    address: { street: '', city: '' },
+                    children: [],
+                    expanded: false,
+                    expand: () => {}
+                })
+
+                context.children.state.newPerson.name = ''
+             }
+            }
+        )
+    },
+
     get persons() {
         // Singleton is provided by mappedViewModelArrayCache
-        return ViewModelArray.get(
-            model.persons,
-            (personModelItem) => (this.transform(personModelItem)),
-            (personViewModelItem) => (this.reverseTransform(personViewModelItem)),
-            { age: 'birthyear' },
-            { newPerson: { name: 'Neuer Name ...' } }
-        )
+        return this.getViewModelArray(model.persons)
     },
 
     loadServerData(viewModelParent = undefined, modelParent = undefined) {

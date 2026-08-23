@@ -11,6 +11,8 @@
         <div id="app"></div>
         
         <template id="ul-structured-data">
+            <!--<p><get>*list.state.length</get> Einträge</p>-->
+
             <ul>
                 <each of="*list.data" as="p">
                     <li>
@@ -30,8 +32,8 @@
                 </each>
 
                 <li>
-                    <input type="text" bind-input-value="*list.state.newPerson.name" placeholder="Name" />
-                    <!--<button action-click="addNewPerson">Add Person</button>-->
+                    <input type="text" bind-input-value="*list.state.newPerson.name" placeholder="Neuer Name ..." />
+                    <button action-click="*list.state.addNewPerson">+ Add</button>
                 </li>
             </ul>
         </template>

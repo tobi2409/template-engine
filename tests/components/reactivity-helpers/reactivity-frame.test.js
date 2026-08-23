@@ -67,6 +67,8 @@ describe('ReactivityFrame', () => {
         data.items[1].name = 'Bobby'
 
         assert.equal(data.items[1].__frameReactive__, true)
+
+        assert.equal(events.length, 2)
         assert.equal(events[0][0], 'change')
         assert.equal(events[0][1].fullKey, 'items')
         assert.equal(events[0][1].action, 'push')
