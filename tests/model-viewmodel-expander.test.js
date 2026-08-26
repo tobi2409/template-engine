@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import ModelViewModelExpander from '../src/model-viewmodel-expander.js'
+import JournalControl from '../src/components/reactivity-helpers/journal-control.js'
 
 test('getExpandTargets returns root arrays when no parent item exists', () => {
     const rootModelArray = [{ id: 1, children: [] }]
@@ -34,7 +35,10 @@ test('expandNextData replaces model and view model arrays', () => {
         nextData,
         viewModelArray,
         modelArray,
-        (item) => ({ id: item.id, name: item.name.toUpperCase() })
+        (item) => {
+            assert.equal(JournalControl.isJournalingDisabled(), true)
+            return { id: item.id, name: item.name.toUpperCase() }
+        }
     )
 
     assert.deepEqual(modelArray, nextData)
@@ -43,6 +47,7 @@ test('expandNextData replaces model and view model arrays', () => {
         { id: 3, name: 'GAMMA' }
     ])
     assert.equal(result, viewModelArray)
+    assert.equal(JournalControl.isJournalingDisabled(), false)
 })
 
 test('createExpandHandler loads children once and toggles expansion', () => {

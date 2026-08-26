@@ -39,4 +39,52 @@ describe('ModelJournal.reactive', () => {
             }
         ])
     })
+
+    test('suppresses journal entries inside withoutJournaling', () => {
+        const entries = []
+        const originalConsoleLog = console.log
+        console.log = (entry) => entries.push(entry)
+
+        try {
+            const data = ModelJournal.reactive({ persons: [] })
+
+            const result = ModelJournal.withoutJournaling(() => {
+                assert.equal(ModelJournal.isJournalingDisabled(), true)
+                data.persons.push({ id: 'a', name: 'Alice' })
+                data.persons[0].name = 'Alicia'
+                return data.persons
+            })
+
+            assert.strictEqual(result, data.persons)
+            assert.equal(ModelJournal.isJournalingDisabled(), false)
+            data.persons[0].name = 'Ally'
+        } finally {
+            console.log = originalConsoleLog
+        }
+
+        assert.deepEqual(entries, [{
+            fullKey: 'persons.a.name',
+            change: { operation: 'set', value: 'Ally' }
+        }])
+    })
+
+    test('journals changes to items inserted into nested arrays', () => {
+        const entries = []
+        const originalConsoleLog = console.log
+        console.log = (entry) => entries.push(entry)
+
+        try {
+            const data = ModelJournal.reactive({ persons: [] })
+            data.persons.push({ id: 'a', children: [] })
+            data.persons[0].children.push({ id: 'b', name: 'Bob', children: [] })
+            data.persons[0].children[0].name = 'Bobby'
+        } finally {
+            console.log = originalConsoleLog
+        }
+
+        assert.deepEqual(entries.at(-1), {
+            fullKey: 'persons.a.children.b.name',
+            change: { operation: 'set', value: 'Bobby' }
+        })
+    })
 })

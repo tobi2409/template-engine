@@ -1,3 +1,5 @@
+import JournalControl from './components/reactivity-helpers/journal-control.js'
+
 const ModelViewModelExpander = (function () {
 
     function getExpandTargets(
@@ -28,15 +30,17 @@ const ModelViewModelExpander = (function () {
         modelArray,
         transformItem = (item) => item
     ) {
-        modelArray.splice(0, modelArray.length, ...nextData)
+        return JournalControl.withoutJournaling(() => {
+            modelArray.splice(0, modelArray.length, ...nextData)
 
-        viewModelArrayData.splice(
-            0,
-            viewModelArrayData.length,
-            ...modelArray.map((item) => transformItem(item))
-        )
+            viewModelArrayData.splice(
+                0,
+                viewModelArrayData.length,
+                ...modelArray.map((item) => transformItem(item))
+            )
 
-        return viewModelArrayData
+            return viewModelArrayData
+        })
     }
 
     function createExpandHandler(loadServerData, options = {}) {
