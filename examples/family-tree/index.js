@@ -61,6 +61,8 @@ const viewModel = TemplateEngine.reactive({
               newPerson: { name: '' },
               addNewPerson: (_, context) => {
                 TemplateEngine.withoutModelSynchronization(() => {
+                    // preparedViewItem ist nur nötig, wenn sich im View-Item komplexere State-Strukturen befinden
+                    // ansonsten kann auch direkt das View-Item erstellt werden
                     const preparedPersonViewItem = {
                         id: `new-${Math.random().toString(36).substring(2, 9)}`,
                         name: context.children.state.newPerson.name,

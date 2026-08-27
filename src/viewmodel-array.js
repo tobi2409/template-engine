@@ -64,6 +64,10 @@ const ViewModelArray = (function () {
         return viewModelArray
     }
 
+    // preparedViewModelItem muss nicht alle Eigenschaften enthalten, die normalerweise im ViewModelItem vorhanden sind
+    // (besonders bei komplexeren State-Strukturen ist dies nicht nötig)
+    // -> dazu wird das preparedViewModelItem zuerst in ein ModelItem übertragen
+    // -> daraus wird das viewModelItem erzeugt, welches jegliche Strukturen enthält
     function prepareItem(viewModelArrayData, preparedViewModelItem) {
         if (!Array.isArray(viewModelArrayData) || typeof viewModelArrayData.__transform__ !== 'function' || typeof viewModelArrayData.__reverseTransform__ !== 'function') {
             throw new TypeError('prepareItem expected a ViewModelArrayData')
