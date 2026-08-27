@@ -55,6 +55,26 @@ const viewModel = TemplateEngine.reactive({
         }
     },
 
+
+
+ evaluateReverseTransformedValue(value) {
+        if (typeof value === 'function') {
+            return this.evaluateReverseTransformedValue(value())
+        }
+
+        if (Array.isArray(value)) {
+            return value.map(this.evaluateReverseTransformedValue)
+        }
+
+        if (value && typeof value === 'object') {
+            return Object.fromEntries(Object.entries(value).map(([key, nestedValue]) =>
+                [key, this.evaluateReverseTransformedValue(nestedValue)]))
+        }
+
+        return value
+    },
+
+
     // TODO: markRecursive
     getViewModelArray(modelArray) {
         return ViewModelArray.get(
@@ -67,19 +87,46 @@ const viewModel = TemplateEngine.reactive({
               addNewPerson: (_, context) => {
                 TemplateEngine.withoutModelSynchronization(() => {
 
-                    const newPersonModelItem = {
+                    let newPersonViewItem = {
                         id: `new-${Math.random().toString(36).substring(2, 9)}`,
                         name: context.children.state.newPerson.name,
-                        wage: this.reverseTransform({ wage: '10 USD' }).wage(),
-                        birthyear: this.reverseTransform({ age: 30 }).birthyear(),
+                        wage: '10 USD',
+                        age: 30,
                         address: { street: '', city: '' },
                         children: []
+                    }
+
+                    let newPersonModelItem = this.reverseTransform(newPersonViewItem)
+                    newPersonModelItem = Object.fromEntries(Object.entries(newPersonModelItem).map(([k, v]) => [k, this.evaluateReverseTransformedValue(v)]))
+
+                    modelArray.push(newPersonModelItem)
+
+                    newPersonViewItem.children = this.getViewModelArray(newPersonModelItem.children)
+
+                    newPersonViewItem = {
+                        ...newPersonViewItem,
+                        ...this.completePersonViewModelItem(newPersonModelItem)
+                    }
+                    
+                    //newPersonViewItem.children = this.getViewModelArray(newPersonModelItem.children)
+
+                    console.log(newPersonViewItem)
+
+                    context.children.data.push(newPersonViewItem)
+
+                    /*const newPersonModelItem = {
+                        id: this.reverseTransform({ id: `new-${Math.random().toString(36).substring(2, 9)}` }).id(),
+                        name: this.reverseTransform({ name: context.children.state.newPerson.name }).name(),
+                        wage: this.reverseTransform({ wage: '10 USD' }).wage(),
+                        birthyear: this.reverseTransform({ age: 30 }).birthyear(),
+                        address: this.reverseTransform({ address: { street: '', city: '' } }).address(),
+                        children: this.reverseTransform({ children: [] }).children()
                     }
 
                     modelArray.push(newPersonModelItem)
 
                     const newPersonViewModelItem = this.transform(newPersonModelItem)
-                    context.children.data.push(newPersonViewModelItem)
+                    context.children.data.push(newPersonViewModelItem)*/
 
                 })
 
