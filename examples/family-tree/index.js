@@ -1,29 +1,14 @@
-// TODO: Beispiel an neue API anpassen
-
 import TemplateEngine from '../../src/template-engine.js'
 import ViewModelArray from '../../src/viewmodel-array.js'
-import { fakeServerData } from './fake-server-data.js'
-import { runDemoUpdates } from './demo-updates.js'
+import ModelViewModelExpander from '../../src/model-viewmodel-expander.js'
+import ModelJournal from '../../src/model-journal.js'
+import { getPersons } from './fake-server-data.js'
 
-const model = {
+// durch Journal kann man die Änderungen im Model nachvollziehen und speichern
+const model = ModelJournal.reactive({
     user: 'Joe Doe',
     persons: []
-}
-
-// in real world, this would be a SELECT query to the server, returning a person with children
-function clonePersonDeep(person) {
-    return {
-        id: person.id,
-        name: person.name,
-        wage: person.wage,
-        birthyear: person.birthyear,
-        address: {
-            street: person.address?.street || '',
-            city: person.address?.city || ''
-        },
-        children: (person.children || []).map(clonePersonDeep)
-    }
-}
+})
 
 const viewModel = TemplateEngine.reactive({
     get user() {
@@ -44,7 +29,10 @@ const viewModel = TemplateEngine.reactive({
                 street: personModelItem.address?.street || '',
                 city: personModelItem.address?.city || ''
             },
-            children: ViewModelArray.markRecursive(personModelItem.children.map(child => this.transform(child)))
+            children: this.getViewModelArray(personModelItem.children),
+            expanded: false,
+            childrenLoaded: false,
+            expand: ModelViewModelExpander.createExpandHandler((viewModelParent) => viewModel.loadServerData(viewModelParent, personModelItem))
         }
     },
 
@@ -52,7 +40,7 @@ const viewModel = TemplateEngine.reactive({
         return {
             id: () => personViewModelItem.id,
             name: () => personViewModelItem.name,
-            wage: () => personViewModelItem.wage.slice(0, -4),
+            wage: () => personViewModelItem.wage.slice(0, -4), // TODO: Input validation, Convert to number
             birthyear: () => new Date().getFullYear() - personViewModelItem.age,
             address: () => ({
                 street: () => personViewModelItem.address?.street,
@@ -62,18 +50,64 @@ const viewModel = TemplateEngine.reactive({
         }
     },
 
-    get persons() {
-        // Singleton is provided by mappedViewModelArrayCache
+    // TODO: markRecursive
+    getViewModelArray(modelArray) {
         return ViewModelArray.get(
-            model.persons,
-            (personModelItem) => (this.transform(personModelItem)),
-            (personViewModelItem, prop, modelItem) => (this.reverseTransform(personViewModelItem, prop, modelItem)),
-            { age: 'birthyear' }
+            modelArray,
+            (personModelItem) => this.transform(personModelItem),
+            (personViewModelItem) => this.reverseTransform(personViewModelItem),
+            { age: 'birthyear' },
+            { get length() { console.log(modelArray); return modelArray[0] },
+              newPerson: { name: '' },
+              addNewPerson: (_, context) => {
+                TemplateEngine.withoutModelSynchronization(() => {
+                    const preparedPersonViewItem = {
+                        id: `new-${Math.random().toString(36).substring(2, 9)}`,
+                        name: context.children.state.newPerson.name,
+                        wage: '10 USD',
+                        age: 30,
+                        address: { street: '', city: '' },
+                        children: []
+                    }
+
+                    const { modelItem, viewModelItem } = ViewModelArray.prepareItem(
+                        context.children.data,
+                        preparedPersonViewItem
+                    )
+
+                    modelArray.push(modelItem)
+                    context.children.data.push(viewModelItem)
+                })
+
+                context.children.state.newPerson.name = ''
+              }
+            }
         )
     },
 
-    demoUpdates() { 
-        runDemoUpdates(viewModel, model)
+    get persons() {
+        // Singleton is provided by mappedViewModelArrayCache
+        return this.getViewModelArray(model.persons)
+    },
+
+    loadServerData(viewModelParent = undefined, modelParent = undefined) {
+        TemplateEngine.withoutModelSynchronization(() => {
+            const nextPersons = getPersons(viewModelParent?.id)
+
+            const { viewModelArray, modelArray } = ModelViewModelExpander.getExpandTargets(
+                viewModelParent,
+                modelParent,
+                viewModel.persons,
+                model.persons
+            )
+
+            ModelViewModelExpander.expandNextData(
+                nextPersons,
+                viewModelArray?.data,
+                modelArray,
+                (personModelItem) => this.transform(personModelItem)
+            )
+        })
     },
 
     logModels() {
@@ -82,12 +116,4 @@ const viewModel = TemplateEngine.reactive({
     }
 }, document.getElementById('app-template-use'))
 
-TemplateEngine.withoutModelSynchronization(() => {
-    model.persons.splice(0, model.persons.length, ...fakeServerData.map(clonePersonDeep))
-
-    viewModel.persons.splice(
-        0,
-        viewModel.persons.length,
-        ...model.persons.map((person) => viewModel.transform(person))
-    )
-})
+viewModel.loadServerData()

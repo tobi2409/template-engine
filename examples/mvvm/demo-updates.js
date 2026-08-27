@@ -23,9 +23,9 @@ function assertValue(actualValue, expectedValue, step) {
 export function runDemoUpdates(viewModel, model) {
     viewModel.firstName = 'Emily'
     viewModel.wage = 200
-    viewModel.beautifiedPersonData.push({ id: 3, name: 'Sample', age: 40, showEdit: false })
-    viewModel.beautifiedPersonData[0].name = 'Test Updated'
-    viewModel.beautifiedPersonData.splice(1, 1)
+    viewModel.beautifiedPersonData.data.push({ id: 3, name: 'Sample', age: 40, showEdit: false })
+    viewModel.beautifiedPersonData.data[0].name = 'Test Updated'
+    viewModel.beautifiedPersonData.data.splice(1, 1)
 
     assertSelectorContains('#first-name-row', 'Emily', 'update firstName')
     assertSelectorNotContains('#wage-block', 'earns $200', 'hide wage block')

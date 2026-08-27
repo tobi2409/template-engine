@@ -6,6 +6,8 @@
 // which is required so context references/index tracking stay consistent
 // after array operations like splice/reindex.
 
+import ReverseTransformEvaluator from './components/utils/reverse-transform-evaluator.js'
+
 const mappedViewModelArrayCache = new WeakMap()
 const mappedViewModelItemCache = new WeakMap()
 
@@ -47,6 +49,7 @@ const ViewModelArray = (function () {
             })
             
             data.__modelArray__ = modelArray
+            data.__transform__ = transform
             data.__reverseTransform__ = reverseTransform
             data.__propertyMapping__ = propertyMapping
 
@@ -61,7 +64,22 @@ const ViewModelArray = (function () {
         return viewModelArray
     }
 
-    return { get }
+    function prepareItem(viewModelArrayData, preparedViewModelItem) {
+        if (!Array.isArray(viewModelArrayData) || typeof viewModelArrayData.__transform__ !== 'function' || typeof viewModelArrayData.__reverseTransform__ !== 'function') {
+            throw new TypeError('prepareItem expected a ViewModelArrayData')
+        }
+
+        const modelItem = ReverseTransformEvaluator.evaluate(viewModelArrayData.__reverseTransform__(preparedViewModelItem))
+        const viewModelItem = viewModelArrayData.__transform__(modelItem)
+
+        if (modelItem && typeof modelItem === 'object' && viewModelItem && typeof viewModelItem === 'object') {
+            mappedViewModelItemCache.set(modelItem, viewModelItem)
+        }
+
+        return { modelItem, viewModelItem }
+    }
+
+    return { get, prepareItem }
 })()
 
 export default ViewModelArray

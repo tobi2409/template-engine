@@ -13,6 +13,8 @@ const ModelViewModelExpander = (function () {
         }
     ) {
         const { modelChildrenKey, viewModelChildrenKey } = options
+
+        //TODO: Error Handling
         
         const modelArray = modelItem ? modelItem[modelChildrenKey] : rootModelArray
         const viewModelArray = viewModelItem ? viewModelItem[viewModelChildrenKey] : rootViewModelArray
@@ -30,6 +32,8 @@ const ModelViewModelExpander = (function () {
         modelArray,
         transformItem = (item) => item
     ) {
+        //TODO: Error Handling
+
         return JournalControl.withoutJournaling(() => {
             modelArray.splice(0, modelArray.length, ...nextData)
 

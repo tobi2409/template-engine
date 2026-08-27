@@ -39,7 +39,7 @@
         <button action-click="logModels">📝 Log Models</button>
 
         <ul id="person-list">
-            <each of="beautifiedPersonData" as="personInfo">
+            <each of="beautifiedPersonData.data" as="personInfo">
                 <li attr-item-index="personInfo.id">
                     <get>personInfo.name</get> (<get>personInfo.age</get> years old)
 

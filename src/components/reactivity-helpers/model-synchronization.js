@@ -1,4 +1,5 @@
 import KeyResolver from "../utils/key-resolver.js"
+import ReverseTransformEvaluator from "../utils/reverse-transform-evaluator.js"
 
 const ModelSynchronization = (function () {
 
@@ -70,23 +71,6 @@ const ModelSynchronization = (function () {
         }
     }
 
-    function evaluateReverseTransformedValue(value) {
-        if (typeof value === 'function') {
-            return evaluateReverseTransformedValue(value())
-        }
-
-        if (Array.isArray(value)) {
-            return value.map(evaluateReverseTransformedValue)
-        }
-
-        if (value && typeof value === 'object') {
-            return Object.fromEntries(Object.entries(value).map(([key, nestedValue]) =>
-                [key, evaluateReverseTransformedValue(nestedValue)]))
-        }
-
-        return value
-    }
-
     // viewModelProps isn't used here because we don't have partially updated items in array operations
     function updateModelArrayByViewModelArrayOperation(viewModelArrayConfig, method, change) {
         if (isModelSynchronizationDisabled()) {
@@ -96,15 +80,15 @@ const ModelSynchronization = (function () {
         if (viewModelArrayConfig) {
             if (method === 'push') {
                 const insertedModelItems = change.items.map((item) =>
-                    evaluateReverseTransformedValue(viewModelArrayConfig.reverseTransform(item)))
+                    ReverseTransformEvaluator.evaluate(viewModelArrayConfig.reverseTransform(item)))
                 viewModelArrayConfig.modelArray.push(...insertedModelItems)
             } else if (method === 'unshift') {
                 const insertedModelItems = change.items.map((item) =>
-                    evaluateReverseTransformedValue(viewModelArrayConfig.reverseTransform(item)))
+                    ReverseTransformEvaluator.evaluate(viewModelArrayConfig.reverseTransform(item)))
                 viewModelArrayConfig.modelArray.unshift(...insertedModelItems)
             } else if (method === 'splice') {
                 const insertedModelItems = change.items.map((item) =>
-                    evaluateReverseTransformedValue(viewModelArrayConfig.reverseTransform(item)))
+                    ReverseTransformEvaluator.evaluate(viewModelArrayConfig.reverseTransform(item)))
                 viewModelArrayConfig.modelArray.splice(change.startIndex, change.deleteCount, ...insertedModelItems)
             } else if (method === 'pop') {
                 viewModelArrayConfig.modelArray.pop()

@@ -1,5 +1,3 @@
-// TODO: Beispiel an neue API anpassen
-
 import TemplateEngine from '../../src/template-engine.js'
 import ViewModelArray from '../../src/viewmodel-array.js'
 import { runDemoUpdates } from './demo-updates.js'
@@ -68,13 +66,13 @@ const viewModel = TemplateEngine.reactive({
 
     editPersonInfo: function(event) {
         const index = parseInt(event.target.parentElement.getAttribute('item-index'))
-        const person = viewModel.beautifiedPersonData.find(p => p.id === index)
+        const person = viewModel.beautifiedPersonData.data.find(p => p.id === index)
         person.showEdit = !person.showEdit
     },
 
     addPersonInfo: function() {
         const nextId = (model.rawPersonData.reduce((max, p) => Math.max(max, p.id), 0) || 0) + 1
-        viewModel.beautifiedPersonData.push({
+        viewModel.beautifiedPersonData.data.push({
             id: nextId,
             name: `Person ${nextId}`,
             age: 30,

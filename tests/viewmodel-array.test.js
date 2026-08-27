@@ -52,6 +52,39 @@ describe('ViewModelArray.get', () => {
         assert.strictEqual(arr.data.__reverseTransform__, reverseTransform)
     })
 
+    test('prepares model and view model items without inserting them', () => {
+        const source = []
+        const arr = ViewModelArray.get(
+            source,
+            (item) => ({
+                label: item.name.toUpperCase(),
+                children: ViewModelArray.get(item.children, (child) => ({ label: child.name }))
+            }),
+            (item) => ({
+                name: () => item.label.trim(),
+                children: () => item.children.map((child) => ({ name: () => child.label }))
+            })
+        )
+
+        const { modelItem, viewModelItem } = ViewModelArray.prepareItem(arr.data, {
+            label: ' Alice ',
+            children: [{ label: 'Bob' }]
+        })
+
+        assert.deepEqual(modelItem, { name: 'Alice', children: [{ name: 'Bob' }] })
+        assert.equal(viewModelItem.label, 'ALICE')
+        assert.equal(viewModelItem.children.data[0].label, 'Bob')
+        assert.deepEqual(source, [])
+        assert.equal(arr.data.length, 0)
+    })
+
+    test('rejects values that are not mapped view model arrays', () => {
+        assert.throws(
+            () => ViewModelArray.prepareItem([], {}),
+            /expected a ViewModelArray/
+        )
+    })
+
     test('throws for non-array modelArray', () => {
         assert.throws(
             () => ViewModelArray.get(null, () => ({})),
