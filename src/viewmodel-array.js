@@ -6,10 +6,9 @@
 // which is required so context references/index tracking stay consistent
 // after array operations like splice/reindex.
 
-import ReverseTransformEvaluator from './components/utils/reverse-transform-evaluator.js'
+import ViewModelItemPreparation from './components/viewmodel-helpers/viewmodel-item-preparation.js'
 
 const mappedViewModelArrayCache = new WeakMap()
-const mappedViewModelItemCache = new WeakMap()
 
 const ViewModelArray = (function () {
 
@@ -38,11 +37,11 @@ const ViewModelArray = (function () {
 
         if (!viewModelArray) {
             const data = modelArray.map((item, index) => {
-                let result = mappedViewModelItemCache.get(item)
+                let result = ViewModelItemPreparation.getViewModelItem(item)
 
                 if (!result) {
                     result = transform(item, index)
-                    mappedViewModelItemCache.set(item, result)
+                    ViewModelItemPreparation.cacheItems(item, result)
                 }
 
                 return result
@@ -69,18 +68,7 @@ const ViewModelArray = (function () {
     // -> dazu wird das preparedViewModelItem zuerst in ein ModelItem übertragen
     // -> daraus wird das viewModelItem erzeugt, welches jegliche Strukturen enthält
     function prepareItem(viewModelArrayData, preparedViewModelItem) {
-        if (!Array.isArray(viewModelArrayData) || typeof viewModelArrayData.__transform__ !== 'function' || typeof viewModelArrayData.__reverseTransform__ !== 'function') {
-            throw new TypeError('prepareItem expected a ViewModelArrayData')
-        }
-
-        const modelItem = ReverseTransformEvaluator.evaluate(viewModelArrayData.__reverseTransform__(preparedViewModelItem))
-        const viewModelItem = viewModelArrayData.__transform__(modelItem)
-
-        if (modelItem && typeof modelItem === 'object' && viewModelItem && typeof viewModelItem === 'object') {
-            mappedViewModelItemCache.set(modelItem, viewModelItem)
-        }
-
-        return { modelItem, viewModelItem }
+        return ViewModelItemPreparation.prepareItem(viewModelArrayData, preparedViewModelItem)
     }
 
     return { get, prepareItem }

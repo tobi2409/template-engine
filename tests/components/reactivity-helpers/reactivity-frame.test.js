@@ -74,4 +74,50 @@ describe('ReactivityFrame', () => {
         assert.equal(events[0][1].action, 'push')
         assert.deepEqual(events[1], ['complete', 'push'])
     })
+
+    test('replaces prepared items before array insertion and excludes the options object', () => {
+        const data = { items: [] }
+        let preparedChange
+
+        ReactivityFrame.makeReactive(data, '', {
+            marker: '__frameReactive__',
+            beforeArrayChange: (change) => {
+                preparedChange = change
+                if (change.extraArrayParams?.prepareItems) {
+                    change.items = change.items.map((item) => ({ ...item, prepared: true }))
+                }
+            }
+        })
+
+        const result = data.items.push(
+            { id: 'a' },
+            { extraArrayParams: { prepareItems: true } }
+        )
+
+        assert.equal(result, 1)
+        assert.equal(preparedChange.extraArrayParams.prepareItems, true)
+        assert.deepEqual(data.items, [{ id: 'a', prepared: true }])
+    })
+
+    test('supports prepared items for unshift and splice', () => {
+        const data = { items: [{ id: 'tail' }] }
+
+        ReactivityFrame.makeReactive(data, '', {
+            marker: '__frameReactive__',
+            beforeArrayChange: (change) => {
+                if (change.extraArrayParams?.prepareItems) {
+                    change.items = change.items.map((item) => ({ ...item, prepared: true }))
+                }
+            }
+        })
+
+        data.items.unshift({ id: 'head' }, { extraArrayParams: { prepareItems: true } })
+        const removed = data.items.splice(1, 1, { id: 'middle' }, { extraArrayParams: { prepareItems: true } })
+
+        assert.deepEqual(removed.map(({ id }) => id), ['tail'])
+        assert.deepEqual(data.items.map(({ id, prepared }) => ({ id, prepared })), [
+            { id: 'head', prepared: true },
+            { id: 'middle', prepared: true }
+        ])
+    })
 })

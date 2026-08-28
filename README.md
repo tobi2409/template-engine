@@ -10,12 +10,15 @@ A lightweight, vanilla JavaScript template engine with declarative HTML tags and
 - Efficient key-to-node tracking via internal node holders
 - Nested context support for scoped access inside loops
 - Array update support: `push`, `pop`, `shift`, `unshift`, `splice`
-- Optional view-model helper: `ViewModelArray.get(...)`
+- Mapped model/view-model arrays with local state and prepared item insertion
+- Optional model change journaling with `ModelJournal`
 
 ## Installation
 
 ```js
-import TemplateEngine from './template-engine.js'
+import TemplateEngine from '@tobi2409/template-engine'
+import ViewModelArray from '@tobi2409/template-engine/viewmodel-array'
+import ModelJournal from '@tobi2409/template-engine/model-journal'
 ```
 
 ## Examples (start here)
@@ -24,16 +27,16 @@ Browse the live demo files in the [GitHub repository](https://github.com/tobi240
 
 Featured demos:
 
-- [MVVM example](examples/mvvm.html)
-- [Recursive template example](examples/recursive-template.html)
+- [MVVM example](examples/mvvm/index.html)
+- [Recursive template example](examples/recursive-template/index.html)
 
 Interesting snippets from those demos:
 
 ### MVVM: computed fields + dependency chaining
 
 ```js
-import TemplateEngine from './template-engine.js'
-import ViewModelArray from './viewmodel-array.js'
+import TemplateEngine from '@tobi2409/template-engine'
+import ViewModelArray from '@tobi2409/template-engine/viewmodel-array'
 
 const viewModel = TemplateEngine.reactive({
   get fullName() {
@@ -282,12 +285,12 @@ Why this matters:
 
 ## ViewModelArray
 
-`ViewModelArray.get(modelArray, transform, reverseTransform?, propertyMapping?)`
+`ViewModelArray.get(modelArray, transform, reverseTransform?, propertyMapping?, state?)`
 maps model items to view-model items and keeps the mapped array associated with
-its source array.
+its source array. It returns a stable `{ data, state }` container.
 
 ```js
-import ViewModelArray from './viewmodel-array.js'
+import ViewModelArray from '@tobi2409/template-engine/viewmodel-array'
 
 const viewModelPersons = ViewModelArray.get(
   model.persons,
@@ -311,6 +314,30 @@ Arguments:
 - `transform`: required function that creates a view-model item.
 - `reverseTransform`: optional function used to synchronize view-model changes back to the model. Its returned properties should be functions, so only the properties affected by a partial update need to be evaluated. It defaults to the identity transformation.
 - `propertyMapping`: optional object mapping view-model property names to model property names, for example `{ age: 'birthyear' }`.
+- `state`: optional object for UI state and actions associated with this mapped array.
+
+The returned `data` array is used by `<each>`. The returned `state` object can
+hold controls that do not belong to model items:
+
+```js
+const persons = ViewModelArray.get(
+  model.persons,
+  transformPerson,
+  reverseTransformPerson,
+  { age: 'birthyear' },
+  {
+    newPerson: { name: '' },
+    expanded: true
+  }
+)
+
+persons.data.push({ id: 1, name: 'Alice', age: 30 })
+persons.state.newPerson.name = 'Bob'
+```
+
+Because `ViewModelArray.get` caches by `modelArray`, repeated calls return the
+same container. The `transform`, `reverseTransform`, `propertyMapping`, and
+`state` from the first call remain in use.
 
 `ViewModelArray.get` caches the mapped array for a source array and preserves
 mapped item identity. Array operations such as `push`, `pop`, `shift`,
@@ -319,11 +346,80 @@ back to the model when `reverseTransform` is provided. For partial property
 updates, the functions returned by `reverseTransform` prevent unrelated model
 properties from being recalculated.
 
+### Preparing incomplete view-model items
+
+`ViewModelArray.prepareItem(viewModelArrayData, preparedViewModelItem)` converts
+an incomplete view-model item to a model item and then applies the normal
+forward transform. It returns both objects without inserting them:
+
+```js
+const { modelItem, viewModelItem } = ViewModelArray.prepareItem(persons.data, {
+  name: 'Alice',
+  age: 30
+})
+```
+
+For insertion into a reactive mapped array, pass the preparation flag as the
+last array argument. The options object itself is not inserted:
+
+```js
+persons.data.push(
+  { name: 'Alice', age: 30 },
+  { extraArrayParams: { preparedViewModelItem: true } }
+)
+```
+
+The same options format works with `unshift` and `splice`. The engine prepares
+every inserted item before rendering and synchronizes the corresponding model
+items. Use this only for items that still need the mapped array's reverse and
+forward transforms; ordinary complete view-model items can be inserted without
+the flag.
+
+## ModelJournal
+
+`ModelJournal.reactive(data, identifierProperty?)` instruments a model and logs
+property and array changes to `console.log`. Array paths use `id` by default;
+pass another identifier property when required.
+
+```js
+import ModelJournal from '@tobi2409/template-engine/model-journal'
+
+const model = ModelJournal.reactive({
+  persons: [{ personId: 'p1', name: 'Alice' }]
+}, 'personId')
+
+model.persons[0].name = 'Alicia'
+// { fullKey: 'persons.p1.name', change: { operation: 'set', value: 'Alicia' } }
+```
+
+Use `ModelJournal.withoutJournaling(callback)` for changes that should not be
+logged. `ModelJournal.isJournalingDisabled()` reports whether such a scope is
+currently active.
+
+```js
+await ModelJournal.withoutJournaling(async () => {
+  model.persons.push({ personId: 'p2', name: 'Bob' })
+})
+```
+
+## Internal architecture
+
+Internal dependencies follow one direction:
+
+- `components/foundation`: import-free identity and value-processing primitives.
+- `components/utils`: general helpers that may depend on `foundation` only.
+- `components/reactivity-helpers` and `components/viewmodel-helpers`: domain logic built on lower layers.
+- rendering components and public APIs: orchestration over those helpers.
+
+Refresh orchestration belongs to `Notifier`; the pure `DependencyResolver` only
+calculates matching dependency keys. Lower layers therefore never import the
+rendering layer.
+
 ## Technical background: NodeHolders and UUID identity
 
 - **NodeHolders:** The engine tracks which DOM nodes depend on a particular "full key" using a segmented Map managed by the node-holders utility ([src/components/utils/node-holders.js](src/components/utils/node-holders.js)). Full keys (for example `users.3.name` or `item#.children.2.title`) are split into segments and stored in nested Maps; the leaf entries contain arrays of node-holders that reference that full key. When a property changes the engine builds the full key and looks up any matching holders to refresh — this enables targeted updates without scanning the entire DOM.
 
-- **UUID / item identity:** For arrays the engine keeps stable per-item identities using a WeakMap-backed id cache (see [src/components/utils/uuid-item-map.js](src/components/utils/uuid-item-map.js)). When rendering `<each>` the engine assigns each object a stable id so that moving, inserting, or deleting items preserves existing DOM nodes for unchanged items. That reduces DOM churn and keeps per-item state (inputs, event handlers) stable across array mutations.
+- **UUID / item identity:** For arrays the engine keeps stable per-item identities using a WeakMap-backed id cache (see [src/components/foundation/uuid-item-map.js](src/components/foundation/uuid-item-map.js)). When rendering `<each>` the engine assigns each object a stable id so that moving, inserting, or deleting items preserves existing DOM nodes for unchanged items. That reduces DOM churn and keeps per-item state (inputs, event handlers) stable across array mutations.
 
 - **Benefits:** targeted refreshes for changed keys, minimal DOM re-creation, efficient nested/context lookups, and stable per-item state during array operations.
 
@@ -332,7 +428,7 @@ properties from being recalculated.
 References:
 - Node holder implementation: [src/components/utils/node-holders.js](src/components/utils/node-holders.js)
 - Mapped array helper: [src/viewmodel-array.js](src/viewmodel-array.js)
-- Item identity helper: [src/components/utils/uuid-item-map.js](src/components/utils/uuid-item-map.js)
+- Item identity helper: [src/components/foundation/uuid-item-map.js](src/components/foundation/uuid-item-map.js)
 - Initial rendering and refresh dispatch: [src/components/render-engine.js](src/components/render-engine.js) and [src/components/refresh-delegator.js](src/components/refresh-delegator.js)
 
 ## Development

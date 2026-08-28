@@ -1,13 +1,16 @@
 {
     "name": "@tobi2409/template-engine",
-    "version": "0.9.8",
+    "version": "0.9.9",
     "description": "Lightweight MVVM template engine with declarative HTML tags, reactive dependency mapping, and mapped-array support",
     "license": "MIT",
     "type": "module",
     "main": "./src/template-engine.js",
     "exports": {
         ".": "./src/template-engine.js",
-        "./mapped-array": "./src/mapped-array.js"
+        "./viewmodel-array": "./src/viewmodel-array.js",
+        "./model-journal": "./src/model-journal.js",
+        "./model-viewmodel-expander": "./src/model-viewmodel-expander.js",
+        "./array-helpers": "./src/array-helpers.js"
     },
     "files": [
         "src",

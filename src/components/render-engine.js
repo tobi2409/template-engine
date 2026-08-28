@@ -5,7 +5,7 @@ import KeyResolver from './utils/key-resolver.js'
 import DomUtils from './utils/dom.js'
 import DefaultNodeAttributes from './default-node-attributes.js'
 import AliasResolver from './utils/alias-resolver.js'
-import UuidItemMap from './utils/uuid-item-map.js'
+import UuidItemMap from './foundation/uuid-item-map.js'
 
 const RenderEngine = (function () {
     function _previewValue(v) {
@@ -155,7 +155,7 @@ const RenderEngine = (function () {
                 DefaultNodeAttributes.handleActionAttribute(cloned, attr, data, contextStack, params)
             } else if (attr.name.startsWith('bind-')) {
                 const resolved = KeyResolver.resolveEx(attr.value, data, contextStack, params)
-                DefaultNodeAttributes.handleBindAttribute(cloned, attr, resolved, data, contextStack, params, dependencies)
+                DefaultNodeAttributes.handleBindAttribute(cloned, attr, resolved, data, contextStack, params)
             } else if (attr.name.startsWith('attr-') || attr.name.startsWith('style-')) {
                 const resolved = KeyResolver.resolveEx(attr.value, data, contextStack, params)
                 DefaultNodeAttributes.handleStyleOrAttrAttribute(cloned, attr, resolved)

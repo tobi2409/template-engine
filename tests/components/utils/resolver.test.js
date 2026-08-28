@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import KeyResolver from '../../../src/components/utils/key-resolver.js'
-import UuidItemMap from '../../../src/components/utils/uuid-item-map.js'
+import UuidItemMap from '../../../src/components/foundation/uuid-item-map.js'
 
 const { resolve, resolveEx, convertToFullKey, setByPath } = KeyResolver
 const { ensureUuidForItem, getUuidByItem } = UuidItemMap

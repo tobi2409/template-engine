@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import UuidItemMap from '../../../src/components/utils/uuid-item-map.js'
+import UuidItemMap from '../../../src/components/foundation/uuid-item-map.js'
 
 describe('UuidItemMap', () => {
     test('stores and retrieves item by uuid', () => {

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { JSDOM } from 'jsdom'
 import RenderEngine from '../../src/components/render-engine.js'
 import NodeHolders from '../../src/components/utils/node-holders.js'
-import UuidItemMap from '../../src/components/utils/uuid-item-map.js'
+import UuidItemMap from '../../src/components/foundation/uuid-item-map.js'
 
 const { handleGetNode, handleDefaultNode, handleIfNode, handleEachNode } = RenderEngine
 const { nodeHoldersByKeys } = NodeHolders

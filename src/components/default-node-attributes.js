@@ -2,9 +2,7 @@
 
 import NodeHolders from './utils/node-holders.js'
 import KeyResolver from './utils/key-resolver.js'
-import RefreshDelegator from './refresh-delegator.js'
-import DependencyNotifier from './utils/dependency-notifier.js'
-import UuidItemMap from './utils/uuid-item-map.js'
+import UuidItemMap from './foundation/uuid-item-map.js'
 
 // Helper function to apply attribute value to DOM element
 function applyAttribute(node, attrName, value) {
@@ -46,7 +44,7 @@ function handleActionAttribute(cloned, attr, data, contextStack, params) {
     cloned.removeAttribute(attr.name)
 }
 
-function handleBindAttribute(cloned, attr, resolved, data, contextStack, params, dependencies = {}) {
+function handleBindAttribute(cloned, attr, resolved, data, contextStack, params, onValueChanged = () => {}) {
     // Two-way binding: bind-{event}-{property}="dataKey"
     const parts = attr.name.split('-')
     const event = parts[1] // e.g., 'input'
@@ -60,19 +58,7 @@ function handleBindAttribute(cloned, attr, resolved, data, contextStack, params,
         // Resolve key dynamically using contextStack from closure
         const currentResolved = KeyResolver.resolveEx(attr.value, data, contextStack, params)
         KeyResolver.setByPath(currentResolved.fullKey, data, e.target[property])
-        
-        // Manually trigger refresh for all NodeHolders
-        const linkedNodeHolders = NodeHolders.nodeHoldersByKeys.getByKey(currentResolved.fullKey)
-        if (linkedNodeHolders) {
-            for (const nodeHolder of linkedNodeHolders.get('holders')) {
-                const change = { fullKey: currentResolved.fullKey, action: nodeHolder.action }
-                RefreshDelegator.refresh(data, change)
-            }
-        }
-        
-        // Trigger dependent refreshes
-        const matchingDependents = DependencyNotifier.findMatchingDependencies(currentResolved.fullKey, dependencies)
-        DependencyNotifier.notifyDependencies(data, matchingDependents)
+        onValueChanged(currentResolved.fullKey)
     })
     
     // Register NodeHolder for Data → UI refresh

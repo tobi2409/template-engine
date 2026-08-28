@@ -84,6 +84,24 @@ describe('ModelSynchronization', () => {
         }])
     })
 
+    test('uses prepared model item instances for array inserts', () => {
+        const preparedModelItem = { name: 'Bob' }
+        const preparedViewModelItem = { label: 'BOB' }
+        const modelArray = []
+        const viewModelArrayConfig = {
+            viewModelArray: [],
+            modelArray,
+            reverseTransform: () => ({ name: 'wrong' })
+        }
+
+        ModelSynchronization.updateModelArrayByViewModelArrayOperation(viewModelArrayConfig, 'push', {
+            items: [preparedViewModelItem],
+            preparedModelItems: [preparedModelItem]
+        })
+
+        assert.strictEqual(modelArray[0], preparedModelItem)
+    })
+
     test('keeps synchronization disabled for nested scopes until outer scope ends', async () => {
         assert.equal(ModelSynchronization.isModelSynchronizationDisabled(), false)
 

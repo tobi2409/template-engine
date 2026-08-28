@@ -52,39 +52,36 @@ const viewModel = TemplateEngine.reactive({
 
     // TODO: markRecursive
     getViewModelArray(modelArray) {
-        return ViewModelArray.get(
+        const state = {
+            newPerson: { name: '' },
+            addNewPerson: () => {
+                viewModelArray.data.push(
+                    {
+                        id: `new-${Math.random().toString(36).substring(2, 9)}`,
+                        name: state.newPerson.name,
+                        wage: '10 USD',
+                        age: 30,
+                        address: { street: '', city: '' },
+                        children: [] //TODO: create Child doesn't work
+                    },
+                    // preparedViewModelItem ist nur nötig, wenn sich im View-Item fachlich unabhängige Strukturen (expand) befinden
+                    // ansonsten kann auch direkt das View-Item erstellt werden
+                    { extraArrayParams: { preparedViewModelItem: true } }
+                )
+
+                state.newPerson.name = ''
+            }
+        }
+
+        const viewModelArray = ViewModelArray.get(
             modelArray,
             (personModelItem) => this.transform(personModelItem),
             (personViewModelItem) => this.reverseTransform(personViewModelItem),
             { age: 'birthyear' },
-            { get length() { console.log(modelArray); return modelArray[0] },
-              newPerson: { name: '' },
-              addNewPerson: (_, context) => {
-                TemplateEngine.withoutModelSynchronization(() => {
-                    // preparedViewItem ist nur nötig, wenn sich im View-Item komplexere State-Strukturen befinden
-                    // ansonsten kann auch direkt das View-Item erstellt werden
-                    const preparedPersonViewItem = {
-                        id: `new-${Math.random().toString(36).substring(2, 9)}`,
-                        name: context.children.state.newPerson.name,
-                        wage: '10 USD',
-                        age: 30,
-                        address: { street: '', city: '' },
-                        children: []
-                    }
-
-                    const { modelItem, viewModelItem } = ViewModelArray.prepareItem(
-                        context.children.data,
-                        preparedPersonViewItem
-                    )
-
-                    modelArray.push(modelItem)
-                    context.children.data.push(viewModelItem)
-                })
-
-                context.children.state.newPerson.name = ''
-              }
-            }
+            state
         )
+
+        return viewModelArray
     },
 
     get persons() {

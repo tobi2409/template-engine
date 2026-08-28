@@ -1,6 +1,6 @@
 // Key Resolution: Conversion and dereferencing of keys
 
-import UuidItemMap from './uuid-item-map.js'
+import UuidItemMap from '../foundation/uuid-item-map.js'
 
 const KeyResolver = (function () {
 

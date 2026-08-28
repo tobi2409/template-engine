@@ -1,10 +1,11 @@
 // Reactive Component: Reactivity through Object.defineProperty-based data observation
 
 import RenderEngine from './components/render-engine.js'
-import Notifier from './components/reactivity-helpers/notifier.js'
+import Notifier from './components/notifier.js'
 import ReactivityFrame from './components/reactivity-helpers/reactivity-frame.js'
-import UuidItemMap from './components/utils/uuid-item-map.js'
+import UuidItemMap from './components/foundation/uuid-item-map.js'
 import ModelSynchronization from './components/reactivity-helpers/model-synchronization.js'
+import ViewModelItemPreparation from './components/viewmodel-helpers/viewmodel-item-preparation.js'
 
 const TemplateEngine = (function () {
     return {
@@ -30,25 +31,25 @@ const TemplateEngine = (function () {
             const frameParams = {
                 marker: '__reactive__',
                 getArrayItemKey: (item) => UuidItemMap.ensureUuidForItem(item),
-                getArrayItemExtraParams: (item, index, extraParams) => {
+                getArrayItemExtraReactiveParams: (item, index, extraReactiveParams) => {
                     // Wird beim initialen Instrumentieren von Arrayelementen sowie für neu
                     // eingefügte Objekte bei push, unshift und splice aufgerufen.
                     // Dadurch wird objectSegments nur am Übergang Array -> Arrayelement zurückgesetzt.
                     // viewModelItemConfig für das aktuelle Index, sofern viewModelArrayConfig existiert
 
-                    const viewModelArrayConfig = extraParams.viewModelArrayConfig
+                    const viewModelArrayConfig = extraReactiveParams.viewModelArrayConfig
                     return {
                         viewModelArrayConfig,
                         objectSegments: viewModelArrayConfig
                             ? undefined
-                            : extraParams.objectSegments,
+                            : extraReactiveParams.objectSegments,
                         viewModelItemConfig: viewModelArrayConfig
                             ? ModelSynchronization.createViewModelItemConfig(viewModelArrayConfig, index)
                             : undefined
                     }
                 },
-                getNestedExtraParams: (value, fullKey, extraParams) => {
-                    // getNestedExtraParams wird für jedes Objekt aufgerufen, das als Wert einer Property gesetzt/gegettet wird.
+                getNestedExtraReactiveParams: (value, fullKey, extraReactiveParams) => {
+                    // getNestedExtraReactiveParams wird für jedes Objekt aufgerufen, das als Wert einer Property gesetzt/gegettet wird.
                     // handelt es sich beim Value um ein Array, wird eine viewModelArrayConfig erstellt
                     // ein viewModelArrayContainer bekommt keine viewModelArrayConfig
                     // ein normales Objekt bekommt die viewModelArrayConfig und viewModelItemConfig des übergeordneten Arrays
@@ -63,14 +64,27 @@ const TemplateEngine = (function () {
                             ? ModelSynchronization.createViewModelArrayConfig(value)
                             : isViewModelArrayContainer
                                 ? undefined
-                                : extraParams.viewModelArrayConfig,
+                                : extraReactiveParams.viewModelArrayConfig,
                         viewModelItemConfig: isArray || isViewModelArrayContainer
                             ? undefined
-                            : extraParams.viewModelItemConfig
+                            : extraReactiveParams.viewModelItemConfig
                     }
                 },
-                onArrayChange: (change, array, extraParams) => {
-                    const viewModelArrayConfig = extraParams.viewModelArrayConfig
+                beforeArrayChange: (change, array, extraReactiveParams) => {
+                    if (!change.extraArrayParams?.preparedViewModelItem) {
+                        return
+                    }
+
+                    if (!extraReactiveParams.viewModelArrayConfig) {
+                        throw new TypeError('[TemplateEngine] preparedViewModelItem requires a ViewModelArrayData')
+                    }
+
+                    const preparedItems = change.items.map((item) => ViewModelItemPreparation.prepareItem(array, item))
+                    change.items = preparedItems.map(({ viewModelItem }) => viewModelItem)
+                    change.preparedModelItems = preparedItems.map(({ modelItem }) => modelItem)
+                },
+                onArrayChange: (change, array, extraReactiveParams) => {
+                    const viewModelArrayConfig = extraReactiveParams.viewModelArrayConfig
                     ModelSynchronization.updateModelArrayByViewModelArrayOperation(
                         viewModelArrayConfig,
                         change.action,
@@ -85,7 +99,7 @@ const TemplateEngine = (function () {
                     }
                 },
                 onDataPropertyGet: () => {},
-                onDataPropertySet: ({ fullKey, extraParams }) => {
+                onDataPropertySet: ({ fullKey, extraReactiveParams }) => {
                     try {
                         Notifier.notifyKeyChange(topData, fullKey, dependencies)
                     } catch (error) {
@@ -93,8 +107,8 @@ const TemplateEngine = (function () {
                     }
 
                     ModelSynchronization.updateModelItemByViewModelItem(
-                        extraParams.viewModelItemConfig,
-                        [extraParams.objectSegments]
+                        extraReactiveParams.viewModelItemConfig,
+                        [extraReactiveParams.objectSegments]
                     )
                 },
                 onAccessorPropertyGet: () => {},
@@ -107,10 +121,10 @@ const TemplateEngine = (function () {
                 }
             }
 
-            function makeReactive(obj, fullKey = '', extraParams = {}) {
+            function makeReactive(obj, fullKey = '', extraReactiveParams = {}) {
                 return ReactivityFrame.makeReactive(obj, fullKey, {
                     ...frameParams,
-                    ...extraParams
+                    ...extraReactiveParams
                 })
             }
 

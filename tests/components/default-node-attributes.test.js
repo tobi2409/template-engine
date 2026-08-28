@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { JSDOM } from 'jsdom'
 import RenderEngine from '../../src/components/render-engine.js'
 import DefaultNodeAttributes from '../../src/components/default-node-attributes.js'
+import Notifier from '../../src/components/notifier.js'
 import NodeHolders from '../../src/components/utils/node-holders.js'
 
 const { handleGetNode } = RenderEngine
@@ -81,7 +82,15 @@ describe('handleBindAttribute', () => {
         mainInput.setAttribute('bind-input-value', 'title')
         const attr = mainInput.attributes.getNamedItem('bind-input-value')
 
-        handleBindAttribute(mainInput, attr, { fullKey: 'title', value: 'Hello' }, data, contextStack, params)
+        handleBindAttribute(
+            mainInput,
+            attr,
+            { fullKey: 'title', value: 'Hello' },
+            data,
+            contextStack,
+            params,
+            (fullKey) => Notifier.notifyKeyChange(data, fullKey)
+        )
 
         const mirrorMount = document.createElement('div')
         const mirrorGetNode = document.createElement('get')

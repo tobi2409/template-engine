@@ -1,10 +1,10 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import DependencyNotifier from '../../../src/components/utils/dependency-notifier.js'
+import DependencyResolver from '../../../src/components/reactivity-helpers/dependency-resolver.js'
 
-const { findMatchingDependencies } = DependencyNotifier
+const { findMatchingDependencies } = DependencyResolver
 
-const deps = {
+const dependencies = {
     'firstName': ['fullName'],
     'lastName': ['fullName'],
     'wage': ['showWage', 'fullInfo'],
@@ -14,48 +14,44 @@ const deps = {
 
 describe('findMatchingDependencies', () => {
     test('returns direct dependency match', () => {
-        const result = findMatchingDependencies('firstName', deps)
+        const result = findMatchingDependencies('firstName', dependencies)
         assert.ok(result.includes('fullName'))
     })
 
     test('returns multiple direct matches', () => {
-        const result = findMatchingDependencies('wage', deps)
+        const result = findMatchingDependencies('wage', dependencies)
         assert.ok(result.includes('showWage'))
         assert.ok(result.includes('fullInfo'))
     })
 
     test('resolves transitive dependencies (A → B → C)', () => {
-        // firstName → fullName → fullInfo
-        const result = findMatchingDependencies('firstName', deps)
+        const result = findMatchingDependencies('firstName', dependencies)
         assert.ok(result.includes('fullName'))
         assert.ok(result.includes('fullInfo'))
     })
 
     test('resolves subpath match with suffix appended', () => {
-        // 'model.rawPersonData.0.name' should match 'model.rawPersonData'
-        // and produce 'beautifiedPersonData.0.name'
-        const result = findMatchingDependencies('model.rawPersonData.0.name', deps)
+        const result = findMatchingDependencies('model.rawPersonData.0.name', dependencies)
         assert.ok(result.includes('beautifiedPersonData.0.name'))
     })
 
     test('returns empty array when no dependencies match', () => {
-        const result = findMatchingDependencies('unknownKey', deps)
+        const result = findMatchingDependencies('unknownKey', dependencies)
         assert.deepEqual(result, [])
     })
 
     test('returns no duplicates', () => {
-        // wage → fullInfo (direct) and wage → showWage (direct), no duplicates
-        const result = findMatchingDependencies('wage', deps)
+        const result = findMatchingDependencies('wage', dependencies)
         const unique = [...new Set(result)]
         assert.deepEqual(result, unique)
     })
 
     test('prevents infinite loop on circular dependencies', () => {
-        const circularDeps = {
+        const circularDependencies = {
             'a': ['b'],
             'b': ['a']
         }
-        assert.doesNotThrow(() => findMatchingDependencies('a', circularDeps))
+        assert.doesNotThrow(() => findMatchingDependencies('a', circularDependencies))
     })
 
     test('returns empty array for empty dependencies', () => {

@@ -1,5 +1,5 @@
 import KeyResolver from "../utils/key-resolver.js"
-import ReverseTransformEvaluator from "../utils/reverse-transform-evaluator.js"
+import ReverseTransformEvaluator from "../foundation/reverse-transform-evaluator.js"
 
 const ModelSynchronization = (function () {
 
@@ -79,15 +79,15 @@ const ModelSynchronization = (function () {
 
         if (viewModelArrayConfig) {
             if (method === 'push') {
-                const insertedModelItems = change.items.map((item) =>
+                const insertedModelItems = change.preparedModelItems ?? change.items.map((item) =>
                     ReverseTransformEvaluator.evaluate(viewModelArrayConfig.reverseTransform(item)))
                 viewModelArrayConfig.modelArray.push(...insertedModelItems)
             } else if (method === 'unshift') {
-                const insertedModelItems = change.items.map((item) =>
+                const insertedModelItems = change.preparedModelItems ?? change.items.map((item) =>
                     ReverseTransformEvaluator.evaluate(viewModelArrayConfig.reverseTransform(item)))
                 viewModelArrayConfig.modelArray.unshift(...insertedModelItems)
             } else if (method === 'splice') {
-                const insertedModelItems = change.items.map((item) =>
+                const insertedModelItems = change.preparedModelItems ?? change.items.map((item) =>
                     ReverseTransformEvaluator.evaluate(viewModelArrayConfig.reverseTransform(item)))
                 viewModelArrayConfig.modelArray.splice(change.startIndex, change.deleteCount, ...insertedModelItems)
             } else if (method === 'pop') {
