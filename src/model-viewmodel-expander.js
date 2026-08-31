@@ -47,6 +47,31 @@ const ModelViewModelExpander = (function () {
         })
     }
 
+    function expand(
+        nextData,
+        viewModelItem,
+        modelItem,
+        rootViewModelArray,
+        rootModelArray,
+        transformItem = (item) => item,
+        options = undefined
+    ) {
+        const { viewModelArray, modelArray } = getExpandTargets(
+            viewModelItem,
+            modelItem,
+            rootViewModelArray,
+            rootModelArray,
+            options
+        )
+
+        return expandNextData(
+            nextData,
+            viewModelArray?.data,
+            modelArray,
+            transformItem
+        )
+    }
+
     function createExpandHandler(loadServerData, options = {}) {
         return (_, viewModelParent) => {
             const { expandedAttribute = 'expanded', childrenLoadedAttribute = 'childrenLoaded' } = options
@@ -63,6 +88,7 @@ const ModelViewModelExpander = (function () {
     return {
         getExpandTargets,
         expandNextData,
+        expand,
         createExpandHandler
     }
 })()

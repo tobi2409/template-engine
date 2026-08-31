@@ -50,6 +50,27 @@ test('expandNextData replaces model and view model arrays', () => {
     assert.equal(JournalControl.isJournalingDisabled(), false)
 })
 
+test('expand resolves nested targets and replaces their data', () => {
+    const modelParent = { children: [{ id: 1, name: 'old' }] }
+    const viewModelParent = { children: { data: [{ id: 1, label: 'OLD' }] } }
+    const rootModelArray = []
+    const rootViewModelArray = { data: [] }
+    const nextData = [{ id: 2, name: 'new' }]
+
+    const result = ModelViewModelExpander.expand(
+        nextData,
+        viewModelParent,
+        modelParent,
+        rootViewModelArray,
+        rootModelArray,
+        (item) => ({ id: item.id, label: item.name.toUpperCase() })
+    )
+
+    assert.deepEqual(modelParent.children, nextData)
+    assert.deepEqual(viewModelParent.children.data, [{ id: 2, label: 'NEW' }])
+    assert.strictEqual(result, viewModelParent.children.data)
+})
+
 test('createExpandHandler loads children once and toggles expansion', () => {
     // Captures calls to the loader passed into the handler factory.
     const viewModelArray = []

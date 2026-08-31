@@ -1,6 +1,6 @@
 const database = new alasql.Database('family-tree')
 
-database.exec('CREATE TABLE persons (id INT, parentId INT, name STRING, wage INT, birthyear INT, street STRING, city STRING)')
+database.exec('CREATE TABLE persons (id INT, parentId INT, name STRING, wage INT, birthyear INT, street STRING, city STRING, tags JSON)')
 
 export const fakeServerData = [{
     id: 1,
@@ -11,6 +11,7 @@ export const fakeServerData = [{
         street: 'Main Street 1',
         city: 'Berlin'
     },
+    tags: [{ name: 'max' }, { name: 'mustermann' }],
     children: [{
         id: 3,
         name: 'Max Jr.',
@@ -20,6 +21,7 @@ export const fakeServerData = [{
             street: 'Main Street 3',
             city: 'Bremen'
         },
+        tags: [{ name: 'max' }, { name: 'jr' }],
         children: [{
             id: 5,
             name: 'Max III',
@@ -29,6 +31,7 @@ export const fakeServerData = [{
                 street: 'Main Street 5',
                 city: 'Hamburg'
             },
+            tags: [{ name: 'max' }, { name: 'iii' }],
             children: []
         }]
     }, {
@@ -40,6 +43,7 @@ export const fakeServerData = [{
             street: 'Main Street 6',
             city: 'Dresden'
         },
+        tags: [{ name: 'max' }, { name: 'jr 2' }],
         children: []
     }]
 }, {
@@ -51,6 +55,7 @@ export const fakeServerData = [{
         street: 'Second Street 2',
         city: 'Hamburg'
     },
+    tags: [{ name: 'erika' }, { name: 'mustermann' }],
     children: [{
         id: 4,
         name: 'Erika Jr.',
@@ -60,6 +65,7 @@ export const fakeServerData = [{
             street: 'Second Street 4',
             city: 'Munich'
         },
+        tags: [{ name: 'erika' }, { name: 'jr' }],
         children: []
     }]
 }]
@@ -73,7 +79,8 @@ function insertPersons(persons, parentId = null) {
             wage: person.wage,
             birthyear: person.birthyear,
             street: person.address?.street || '',
-            city: person.address?.city || ''
+            city: person.address?.city || '',
+            tags: person.tags || []
         })
         
         insertPersons(person.children || [], person.id)
@@ -82,21 +89,59 @@ function insertPersons(persons, parentId = null) {
 
 insertPersons(fakeServerData)
 
-export function getPersons(parentId = null) {
-    const query = parentId === null
-        ? 'SELECT id, name, wage, birthyear, street, city FROM persons WHERE parentId IS NULL'
-        : 'SELECT id, name, wage, birthyear, street, city FROM persons WHERE parentId = ?'
-    const parameters = parentId === null ? [] : [parentId]
-
-    return database.exec(query, parameters).map((person) => ({
-        id: person.id,
-        name: person.name,
-        wage: person.wage,
-        birthyear: person.birthyear,
+function toPerson(row) {
+    return {
+        id: row.id,
+        name: row.name,
+        wage: row.wage,
+        birthyear: row.birthyear,
         address: {
-            street: person.street,
-            city: person.city
+            street: row.street,
+            city: row.city
         },
+        tags: row.tags || [],
         children: []
-    }))
+    }
+}
+
+function getSearchResultTree(searchNamePattern) {
+    const rowsById = new Map(
+        database.tables.persons.data.map((row) => [row.id, row])
+    )
+    const selectedRows = new Map()
+
+    const matches = database.exec(
+        'SELECT * FROM persons WHERE name LIKE ?',
+        [`%${searchNamePattern}%`]
+    )
+
+    for (const match of matches) {
+        for (let row = match; row; row = rowsById.get(row.parentId)) {
+            selectedRows.set(row.id, row)
+        }
+    }
+
+    const personsById = new Map(
+        Array.from(selectedRows.values(), (row) => [row.id, toPerson(row)])
+    )
+
+    for (const row of selectedRows.values()) {
+        personsById.get(row.parentId)?.children.push(personsById.get(row.id))
+    }
+
+    return Array.from(selectedRows.values())
+        .filter((row) => !personsById.has(row.parentId))
+        .map((row) => personsById.get(row.id))
+}
+
+export function getPersons(parentId = null, searchNamePattern = undefined) {
+    if (searchNamePattern?.trim()) {
+        return getSearchResultTree(searchNamePattern.trim())
+    }
+
+    const rows = parentId === null
+        ? database.exec('SELECT * FROM persons WHERE parentId IS NULL')
+        : database.exec('SELECT * FROM persons WHERE parentId = ?', [parentId])
+
+    return rows.map(toPerson)
 }
