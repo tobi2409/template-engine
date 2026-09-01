@@ -94,6 +94,7 @@ const TemplateEngine = (function () {
                 onArrayItemsChange: (change) => {
                     try {
                         Notifier.notifyChange(topData, change.fullKey, change, dependencies)
+                        Notifier.notifyKeyChange(topData, `${change.fullKey}.length`, dependencies)
                     } catch (error) {
                         throw new Error(`[TemplateEngine] Error during refresh of "${change.fullKey}" after "${change.action}"`, { cause: error })
                     }

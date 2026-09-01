@@ -153,6 +153,19 @@ describe('TemplateEngine.reactive', () => {
         assert.equal(items[2].querySelector('.get-resolved').textContent, 'C')
     })
 
+    test('updates GET array length after array mutations', () => {
+        const { mount, templateUse } = setupTemplate('<get>items.length</get>')
+
+        const data = TemplateEngine.reactive({ items: [{ label: 'A' }] }, templateUse)
+        const length = mount.querySelector('.get-resolved')
+
+        data.items.push({ label: 'B' })
+        assert.equal(length.textContent, '2')
+
+        data.items.pop()
+        assert.equal(length.textContent, '1')
+    })
+
     test('renders updates for two views using same each source (change + push)', () => {
         const { mount, templateUse } = setupTemplate(`
             <div id="view-a">
