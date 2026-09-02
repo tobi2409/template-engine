@@ -111,7 +111,7 @@ function getSearchResultTree(searchNamePattern) {
     const selectedRows = new Map()
 
     const matches = database.exec(
-        'SELECT * FROM persons WHERE name LIKE ?',
+        'SELECT * FROM persons WHERE name LIKE ? LIMIT 1',
         [`%${searchNamePattern}%`]
     )
 
@@ -140,8 +140,8 @@ export function getPersons(parentId = null, searchNamePattern = undefined) {
     }
 
     const rows = parentId === null
-        ? database.exec('SELECT * FROM persons WHERE parentId IS NULL')
-        : database.exec('SELECT * FROM persons WHERE parentId = ?', [parentId])
+        ? database.exec('SELECT * FROM persons WHERE parentId IS NULL LIMIT 1')
+        : database.exec('SELECT * FROM persons WHERE parentId = ? LIMIT 1', [parentId])
 
     return rows.map(toPerson)
 }
