@@ -41,6 +41,10 @@
                     </li>
                 </each>
 
+                <if test="*list.state.hasMore">
+                    <button action-click="*list.state.loadNextData">Load Next Data</button>
+                </if>
+
                 <li>
                     <input type="text" bind-input-value="*list.state.newPerson.name" placeholder="Neuer Name ..." />
                     <button action-click="*list.state.addNewPerson">+ Add</button>

@@ -28,6 +28,9 @@ const viewModel = TemplateEngine.reactive({
 
     set searchNamePattern(value) {
         this._searchNamePattern = value
+        const state = viewModel.persons.state
+        state.start = 0
+        state.searchNamePattern = value
         // sowohl Model als auch ViewModel werden aktualisiert
         // das Model soll sich auch ändern, weil die Daten vom Server kommen
         // würden wir nur die bereits gefetchten Daten filtern, sollte sich nur das ViewModel ändern
@@ -55,7 +58,7 @@ const viewModel = TemplateEngine.reactive({
                 (tagViewModelItem) => ({ name: () => tagViewModelItem.name.slice(0, -12) })
             ),
             // siehe Tags
-            children: this.getViewModelArray(personModelItem.children),
+            children: this.getViewModelArray(personModelItem.children, personModelItem),
             // Bei Suchergebnissen werden die Parents inklusive ihrer Trefferpfade
             // geliefert. Diese Pfade müssen direkt geöffnet und als geladen markiert
             // werden, damit tiefer liegende Treffer sichtbar sind und nicht beim
@@ -92,8 +95,11 @@ const viewModel = TemplateEngine.reactive({
     },
 
     // TODO: markRecursive
-    getViewModelArray(modelArray) {
+    getViewModelArray(modelArray, modelItem = undefined) {
         const state = {
+            start: 0,
+            searchNamePattern: undefined,
+            hasMore: modelArray.length === 0,
             newPerson: { name: '' },
             addNewPerson: () => {
                 viewModelArray.data.push({
@@ -116,6 +122,14 @@ const viewModel = TemplateEngine.reactive({
                 viewModelArray.data.at(-1).childrenLoaded = true
 
                 state.newPerson.name = ''
+            },
+            loadNextData: (_, viewModelItem) => {
+                viewModel.loadServerData(
+                    modelItem ? viewModelItem : undefined,
+                    modelItem,
+                    state.searchNamePattern,
+                    true
+                )
             }
         }
 
@@ -135,18 +149,35 @@ const viewModel = TemplateEngine.reactive({
         return this.getViewModelArray(model.persons)
     },
 
-    loadServerData(viewModelParent = undefined, modelParent = undefined, searchNamePattern = undefined) {
+    loadServerData(viewModelParent = undefined, modelParent = undefined, searchNamePattern = undefined, append = false) {
         TemplateEngine.withoutModelSynchronization(() => {
-            const nextPersons = getPersons(viewModelParent?.id, searchNamePattern)
+            const viewModelArray = viewModelParent?.children ?? viewModel.persons
+            const state = viewModelArray.state
+
+            if (!append) {
+                state.start = 0
+                state.searchNamePattern = searchNamePattern
+            }
+
+            const { items, hasMore } = getPersons(
+                viewModelParent?.id,
+                state.searchNamePattern,
+                state.start
+            )
 
             ModelViewModelExpander.expand(
-                nextPersons,
+                items,
                 viewModelParent,
                 modelParent,
                 viewModel.persons,
                 model.persons,
-                (personModelItem) => this.transform(personModelItem)
+                (personModelItem) => this.transform(personModelItem),
+                undefined,
+                append
             )
+
+            state.start += items.length
+            viewModelArray.state.hasMore = hasMore
         })
     },
 
